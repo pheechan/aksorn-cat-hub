@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>คลังความรู้แมวอักษร</title>
+  <meta name="description" content="คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ: เรื่องเล่าของแมวที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307090c'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ef6d9f'/%3E%3Cpath d='M9 12 L11 5 L14 10 Z M23 12 L21 5 L18 10 Z' fill='%23ef6d9f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="landing.css">
+</head>
+<body class="is-loading">
+  <canvas id="gl" aria-hidden="true"></canvas>
+  <div id="vignette" aria-hidden="true"></div>
+  <div id="grain" aria-hidden="true"></div>
+
+  <div id="preloader" role="status" aria-live="polite">
+    <div class="pl-inner">
+      <div class="pl-eyes" aria-hidden="true"><i></i><i></i></div>
+      <div class="pl-title">คลังความรู้แมวอักษร</div>
+      <div class="pl-row"><span>กำลังปลุกแมวในคณะ</span><span id="plPct">0%</span></div>
+      <div class="pl-bar"><i id="plBar"></i></div>
+    </div>
+  </div>
+
+  <header class="nav" id="nav">
+    <a class="logo" href="#top" aria-label="คลังความรู้แมวอักษร หน้าแรก">
+      <span class="logo-mark" aria-hidden="true"></span>
+      <span class="logo-txt"><b>AKSORN CAT</b><small>Knowledge Hub</small></span>
+    </a>
+    <nav class="nav-links" aria-label="บทต่าง ๆ">
+      <a href="#keepers">Keepers <i>ผู้รู้</i></a>
+      <a href="#field">Field notes <i>บันทึก</i></a>
+      <a href="#process">Process <i>กระบวนการ</i></a>
+      <a href="#care">Care <i>ดูแลต่อ</i></a>
+    </nav>
+    <a class="nav-cta" href="cats.html">เข้าคลังความรู้ <span aria-hidden="true">→</span></a>
+  </header>
+
+  <nav class="rail" id="rail" aria-label="ความคืบหน้า">
+    <a href="#top" data-i="0"><span>00</span></a>
+    <a href="#keepers" data-i="1"><span>01</span></a>
+    <a href="#field" data-i="2"><span>02</span></a>
+    <a href="#process" data-i="3"><span>03</span></a>
+    <a href="#care" data-i="4"><span>04</span></a>
+  </nav>
+
+  <main class="page">
+    <!-- 00 · hero -->
+    <section class="hero" id="top" data-cam="0">
+      <div class="hero-copy">
+        <p class="eyebrow" data-rv><span class="dot"></span>Chapter 00 — คืนหนึ่งในคณะอักษร</p>
+        <h1 class="display h-hero" data-rv>แมวทุกตัว<br>มีเรื่องเล่า<br><em>ที่ยังไม่มีใครจด</em></h1>
+        <p class="lede" data-rv>ใครเป็นแม่ใคร ตัวไหนป่วย ตัวไหนทำหมันแล้ว ความรู้พวกนี้อยู่กับพี่ ๆ แม่บ้านไม่กี่คน เราขอฟัง แล้วจดไว้ให้ทุกคน</p>
+      </div>
+
+      <aside class="vert" aria-hidden="true"><span>แมว</span><span>อัก</span><span>ษร</span></aside>
+
+      <figure class="vp-card hero-vp" data-vp="hero">
+        <div class="vp" aria-hidden="true"></div>
+        <figcaption><span class="vp-th">บันได</span><span>Front steps — ภาพจำลอง</span></figcaption>
+      </figure>
+
+      <div class="hero-foot">
+        <div class="scroll-cue">Scroll to enter <i></i></div>
+        <ol class="hero-index">
+          <li><a href="#keepers"><b>01</b><span>Keepers</span><small>ความรู้ที่อยู่ในคน</small></a></li>
+          <li><a href="#field"><b>02</b><span>Field notes</span><small>รู้จักแมวทีละตัว</small></a></li>
+          <li><a href="#process"><b>03</b><span>Process</span><small>จากเรื่องเล่าสู่คลัง</small></a></li>
+          <li><a href="#care"><b>04</b><span>Care</span><small>ช่วยกันดูแลต่อ</small></a></li>
+        </ol>
+      </div>
+
+      <div class="wordmark" aria-hidden="true">MAEW</div>
+      <svg class="fg-grass" id="fgGrass" aria-hidden="true" preserveAspectRatio="none"></svg>
+    </section>
+
+    <!-- 01 · keepers -->
+    <section class="sec" id="keepers" data-cam="1">
+      <div class="sec-inner col-left">
+        <p class="eyebrow" data-rv><span class="dot"></span>01 — The Keepers <span class="th">ผู้รู้</span></p>
+        <h2 class="display h-sec" data-rv>ความรู้ไม่ได้อยู่ในแฟ้ม<br>มันอยู่ในคน</h2>
+        <div class="prose" data-rv>
+          <p>ลองถามพี่แม่บ้านว่าแมวส้มที่นอนหน้าโรงอาหารชื่ออะไร พี่จะเล่าได้ทันทีว่าแม่มันคือตัวไหน คลอดตอนไหน ทำหมันหรือยัง ชอบให้ใครลูบหัว ทั้งหมดนี้ไม่เคยถูกเขียนไว้ที่ไหน</p>
+          <p>นี่คือ <b>ความรู้ฝังลึก (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน วันที่พี่เปลี่ยนกะหรือเกษียณ ความรู้นั้นก็หายไปด้วย โครงการนี้จึงเริ่มจากการฟัง</p>
+        </div>
+        <a class="link-cta" href="#process" data-rv>ดูว่าเราทำอย่างไร</a>
+        <dl class="stats" data-rv>
+          <div><dt id="stCats">—</dt><dd>แมวในคลัง</dd></div>
+          <div><dt id="stFamilies">—</dt><dd>ครอบครัว</dd></div>
+          <div><dt id="stSteril">—</dt><dd>ทำหมันแล้ว</dd></div>
+          <div><dt id="stSources">—</dt><dd>แหล่งความรู้</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 02 · field notes -->
+    <section class="sec" id="field" data-cam="2">
+      <div class="sec-inner col-wide">
+        <div class="sec-head">
+          <p class="eyebrow" data-rv><span class="dot"></span>02 — Field notes <span class="th">บันทึก</span></p>
+          <h2 class="display h-sec" data-rv>รู้จักแมวทีละตัว</h2>
+        </div>
+        <div class="cards" id="cards"></div>
+        <a class="link-cta" href="cats.html" data-rv>ดูแมวทั้งหมดในคลัง</a>
+      </div>
+    </section>
+
+    <!-- 03 · process -->
+    <section class="sec" id="process" data-cam="3">
+      <div class="sec-inner col-right">
+        <p class="eyebrow" data-rv><span class="dot"></span>03 — Process <span class="th">กระบวนการ</span></p>
+        <h2 class="display h-sec" data-rv>ห้าขั้น จากเรื่องเล่า<br>สู่คลังความรู้</h2>
+        <p class="sec-lede" data-rv>แต่ละขั้นเดินตามวงจรสร้างความรู้ SECI ของ Nonaka และ Takeuchi</p>
+        <ol class="steps">
+          <li data-rv><b>01</b><div><h3>ฟัง <span>Socialization</span></h3><p>เดินคุยกับพี่แม่บ้านและภารโรงรอบคณะ ชี้รูปแล้วฟังเรื่องเล่าของแมวแต่ละตัว</p></div><small>สัมภาษณ์</small></li>
+          <li data-rv><b>02</b><div><h3>จด <span>Externalization</span></h3><p>แปลงเรื่องเล่าเป็นประวัติแมวรายตัว และบันทึกที่มาของข้อมูลทุกชิ้น</p></div><small>บันทึก</small></li>
+          <li data-rv><b>03</b><div><h3>จัด <span>Combination</span></h3><p>ชื่อหลักหนึ่งชื่อ ชื่อเล่นหลายชื่อ (authority control) และผังครอบครัวที่โยงแม่กับลูก</p></div><small>จัดระเบียบ</small></li>
+          <li data-rv><b>04</b><div><h3>ส่ง <span>Access</span></h3><p>ค้นได้ด้วยชื่อไหนก็ได้ หรือสแกน QR ตรงจุดที่แมวอยู่</p></div><small>เข้าถึง</small></li>
+          <li data-rv><b>05</b><div><h3>ดูแลต่อ <span>Internalization</span></h3><p>ทุกคนแจ้งข่าวแมวได้ ทีมตรวจสอบก่อนแก้คลัง ความรู้จึงไม่หายไปเมื่อเราเรียนจบ</p></div><small>ใช้และต่อยอด</small></li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 04 · care -->
+    <section class="sec fin" id="care" data-cam="4">
+      <div class="sec-inner col-center">
+        <p class="eyebrow" data-rv><span class="dot"></span>Chapter 04 — Care <span class="th">ดูแลต่อ</span></p>
+        <h2 class="display h-fin" data-rv>คืนนี้ แมวยังรออยู่</h2>
+        <p class="sec-lede" data-rv>เห็นแมวตัวไหน เจอตัวใหม่ หรือข้อมูลไม่ตรง บอกเราได้ คลังนี้โตได้เพราะทุกคนช่วยกันเติม</p>
+        <div class="cta-row" data-rv>
+          <a class="btn" href="cats.html">ดูแมวทั้งหมด</a>
+          <a class="btn ghost" href="cats.html#/knowledge">อ่านคลังความรู้</a>
+          <a class="btn ghost" href="cats.html#/share">แบ่งปันความรู้</a>
+          <a class="btn ghost warn" href="cats.html#/help">เจอแมวป่วย?</a>
+        </div>
+      </div>
+    </section>
+
+    <footer class="foot">
+      <div class="foot-grid">
+        <div class="foot-about">
+          <div class="logo static"><span class="logo-mark" aria-hidden="true"></span><span class="logo-txt"><b>AKSORN CAT</b><small>Knowledge Hub</small></span></div>
+          <p>คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ เรื่องเล่าที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน</p>
+        </div>
+        <div><h4>Chapters</h4><a href="#keepers">Keepers</a><a href="#field">Field notes</a><a href="#process">Process</a><a href="#care">Care</a></div>
+        <div><h4>คลังความรู้</h4><a href="cats.html">แมวทั้งหมด</a><a href="cats.html#/family">ผังครอบครัว</a><a href="cats.html#/knowledge">คลังความรู้การดูแล</a><a href="cats.html#/share">แบ่งปันความรู้</a><a href="cats.html#/help">เจอแมวป่วย?</a></div>
+        <div><h4>โครงการ</h4><a href="cats.html#/about">เกี่ยวกับโครงการ</a><span id="footCourse"></span></div>
+      </div>
+      <div class="foot-base"><span>© 2569 คลังความรู้แมวอักษร · Aksorn Cat Knowledge Hub</span><span>ทุกเรื่องเล่ามีเจ้าของ ขอบคุณผู้ให้ความรู้ทุกท่าน</span><span>WebGL · Google Sans</span></div>
+    </footer>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="config.js"></script>
+  <script src="data-sample.js"></script>
+  <script src="data.js"></script>
+  <script src="landing.js"></script>
+</body>
+</html>

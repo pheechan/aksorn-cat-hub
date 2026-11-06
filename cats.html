@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>คลังความรู้แมวอักษร</title>
+  <meta name="description" content="คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub): ประวัติแมวในคณะอักษรศาสตร์ จุฬาฯ ความรู้การดูแลแมว และประสบการณ์จากผู้ดูแล">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307090c'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ef6d9f'/%3E%3Cpath d='M9 12 L11 5 L14 10 Z M23 12 L21 5 L18 10 Z' fill='%23ef6d9f'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip" href="#app">ข้ามไปเนื้อหา</a>
+  <header class="top">
+    <div class="top-row">
+      <a class="brand" href="index.html" aria-label="คลังความรู้แมวอักษร หน้าแรก">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-txt"><b id="brandTitle">คลังความรู้แมวอักษร</b><small>Aksorn Cat Knowledge Hub</small></span>
+      </a>
+      <form class="search" id="searchForm" role="search">
+        <label class="sr" for="searchInput">ค้นหาแมวหรือความรู้</label>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
+        <input id="searchInput" type="search" placeholder="ค้นหาแมว ความรู้ หรือคำสำคัญ" autocomplete="off">
+      </form>
+    </div>
+    <nav class="nav" id="nav" aria-label="เมนูหลัก">
+      <a href="#/" data-page="">แมวในคณะ</a>
+      <a href="#/knowledge" data-page="knowledge">คลังความรู้</a>
+      <a href="#/family" data-page="family">ผังครอบครัว</a>
+      <a href="#/share" data-page="share">แบ่งปันความรู้</a>
+      <a href="#/help" data-page="help" class="urgent">เจอแมวป่วย</a>
+      <a href="#/about" data-page="about">เกี่ยวกับโครงการ</a>
+    </nav>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+  <main id="app" class="wrap" tabindex="-1"><p class="muted">กำลังโหลด…</p></main>
+
+  <footer class="foot wrap">
+    <div class="foot-brand"><b>คลังความรู้แมวอักษร</b><span>Aksorn Cat Knowledge Hub</span></div>
+    <p id="footCourse"></p>
+    <nav aria-label="ลิงก์ท้ายหน้า"><a href="index.html">หน้าแรก</a><a href="#/share">แบ่งปันความรู้</a><a href="#/about">เกี่ยวกับโครงการ</a></nav>
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="config.js"></script>
+  <script src="data-sample.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -48,7 +48,8 @@
 
   /* ============================================================ foreground grass (SVG) */
   function makeGrass() {
-    const svg = $("#fgGrass"); const W = 1000, H = 260; const r = rng(7);
+    const svg = $("#fgGrass"); if (!svg) return; // grass foreground is optional (removed from the hero)
+    const W = 1000, H = 260; const r = rng(7);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     const mound = (x) => {
       const a = Math.exp(-Math.pow((x - 0.08) / 0.16, 2)), b = Math.exp(-Math.pow((x - 0.93) / 0.14, 2)), c = Math.exp(-Math.pow((x - 0.5) / 0.35, 2));

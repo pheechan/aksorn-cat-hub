@@ -67,9 +67,11 @@
       <circle cx="86" cy="110" r="4.2" fill="#dcff86"/><circle cx="114" cy="110" r="4.2" fill="#dcff86"/>
     </svg>`;
   }
-  function portrait(c, note) {
+  function portrait(c, note, large) {
     if (c.photo) {
-      return `<div class="portrait"><img src="${esc(c.photo)}" alt="รูปของ ${esc(c.name)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
+      return large
+        ? `<div class="portrait"><img id="profilePhoto" src="${esc(c.photoLarge || c.photo)}" alt="รูปของ ${esc(c.name)}" width="900" height="1200" fetchpriority="high" decoding="async"></div>`
+        : `<div class="portrait"><img src="${esc(c.photo)}" alt="รูปของ ${esc(c.name)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
     }
     return `<div class="portrait">${silhouette(c)}${note ? '<span class="ph-note">ยังไม่มีรูป</span>' : ""}</div>`;
   }
@@ -212,7 +214,8 @@
     app.innerHTML = `
       <nav class="crumbs" aria-label="ตำแหน่ง"><a href="#/">แมวในคณะ</a><span>/</span>${esc(c.name)}</nav>
       <article class="profile">
-        <div class="profile-side">${portrait(c, true)}</div>
+        <div class="profile-side">${portrait(c, true, true)}${c.gallery && c.gallery.length > 1 ? `
+          <div class="gallery" role="group" aria-label="รูปของ${esc(c.name)} ${c.gallery.length} รูป">${c.gallery.map((p, i) => `<button type="button" class="thumb" aria-pressed="${i === 0}" aria-label="ดูรูปที่ ${i + 1}" data-l="${esc(p.l)}"><img src="${esc(p.s)}" alt="" width="96" height="120" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}</div>
         <div>
           <h1>${esc(c.name)}</h1>
           ${c.nicknames.length ? `<p class="aka">ชื่อที่คนเรียก: ${esc(c.nicknames.join(" · "))}</p>` : ""}
@@ -262,6 +265,15 @@
         </div>
       </article>`;
   }
+
+  // profile gallery: thumbnails swap the main photo (event delegation, survives re-renders)
+  app.addEventListener("click", (e) => {
+    const t = e.target.closest(".gallery .thumb");
+    if (!t) return;
+    const main = document.getElementById("profilePhoto");
+    if (main) main.src = t.dataset.l;
+    t.parentNode.querySelectorAll(".thumb").forEach((b) => b.setAttribute("aria-pressed", b === t));
+  });
 
   function renderKnowledge(cat) {
     cat = Object.prototype.hasOwnProperty.call(CATEGORIES, cat) ? cat : "";

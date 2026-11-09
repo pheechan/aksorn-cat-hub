@@ -49,6 +49,7 @@ window.CatData = (function () {
   function photoUrl(u) {
     u = norm(u);
     if (!u) return "";
+    if (/drive\.google\.com\/drive\/(u\/\d+\/)?folders\//.test(u)) return ""; // a folder is not an image: tools/sync_photos.py handles folders
     const m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]+)/);
     if (m) return "https://lh3.googleusercontent.com/d/" + m[1];
     if (/^https?:\/\//i.test(u)) return u;
@@ -103,7 +104,10 @@ window.CatData = (function () {
       id: lower(r.id) || name,
       name,
       nicknames: splitList(r.nicknames),
-      photo: photoUrl(r.photo) || photoUrl(photos[name]),
+      // photos synced from the team's Drive folders (photos/manifest.js), then a direct image link, then config
+      gallery: ((window.CAT_PHOTO_SETS || {})[name] || []).filter((p) => p && p.s && p.l),
+      photo: "",
+      photoLarge: "",
       sex: sexOf(r.sex),
       age: clean(r.age),
       // "ไปกลับ" typed into the marks column is a status note, not a coat marking
@@ -123,6 +127,9 @@ window.CatData = (function () {
       source: clean(r.source),
       notes: clean(r.notes)
     };
+    const direct = photoUrl(r.photo) || photoUrl(photos[name]);
+    c.photo = c.gallery.length ? c.gallery[0].s : direct;
+    c.photoLarge = c.gallery.length ? c.gallery[0].l : direct;
     c.coat = coatOf(c);
     return c;
   }

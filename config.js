@@ -22,12 +22,10 @@ window.SITE_CONFIG = {
   // ฟอร์มแบ่งปันความรู้: ส่งบทความ เคล็ดลับ หรือประสบการณ์การดูแลแมว (ผ่านการตรวจก่อนเผยแพร่)
   SHARE_FORM_URL: "",
 
-  // รูปแมวที่เก็บไว้กับเว็บ (ใช้เมื่อช่อง Photo ในชีตไม่ใช่ลิงก์รูป) — ชื่อต้องตรงกับช่อง Name ในชีต
-  CAT_PHOTOS: {
-    "ส้มส้ม": "photos/somsom.jpg",
-    "ชาโคล": "photos/charcoal.jpg",
-    "มีตัง": "photos/mitang.jpg"
-  },
+  // รูปแมวมาจากโฟลเดอร์ Google Drive ที่ลิงก์ไว้ในช่อง Photo ของชีต
+  // เพิ่มรูปในโฟลเดอร์แล้วรัน: python -I tools/sync_photos.py (ดู README)
+  // ช่องนี้ใช้เพิ่มรูปเองแบบเฉพาะกิจ เช่น { "ชื่อแมว": "photos/ไฟล์.jpg" }
+  CAT_PHOTOS: {},
 
   // URL จริงของเว็บหลังขึ้น GitHub Pages เช่น "https://yourname.github.io/arts-cats/" (ใช้สร้าง QR)
   SITE_URL: "https://pheechan.github.io/aksorn-cat-hub/",

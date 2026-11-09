@@ -128,10 +128,7 @@ body.is-loading #gl { opacity: .35; }
 /* ============================================================ hero */
 .hero { position: relative; min-height: 100vh; min-height: 100svh; overflow: hidden; display: flex; align-items: center; }
 /* left-side scrim keeps the copy readable over any part of the 3D scene */
-.hero::before {
-  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
-  background: linear-gradient(90deg, rgba(5, 7, 9, .82) 0%, rgba(5, 7, 9, .55) 38%, rgba(5, 7, 9, 0) 68%);
-}
+/* no overlay on the hero: the 3D scene shows as is; text keeps its own shadow for contrast */
 .hero-copy { position: relative; z-index: 5; padding: calc(var(--nav-h) + 2vh) var(--pad) 14vh; max-width: 640px; }
 .h-hero { font-size: clamp(38px, 4.8vw, 72px); text-wrap: balance; text-shadow: 0 2px 30px rgba(0, 0, 0, .55); }
 .lede { max-width: 470px; color: var(--bone-dim); font-size: 17px; margin: 20px 0 0; text-wrap: pretty; }
@@ -295,7 +292,6 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--pink); outline-
 
 @media (prefers-reduced-motion: reduce) { #gl { transition: none; } }
 @media (max-width: 760px) {
-  .hero::before { background: linear-gradient(180deg, rgba(5, 7, 9, .35) 0%, rgba(5, 7, 9, .8) 55%, rgba(5, 7, 9, .9) 100%); }
   .hero { align-items: flex-end; }
   .hero-copy { padding-bottom: 16vh; }
   .hero-search button { padding: 0 16px; }
@@ -308,3 +304,7 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--pink); outline-
 .eyebrow.thai { letter-spacing: .02em; text-transform: none; font-size: 14px; }
 .logo-txt b { letter-spacing: 0; font-size: 15px; }
 .logo-txt small { letter-spacing: .14em; }
+
+/* hero copy readability without a dark overlay */
+.hero-copy .eyebrow, .h-hero, .lede, .hero-links a { text-shadow: 0 1px 2px rgba(0,0,0,.85), 0 2px 24px rgba(0,0,0,.75); }
+.hero-search input { background: rgba(13, 17, 21, .92); }

@@ -553,6 +553,7 @@
         ${Object.keys(CATEGORIES).filter((k) => n(k)).map((k) => `<a href="#/knowledge/${k}" class="${cat === k ? "on" : ""}" ${cat === k ? 'aria-current="page"' : ""}>${lbl(CATEGORIES[k])}<span class="n">${n(k)}</span></a>`).join("")}
       </nav>
       ${cat ? `<p class="cat-desc">${esc(L(CATEGORIES[cat].desc, CATEGORIES[cat].descEn))}</p>` : ""}
+      <h2 class="sr">${L("รายการความรู้", "Articles")}</h2>
       ${list.length ? `<ul class="articles">${list.map((a) => articleRow(a)).join("")}</ul>` : `<p class="empty">${L("ยังไม่มีเรื่องในหมวดนี้", "Nothing in this category yet.")} <a href="${shareHref("story")}">${L("เป็นคนแรกที่เล่า", "Be the first to share")}</a></p>`}
       <aside class="callout"><h3>${L("รู้อะไรที่ผู้ดูแลรุ่นต่อไปควรรู้?", "Know something the next keepers should know?")}</h3><p>${L("เคล็ดลับ บทเรียน หรือเรื่องที่เคยเกิดขึ้นกับแมวในคณะ บอกเท่าที่รู้ก็พอ ทีมจะเรียบเรียงและตรวจทานก่อนเผยแพร่ พร้อมใส่ชื่อคุณเป็นเครดิต", "A tip, a lesson, or something that happened with the faculty's cats. Just tell us what you know: the team writes it up, reviews it before publishing, and credits you.")}</p><a class="btn pink" href="${shareHref("story")}">${L("เล่าให้ทีมฟัง", "Tell the team")}</a></aside>`;
   }
@@ -648,7 +649,7 @@
           <div><button class="btn pink" type="submit" id="fSubmit">${L("ส่งให้ทีม", "Send to the team")}</button></div>
         </form>
         <aside>
-          <span class="label">${L("หลังจากกดส่ง", "After you send")}</span>
+          <h2 class="label">${L("หลังจากกดส่ง", "After you send")}</h2>
           <ol class="flow">
             <li><div><b>${L("เข้าชีตรอตรวจ", "It waits for review")}</b>${L("เรื่องของคุณยังไม่ขึ้นเว็บทันที", "It doesn't appear on the site straight away.")}</div></li>
             <li><div><b>${L("ผู้ดูแลเนื้อหาตรวจทาน", "The content steward checks it")}</b>${L("เช็กความถูกต้องและความเป็นส่วนตัว เรื่องสุขภาพจะถามผู้ดูแลหรือสัตวแพทย์ก่อน", "For accuracy and privacy. Health matters are checked with a keeper or vet first.")}</div></li>

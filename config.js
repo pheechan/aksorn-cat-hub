@@ -14,9 +14,9 @@ window.SITE_CONFIG = {
   HISTORY_CSV_URL: "",    // (ไม่บังคับ) แท็บ history — เว้นว่าง = ใช้ประวัติใน data-sample.js
 
   // ---- ช่องทางรับเรื่องจากผู้ใช้ (พื้นที่แบ่งปันความรู้) ----
-  // ลิงก์ Web app ของ Google Apps Script ที่บันทึกลงชีต "Submissions" (ดูวิธีตั้งใน README / tools/submissions.gs)
+  // ลิงก์ Web app ของ Google Apps Script ที่บันทึกลงชีตรับเรื่องแยกส่วนตัว (ดู README / tools/submissions.gs)
   // ตั้งแล้ว ฟอร์มในหน้า "แบ่งปันความรู้" จะส่งเรื่องเข้าชีตทันที สถานะ "รอตรวจ"
-  SUBMIT_URL: "",
+  SUBMIT_URL: "https://script.google.com/macros/s/AKfycbxb93rl03hfs-TmaK5kwvDq4O8nCbUBmHYlxfN-HxLPMCu3uVx3n0YFfhu1gJAgvaMEVA/exec",
 
   // ---- ข้อมูลเสริมที่ชีตยังไม่มีคอลัมน์ ----
   // สีขนระบุจากรูปถ่ายในโฟลเดอร์ Drive ของทีม (ถ้าเพิ่มคอลัมน์ "สีขน" ในชีต ค่าในชีตจะใช้แทน)

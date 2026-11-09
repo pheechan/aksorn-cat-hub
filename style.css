@@ -542,3 +542,6 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
   .gallery { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 8px; padding-bottom: 4px; }
   .gallery .thumb { flex: 0 0 64px; scroll-snap-align: start; }
 }
+
+/* while the notebook loads, keep the footer below the fold so it doesn't jump when content arrives */
+main:has(> .loading) { min-height: 100vh; min-height: 100dvh; }

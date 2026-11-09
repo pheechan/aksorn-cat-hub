@@ -26,7 +26,7 @@ from PIL import Image, ImageOps
 SHEET_ID = "1LFBVHk6D9GHRL2BPJldPS-qql6UkGWmlpr8B-0B1J70"
 TAB = "Cat_profile"
 MAX_PHOTOS = 8          # per cat
-SMALL, LARGE = 480, 1200  # longest side in px
+THUMB, SMALL, LARGE = 240, 480, 1200  # longest side in px (t: list cards, s: cards on big screens, l: profile)
 OUT_DIR = os.path.join("photos", "cats")
 MANIFEST = os.path.join("photos", "manifest.js")
 IMAGE_EXT = (".jpg", ".jpeg", ".png", ".heic", ".heif", ".webp")
@@ -70,7 +70,7 @@ def save_sizes(file_id, stem):
     img = Image.open(io.BytesIO(fetch(f"https://drive.google.com/thumbnail?id={file_id}&sz=w{LARGE}")))
     img = ImageOps.exif_transpose(img).convert("RGB")
     paths = {}
-    for label, size in (("s", SMALL), ("l", LARGE)):
+    for label, size in (("t", THUMB), ("s", SMALL), ("l", LARGE)):
         copy = img.copy()
         copy.thumbnail((size, size))
         path = f"{OUT_DIR}/{stem}-{label}.jpg"

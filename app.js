@@ -1,51 +1,95 @@
 /* คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub) — the hub (cats.html), "The Keepers' Notebook".
    Built around the newcomer's tasks from Chapter 2: find a cat you saw (2.5.1), learn what is normal for it (2.1.1),
    start caring step by step (SECI internalization/socialization), and share what you know with review (2.4.1).
+   Thai and English: every UI string goes through L("ไทย", "English"); sheet text goes through T() (see i18n.js).
    Routes: #/  #/cats?coat=&area=&status=&touch=  #/find?coat=&area=  #/start  #/cat/:id  #/family[/:id]
            #/knowledge[/:category]  #/article/:id  #/search/:q  #/share?type=&cat=&ctx=  #/help  #/about  #/qr */
 (function () {
   "use strict";
 
   const CFG = window.SITE_CONFIG || {};
-  const { STATUS, CATEGORIES, HISTORY_TYPES, COATS, AREAS, norm, lower, esc } = window.CatData;
+  const { STATUS, CATEGORIES, HISTORY_TYPES, HISTORY_EN, COATS, AREAS, norm, lower, esc } = window.CatData;
+  const I = window.I18N;
+  const X = window.CONTENT_EN || { names: {}, text: {}, articles: {} };
   const app = document.getElementById("app");
   const banner = document.getElementById("banner");
   const searchInput = document.getElementById("searchInput");
-  const TITLE = CFG.SITE_TITLE || "คลังความรู้แมวอักษร";
   const enc = encodeURIComponent;
   const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 
   let D = { cats: [], byId: {}, articles: [], articleById: {}, history: [], samples: {}, error: "" };
 
-  const STERIL = { yes: "ทำหมันแล้ว", no: "ยังไม่ทำหมัน", unknown: "ไม่ทราบเรื่องทำหมัน" };
-  const VACC = { yes: "ฉีดวัคซีนแล้ว", no: "ยังไม่ฉีดวัคซีน", unknown: "ไม่ทราบเรื่องวัคซีน" };
-  const SEX = { male: "ตัวผู้", female: "ตัวเมีย", unknown: "" };
-  const TOUCH = { yes: "เป็นมิตร เข้าหาได้", no: "ไม่ชอบให้จับ" };
+  /* ---------------- language helpers ---------------- */
+  const L = (th, en) => I.L(th, en);
+  const isEN = () => I.lang === "en";
+  const TITLE = () => L(CFG.SITE_TITLE || "คลังความรู้แมวอักษร", CFG.SITE_TITLE_EN || "Aksorn Cat Knowledge Hub");
+  const lbl = (o) => (o ? (isEN() && o.en) || o.label : "");
+  const en = (o, k) => (isEN() && o && o.en && o.en[k]) || (o ? o[k] : "");
+  // sheet text → escaped HTML in the current language; still-Thai text is marked lang="th" for screen readers
+  function T(s) {
+    s = norm(s);
+    if (!s) return "";
+    return I.untranslated(s) ? `<span lang="th">${esc(s)}</span>` : esc(I.tx(s));
+  }
+  const Tp = (s) => I.tx(norm(s));
+  const nm = (c) => (isEN() && I.nameEn(c.name)) || c.name;
+  // name as HTML: in English the Thai name stays beside it (it is what is written on the collar tags)
+  function nmHtml(c, terms) {
+    const e = isEN() && I.nameEn(c.name);
+    return e ? `${highlight(e, terms || [])} <span class="th-name" lang="th">${highlight(c.name, terms || [])}</span>` : highlight(c.name, terms || []);
+  }
+
+  const STERIL = () => ({ yes: L("ทำหมันแล้ว", "Spayed / neutered"), no: L("ยังไม่ทำหมัน", "Not spayed / neutered"), unknown: L("ไม่ทราบเรื่องทำหมัน", "Spay / neuter unknown") });
+  const VACC = () => ({ yes: L("ฉีดวัคซีนแล้ว", "Vaccinated"), no: L("ยังไม่ฉีดวัคซีน", "Not vaccinated"), unknown: L("ไม่ทราบเรื่องวัคซีน", "Vaccines unknown") });
+  const SEX = () => ({ male: L("ตัวผู้", "Male"), female: L("ตัวเมีย", "Female"), unknown: "" });
   const STATUS_ORDER = { active: 0, commuter: 1, missing: 2, unknown: 3, adopted: 4, passed: 5 };
   const SEEN_NOW = (c) => c.status === "active" || c.status === "commuter";
 
   /* ---------------- helpers ---------------- */
-  const TH_DATE = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric" });
-  const TH_TIME = new Intl.DateTimeFormat("th-TH", { hour: "2-digit", minute: "2-digit" });
-  function thDate(iso) {
+  function fmtDate(iso) {
     const m = norm(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!m) return esc(iso);
-    return TH_DATE.format(new Date(+m[1], +m[2] - 1, +m[3]));
+    return new Intl.DateTimeFormat(I.locale(), { day: "numeric", month: "short", year: "numeric" }).format(new Date(+m[1], +m[2] - 1, +m[3]));
   }
-  const statusDot = (c) => `<span class="dot ${STATUS[c.status].cls}">${STATUS[c.status].label}</span>`;
+  const fmtTime = (d) => new Intl.DateTimeFormat(I.locale(), { hour: "2-digit", minute: "2-digit" }).format(d) + (isEN() ? "" : " น.");
+  const statusDot = (c) => `<span class="dot ${STATUS[c.status].cls}">${lbl(STATUS[c.status])}</span>`;
   const catHref = (c) => `#/cat/${enc(c.id)}`;
   const shareHref = (type, c, extra) => `#/share?type=${type}${c ? "&cat=" + enc(c.id) : ""}${extra || ""}`;
   const childrenOf = (id) => D.cats.filter((c) => c.mother === id);
   const siblingsOf = (c) => D.cats.filter((x) => x.id !== c.id && ((c.mother && x.mother === c.mother) || (c.siblings || []).includes(x.id)));
   const articlesFor = (id) => D.articles.filter((a) => a.relatedCats.includes(id));
   const historyFor = (id) => D.history.filter((h) => h.cat === id);
-  const coatLabel = (c) => (has(COATS, c.coat) ? COATS[c.coat].label : "");
-  const placeOf = (c) => c.locations[0] || (c.areas[0] ? AREAS[c.areas[0]].label : "");
-  const byStatusThenName = (a, b) => (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) || a.name.localeCompare(b.name, "th");
+  const coatLabel = (c) => (has(COATS, c.coat) ? lbl(COATS[c.coat]) : "");
+  const placeHtml = (c) => (c.locations[0] ? T(c.locations[0]) : c.areas[0] ? esc(lbl(AREAS[c.areas[0]])) : "");
+  const byStatusThenName = (a, b) => (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) || nm(a).localeCompare(nm(b), I.locale());
   const store = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: progress just is not kept */ } }
   };
+  const session = {
+    get(k) { try { return JSON.parse(sessionStorage.getItem(k) || "null"); } catch (e) { return null; } },
+    set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* not kept */ } }
+  };
+  const START_KEY = "akc-start-v1", MET_KEY = "akc-met-v1";
+  const metMap = () => store.get(MET_KEY, {});
+
+  // the list a visitor came from (filtered cats, find results, search), so a profile can lead back and step through it
+  function rememberList(ids, th, enLabel) { session.set("akc-list", { hash: location.hash, ids, th, en: enLabel }); }
+
+  // load a library only on the page that needs it (family graph, QR sheet)
+  const libs = {};
+  function loadScript(src) {
+    if (!libs[src]) libs[src] = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src; s.async = true; s.crossOrigin = "anonymous";
+      s.onload = resolve; s.onerror = () => { delete libs[src]; reject(new Error("failed to load " + src)); };
+      document.head.appendChild(s);
+    });
+    return libs[src];
+  }
+  const VIS_JS = "https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js";
+  const QR_JS = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
+  let renderToken = 0;
 
   // Drawn sitting cat in the cat's coat colour, used when there is no photo yet.
   const DRAW = {
@@ -60,7 +104,7 @@
     if (c.coat === "calico") extra = `<g clip-path="url(#${id})"><ellipse cx="72" cy="168" rx="26" ry="34" fill="#d9822b"/><ellipse cx="128" cy="200" rx="22" ry="26" fill="#232326"/><ellipse cx="118" cy="96" rx="22" ry="16" fill="#d9822b"/><ellipse cx="80" cy="92" rx="14" ry="12" fill="#232326"/></g>`;
     else if (c.coat === "bicolor") extra = `<g clip-path="url(#${id})" fill="#f4f1ea"><path d="M84 112 Q100 104 116 112 L112 150 Q100 160 88 150 Z"/><ellipse cx="100" cy="200" rx="26" ry="34"/></g>`;
     else if (c.coat === "tabby" || c.coat === "orange" || c.coat === "cream") extra = `<g clip-path="url(#${id})" stroke="${dark}" stroke-width="5" stroke-linecap="round" fill="none"><path d="M90 84 L92 98 M100 82 L100 97 M110 84 L108 98"/><path d="M62 170 C80 168 90 172 98 176 M60 194 C80 190 92 196 102 200 M140 172 C126 170 116 174 108 178"/></g>`;
-    return `<svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" role="img" aria-label="ภาพวาดแทนรูปของ ${esc(c.name)}">
+    return `<svg viewBox="0 0 200 250" preserveAspectRatio="xMidYMax meet" role="img" aria-label="${esc(L("ภาพวาดแทนรูปของ " + c.name, "Drawing in place of a photo of " + nm(c)))}">
       <defs><clipPath id="${id}"><path d="${body}"/><ellipse cx="100" cy="110" rx="38" ry="33"/></clipPath></defs>
       <ellipse cx="100" cy="232" rx="64" ry="7" fill="rgba(31,29,26,.12)"/>
       <path d="M138 222 C176 218 184 186 168 164" stroke="${fill}" stroke-width="12" stroke-linecap="round" fill="none"/>
@@ -69,22 +113,25 @@
       <circle cx="86" cy="110" r="4.4" fill="#c2416f"/><circle cx="114" cy="110" r="4.4" fill="#c2416f"/>
     </svg>`;
   }
+  const photoAlt = (c) => esc(L("รูปของ" + c.name, "Photo of " + nm(c)));
   function portrait(c, note, large) {
     if (c.photo) {
       return large
-        ? `<div class="portrait"><img id="profilePhoto" src="${esc(c.photoLarge || c.photo)}" alt="รูปของ${esc(c.name)}" width="900" height="1125" fetchpriority="high" decoding="async"></div>`
-        : `<div class="portrait"><img src="${esc(c.photo)}" alt="รูปของ${esc(c.name)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
+        ? `<div class="portrait"><img id="profilePhoto" src="${esc(c.photoLarge || c.photo)}" alt="${photoAlt(c)}" width="900" height="1125" fetchpriority="high" decoding="async"></div>`
+        : `<div class="portrait"><img src="${esc(c.photo)}"${c.photoThumb ? ` srcset="${esc(c.photoThumb)} 240w, ${esc(c.photo)} 480w" sizes="(max-width: 640px) 45vw, 230px"` : ""} alt="${photoAlt(c)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
     }
-    return `<div class="portrait">${silhouette(c)}${note ? '<span class="ph-note">ยังไม่มีรูป</span>' : ""}</div>`;
+    return `<div class="portrait">${silhouette(c)}${note ? `<span class="ph-note">${L("ยังไม่มีรูป", "No photo yet")}</span>` : ""}</div>`;
   }
-  const miniCat = (c) => `<a class="mini" href="${catHref(c)}">${portrait(c)}${esc(c.name)}</a>`;
-  function catCard(c, terms, why) {
+  const CHECK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7"/></svg>';
+  const metBadge = (c, met) => (met[c.id] ? `<span class="met-badge">${CHECK}${L("รู้จักแล้ว", "Known")}</span>` : "");
+  const miniCat = (c) => `<a class="mini" href="${catHref(c)}">${portrait(c)}<span>${nmHtml(c)}</span></a>`;
+  function catCard(c, terms, why, met) {
     const meta = [statusDot(c)];
-    const place = placeOf(c);
-    if (place) meta.push(`<span>${highlight(place, terms || [])}</span>`);
+    const place = placeHtml(c);
+    if (place) meta.push(`<span>${terms && terms.length ? highlight(Tp(c.locations[0] || ""), terms) || place : place}</span>`);
     return `<a class="cat${c.status === "passed" ? " past" : ""}" href="${catHref(c)}">
-      ${portrait(c, true)}
-      <div class="cat-name">${highlight(c.name, terms || [])}</div>
+      ${portrait(c, true)}${metBadge(c, met || {})}
+      <div class="cat-name">${nmHtml(c, terms)}</div>
       <div class="cat-meta">${meta.join("")}</div>
       ${why ? `<span class="why">${esc(why)}</span>` : ""}
     </a>`;
@@ -106,6 +153,16 @@
       return html;
     }).join("");
   }
+  // an article in the current language; th: true means English was asked for but there is no translation yet
+  function art(a) {
+    const e = isEN() && X.articles && X.articles[a.id];
+    if (!e) return Object.assign({}, a, { th: isEN() });
+    return Object.assign({}, a, {
+      title: e.title || a.title, summary: e.summary || a.summary, body: e.body || a.body,
+      tags: e.tags ? e.tags.split(/\s*,\s*/).filter(Boolean) : a.tags, author: e.author || a.author, source: e.source || a.source, th: false
+    });
+  }
+  const langAttr = (x) => (x.th ? ' lang="th"' : "");
 
   /* ---------------- search ---------------- */
   const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -125,22 +182,31 @@
     }
     return s;
   }
+  // searches both languages, so "nu dam" and "หนูดำ" find the same cat
   function searchAll(q) {
     q = lower(q);
     const terms = q.split(/\s+/).filter(Boolean);
     if (!terms.length) return { cats: [], articles: [], terms };
-    const cats = D.cats.map((c) => ({ c, s: score([[c.name, 10], [c.nicknames.join(" "), 8], [coatLabel(c), 4], [c.locations.join(" "), 3], [c.areas.map((a) => AREAS[a].label).join(" "), 2], [c.marks, 3], [c.personality, 2], [c.health, 2], [c.normal, 2], [c.notes, 1], [c.interview.join(" "), 1]], terms, q) }))
-      .filter((r) => r.s).sort((a, b) => b.s - a.s).map((r) => r.c);
-    const articles = D.articles.map((a) => ({ a, s: score([[a.title, 10], [a.tags.join(" "), 6], [CATEGORIES[a.category].label, 5], [a.summary, 3], [a.body, 1]], terms, q) }))
-      .filter((r) => r.s).sort((a, b) => b.s - a.s).map((r) => r.a);
+    const both = (s) => { const t = X.text && X.text[norm(s).replace(/\s+/g, " ")]; return t ? s + " " + t : s; };
+    const cats = D.cats.map((c) => ({ c, s: score([
+      [c.name, 10], [X.names && X.names[c.name], 10], [c.nicknames.join(" "), 8],
+      [has(COATS, c.coat) ? COATS[c.coat].label + " " + COATS[c.coat].en : "", 4],
+      [c.locations.map(both).join(" "), 3], [c.areas.map((a) => AREAS[a].label + " " + AREAS[a].en).join(" "), 2],
+      [both(c.marks), 3], [both(c.personality), 2], [both(c.health), 2], [c.normal, 2], [both(c.notes), 1], [c.interview.map(both).join(" "), 1]
+    ], terms, q) })).filter((r) => r.s).sort((a, b) => b.s - a.s).map((r) => r.c);
+    const articles = D.articles.map((a) => {
+      const e = (X.articles && X.articles[a.id]) || {};
+      return { a, s: score([[a.title + " " + (e.title || ""), 10], [a.tags.join(" ") + " " + (e.tags || ""), 6], [CATEGORIES[a.category].label + " " + CATEGORIES[a.category].en, 5], [a.summary + " " + (e.summary || ""), 3], [a.body + " " + (e.body || ""), 1]], terms, q) };
+    }).filter((r) => r.s).sort((a, b) => b.s - a.s).map((r) => r.a);
     return { cats, articles, terms };
   }
 
-  function articleRow(a, terms) {
+  function articleRow(raw, terms) {
+    const a = art(raw);
     return `<li><a class="article-row" href="#/article/${enc(a.id)}">
-      <span class="a-cat">${CATEGORIES[a.category].label}</span>
-      <div><h3>${highlight(a.title, terms)}</h3>${a.summary ? `<p>${highlight(a.summary, terms)}</p>` : ""}
-      <span class="a-meta">${[esc(a.source || a.author), a.date ? thDate(a.date) : "", a.reviewedBy ? "ตรวจทานโดย " + esc(a.reviewedBy) : ""].filter(Boolean).join(" · ")}</span></div>
+      <span class="a-cat">${lbl(CATEGORIES[a.category])}</span>
+      <div${langAttr(a)}><h3>${highlight(a.title, terms)}</h3>${a.summary ? `<p>${highlight(a.summary, terms)}</p>` : ""}
+      <span class="a-meta">${[esc(a.source || a.author), a.date ? fmtDate(a.date) : "", a.reviewedBy ? L("ตรวจทานโดย ", "Reviewed by ") + esc(a.reviewedBy) : ""].filter(Boolean).join(" · ")}</span></div>
     </a></li>`;
   }
 
@@ -150,8 +216,37 @@
     help: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M12 9v5M9.5 11.5h5"/></svg>'
   };
 
+  /* ---------------- newcomer path (shared by home and #/start) ---------------- */
+  function startSteps() {
+    const noTouch = D.cats.filter((c) => c.touch === "no" && SEEN_NOW(c)).map(nm);
+    const nNow = D.cats.filter(SEEN_NOW).length;
+    return [
+      { id: "know", seci: "Combination", title: L("รู้จักแมวที่คุณจะเจอบ่อย", "Get to know the cats you'll see most"),
+        text: L(`ตอนนี้มีแมวในคณะ ${nNow} ตัว เริ่มจากตัวที่อยู่ในอาคารที่คุณเรียน แล้วลองจำให้ได้ 3 ตัว กดปุ่ม “ฉันรู้จัก…แล้ว” ในหน้าแมวแต่ละตัวเพื่อนับ`,
+          `There are ${nNow} cats at the faculty right now. Start with the ones in the building where you study and try to learn three. Tap “I know … now” on a cat's page to keep count.`),
+        links: [[L("ดูแมวที่อยู่ในคณะ", "See the cats at the faculty"), "#/cats?status=active"], [L("วิธีที่ผู้ดูแลจำแมว", "How keepers tell cats apart"), "#/article/a09"]] },
+      { id: "touch", seci: "Internalization", title: L("รู้ว่าตัวไหนเข้าหาได้ ตัวไหนไม่ควรจับ", "Know which cats you can approach, and which not to touch"),
+        text: noTouch.length
+          ? L(`${noTouch.join(", ")} ไม่ชอบให้จับ ส่วนตัวอื่นส่วนใหญ่เป็นมิตร แต่ก็ควรอ่านท่าทางก่อนทุกครั้ง`, `${noTouch.join(", ")} ${noTouch.length > 1 ? "don't" : "doesn't"} like being touched. Most of the others are friendly, but always read a cat's body language first.`)
+          : L("ส่วนใหญ่เป็นมิตร แต่ควรอ่านท่าทางแมวก่อนเข้าหาทุกครั้ง", "Most are friendly, but always read a cat's body language before approaching."),
+        links: [[L("แมวที่ไม่ชอบให้จับ", "Cats who don't like being touched"), "#/cats?touch=no"], [L("อ่านภาษากายแมว", "Reading cat body language"), "#/article/a04"]] },
+      { id: "feed", seci: "Internalization", title: L("ให้อาหารตามธรรมเนียมของคณะ", "Feed the way the faculty does"),
+        text: L("ให้ในจุดที่ตกลงกันไว้ ไม่ให้ซ้ำกับคนอื่น และเก็บชามหลังแมวกินเสร็จ ธรรมเนียมเหล่านี้ไม่เคยถูกเขียนเป็นกฎ แต่ผู้ดูแลทุกคนทำเหมือนกัน",
+          "Feed at the agreed spots, don't double up with others, and clear the bowls once the cats have eaten. None of this was ever written down as a rule, but every keeper does it."),
+        links: [[L("การให้อาหาร", "Feeding"), "#/article/a01"], [L("ความสะอาดของจุดให้อาหาร", "Keeping feeding spots clean"), "#/article/a05"]] },
+      { id: "sick", seci: "Internalization", title: L("รู้ว่าเจอแมวป่วยต้องทำอะไร และแจ้งใคร", "Know what to do, and who to tell, if a cat is sick"),
+        text: L("สังเกตอาการ ถ่ายรูป จดเวลาและสถานที่ ห้ามให้ยาของคน แล้วแจ้งผู้ดูแล", "Watch the symptoms, take a photo, note the time and place, never give human medicine, and tell a keeper."),
+        links: [[L("เจอแมวป่วย ทำอย่างไร", "If you find a sick cat"), "#/help"], [L("สัญญาณว่าแมวไม่สบาย", "Signs a cat is unwell"), "#/article/a02"]] },
+      { id: "join", seci: "Socialization", title: L("ไปดูแลจริงกับผู้ดูแลเดิมสักรอบ", "Go on a round with an experienced keeper"),
+        text: L("บางอย่างเรียนจากการอ่านไม่ได้ เช่น จังหวะการเข้าหาแมวขี้ระแวง หรือวิธีสังเกตว่าแมวกินน้อยกว่าปกติ ขอไปให้อาหารกับผู้ดูแลเดิมสักครั้ง",
+          "Some things can't be learned by reading, like the timing for approaching a wary cat, or noticing that a cat is eating less than usual. Ask to join an experienced keeper on a feeding round."),
+        links: [[L("ขอไปช่วยดูแลด้วย", "Ask to help out"), shareHref("join")], [L("ใครดูแลอะไร", "Who looks after what"), "#/about"]] }
+    ];
+  }
+
   /* ---------------- home ---------------- */
   function renderHome() {
+    const met = metMap();
     const now = D.cats.filter(SEEN_NOW).sort((a, b) => (b.photo ? 1 : 0) - (a.photo ? 1 : 0) || byStatusThenName(a, b));
     const active = D.cats.filter((c) => c.status === "active").length;
     const commuters = D.cats.filter((c) => c.status === "commuter").length;
@@ -159,47 +254,55 @@
     const quotes = (CFG.KEEPER_QUOTES || []).slice(0, 4);
     const recent = D.history.slice(0, 4);
     const firstReads = ["a09", "a01", "a04", "a02"].map((id) => D.articleById[id]).filter(Boolean);
+    const steps = startSteps(), done = store.get(START_KEY, {}), nDone = steps.filter((s) => done[s.id]).length;
+    const next = steps.find((s) => !done[s.id]);
+    const nMet = D.cats.filter((c) => met[c.id]).length;
+    const resume = nDone > 0 && next ? `<a class="resume" href="#/start">
+        <span class="resume-ring" style="--p:${nDone / steps.length}" aria-hidden="true"><b>${nDone}/${steps.length}</b></span>
+        <span><span class="eyebrow">${L("ทำต่อจากครั้งก่อน", "Pick up where you left off")}</span><b>${L("ขั้นต่อไป: ", "Next: ")}${esc(next.title)}</b>
+        ${nMet ? `<small>${L(`คุณรู้จักแมวแล้ว ${nMet} ตัว`, `You know ${nMet} cat${nMet > 1 ? "s" : ""} so far`)}</small>` : ""}</span><span class="go" aria-hidden="true">→</span></a>` : "";
     app.innerHTML = `
       <section class="hello">
         <div>
-          <span class="eyebrow">สมุดผู้ดูแลแมว คณะอักษรศาสตร์</span>
-          <h1>สิ่งที่ผู้ดูแลรู้ เกี่ยวกับแมวทุกตัวในคณะ</h1>
-          <p class="lede">ความรู้เรื่องแมวในคณะเคยอยู่กับผู้ดูแลไม่กี่คน และทุกปีนิสิตที่ช่วยดูแลก็เปลี่ยนรุ่น สมุดเล่มนี้เก็บสิ่งที่พวกเขารู้ไว้ให้คนมาใหม่ ไม่ต้องเริ่มจากศูนย์</p>
+          <span class="eyebrow">${L("สมุดผู้ดูแลแมว คณะอักษรศาสตร์", "The cat keepers' notebook, Faculty of Arts")}</span>
+          <h1>${L("สิ่งที่ผู้ดูแลรู้ เกี่ยวกับแมวทุกตัวในคณะ", "What the keepers know about every cat in the faculty")}</h1>
+          <p class="lede">${L("ความรู้เรื่องแมวในคณะเคยอยู่กับผู้ดูแลไม่กี่คน และทุกปีนิสิตที่ช่วยดูแลก็เปลี่ยนรุ่น สมุดเล่มนี้เก็บสิ่งที่พวกเขารู้ไว้ให้คนมาใหม่ ไม่ต้องเริ่มจากศูนย์",
+            "What people know about the faculty's cats used to live with a few keepers, and the students who help out change every year. This notebook keeps what they know, so newcomers don't start from zero.")}</p>
         </div>
-        <div class="hello-stats" aria-label="สรุปตอนนี้">
-          <div><b>${active}</b><span>ตัวอยู่ในคณะ</span></div>
-          <div><b>${commuters}</b><span>ตัวแวะมาบ้าง</span></div>
-          <div><b>${keeperArticles}</b><span>เรื่องเล่าผู้ดูแล</span></div>
+        <div class="hello-stats" role="group" aria-label="${L("สรุปตอนนี้", "At a glance")}">
+          <div><b>${active}</b><span>${L("ตัวอยู่ในคณะ", "living at the faculty")}</span></div>
+          <div><b>${commuters}</b><span>${L("ตัวแวะมาบ้าง", "drop by now and then")}</span></div>
+          <div><b>${keeperArticles}</b><span>${L("เรื่องเล่าผู้ดูแล", "keepers' stories")}</span></div>
         </div>
       </section>
-
+      ${resume}
       <div class="tasks">
-        <a class="task" href="#/find"><span class="task-ico">${ICON.find}</span><h2>เพิ่งเจอแมว อยากรู้ว่าตัวไหน</h2><p>ไม่ต้องรู้ชื่อ เลือกสีขนและที่ที่เจอ แล้วดูว่าเป็นแมวตัวไหน</p><span class="go">หาแมวตัวนี้ →</span></a>
-        <a class="task" href="#/start"><span class="task-ico">${ICON.start}</span><h2>มาใหม่ อยากช่วยดูแล</h2><p>5 ขั้นที่ผู้ดูแลเดิมอยากให้รู้ ตั้งแต่จำแมวไปจนถึงไปดูแลจริง</p><span class="go">เริ่มที่นี่ →</span></a>
-        <a class="task urgent" href="#/help"><span class="task-ico">${ICON.help}</span><h2>แมวดูไม่สบาย หรือบาดเจ็บ</h2><p>ทำอะไรก่อน อะไรห้ามทำ และติดต่อใคร</p><span class="go">ดูขั้นตอน →</span></a>
+        <a class="task" href="#/find"><span class="task-ico">${ICON.find}</span><h2>${L("เพิ่งเจอแมว อยากรู้ว่าตัวไหน", "Just met a cat? Find out who it is")}</h2><p>${L("ไม่ต้องรู้ชื่อ เลือกสีขนและที่ที่เจอ แล้วดูว่าเป็นแมวตัวไหน", "No name needed. Pick its coat and where you saw it.")}</p><span class="go">${L("หาแมวตัวนี้", "Find this cat")} →</span></a>
+        <a class="task" href="#/start"><span class="task-ico">${ICON.start}</span><h2>${L("มาใหม่ อยากช่วยดูแล", "New here and want to help?")}</h2><p>${L("5 ขั้นที่ผู้ดูแลเดิมอยากให้รู้ ตั้งแต่จำแมวไปจนถึงไปดูแลจริง", "Five steps the keepers want you to know, from learning the cats to caring for them.")}</p><span class="go">${nDone ? L(`ทำแล้ว ${nDone}/5 · ทำต่อ`, `${nDone}/5 done · continue`) : L("เริ่มที่นี่", "Start here")} →</span></a>
+        <a class="task urgent" href="#/help"><span class="task-ico">${ICON.help}</span><h2>${L("แมวดูไม่สบาย หรือบาดเจ็บ", "A cat looks sick or hurt")}</h2><p>${L("ทำอะไรก่อน อะไรห้ามทำ และติดต่อใคร", "What to do first, what not to do, and who to call.")}</p><span class="go">${L("ดูขั้นตอน", "See the steps")} →</span></a>
       </div>
 
       <section class="sec">
-        <div class="toolbar"><h2>ตอนนี้ในคณะ</h2><a href="#/cats">ดูแมวทั้งหมด ${D.cats.length} ตัว →</a></div>
-        <div class="strip">${now.map((c) => catCard(c)).join("")}</div>
+        <div class="toolbar"><h2>${L("ตอนนี้ในคณะ", "At the faculty now")}</h2><a href="#/cats">${L(`ดูแมวทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`)} →</a></div>
+        <div class="strip">${now.map((c) => catCard(c, null, "", met)).join("")}</div>
       </section>
 
       ${quotes.length ? `<section class="sec">
-        <h2>จากสมุดผู้ดูแล</h2>
-        <p class="muted">คำพูดจริงจากการสัมภาษณ์ผู้ดูแลแมว ความรู้แบบนี้ไม่เคยถูกเขียนไว้ที่ไหนมาก่อน</p>
-        <div class="quotes">${quotes.map((q) => `<figure class="quote"><blockquote>“${esc(q.text)}”</blockquote><figcaption>${esc(q.context)}${q.href ? ` · <a href="${esc(q.href)}">${esc(q.cta || "อ่านต่อ")}</a>` : ""}</figcaption></figure>`).join("")}</div>
+        <h2>${L("จากสมุดผู้ดูแล", "From the keepers' notebook")}</h2>
+        <p class="muted">${L("คำพูดจริงจากการสัมภาษณ์ผู้ดูแลแมว ความรู้แบบนี้ไม่เคยถูกเขียนไว้ที่ไหนมาก่อน", "Real words from interviews with the keepers. Knowledge like this had never been written down anywhere.")}</p>
+        <div class="quotes">${quotes.map((q) => `<figure class="quote"><blockquote>“${esc(en(q, "text"))}”</blockquote>${isEN() && q.en ? `<p class="orig" lang="th">“${esc(q.text)}”</p>` : ""}<figcaption>${esc(en(q, "context"))}${q.href ? ` · <a href="${esc(q.href)}">${esc(en(q, "cta") || L("อ่านต่อ", "Read more"))}</a>` : ""}</figcaption></figure>`).join("")}</div>
       </section>` : ""}
 
       <section class="sec two">
         <div>
-          <h2>บันทึกล่าสุด</h2>
-          <p class="muted">ข่าวและการดูแลที่ทีมบันทึกไว้</p>
-          ${recent.length ? `<ol class="timeline">${recent.map((h) => { const c = D.byId[h.cat]; return `<li><time datetime="${esc(h.date)}">${thDate(h.date)}</time><div>${c ? `<a href="${catHref(c)}"><b>${esc(c.name)}</b></a> · ` : ""}<span class="t-type">${HISTORY_TYPES[h.type]}</span>${esc(h.note)}</div></li>`; }).join("")}</ol>` : `<p class="muted">ยังไม่มีบันทึก</p>`}
-          <p style="margin-top:14px"><a href="${shareHref("sighting")}">เห็นแมววันนี้? บันทึกให้ทีม →</a></p>
+          <h2>${L("บันทึกล่าสุด", "Latest notes")}</h2>
+          <p class="muted">${L("ข่าวและการดูแลที่ทีมบันทึกไว้", "News and care the team has recorded")}</p>
+          ${recent.length ? `<ol class="timeline">${recent.map((h) => { const c = D.byId[h.cat]; return `<li><time datetime="${esc(h.date)}">${fmtDate(h.date)}</time><div>${c ? `<a href="${catHref(c)}"><b>${nmHtml(c)}</b></a> · ` : ""}<span class="t-type">${L(HISTORY_TYPES[h.type], HISTORY_EN[h.type])}</span>${T(h.note)}</div></li>`; }).join("")}</ol>` : `<p class="muted">${L("ยังไม่มีบันทึก", "Nothing recorded yet")}</p>`}
+          <p style="margin-top:14px"><a href="${shareHref("sighting")}">${L("เห็นแมววันนี้? บันทึกให้ทีม", "Saw a cat today? Tell the team")} →</a></p>
         </div>
         <div>
-          <h2>อ่านก่อนไปดูแลแมว</h2>
-          <p class="muted">เรื่องที่ผู้ดูแลใหม่ถามบ่อยที่สุด</p>
+          <h2>${L("อ่านก่อนไปดูแลแมว", "Read before you go")}</h2>
+          <p class="muted">${L("เรื่องที่ผู้ดูแลใหม่ถามบ่อยที่สุด", "What new keepers ask most")}</p>
           <ul class="articles">${firstReads.map((a) => articleRow(a)).join("")}</ul>
         </div>
       </section>`;
@@ -207,34 +310,36 @@
 
   /* ---------------- all cats with facets ---------------- */
   function renderCats(q) {
+    const met = metMap();
     const f = { status: q.get("status") || "", coat: q.get("coat") || "", area: q.get("area") || "", touch: q.get("touch") || "" };
     const n = (pred) => D.cats.filter(pred).length;
     const chip = (key, val, label, count, swatch) => `<button type="button" data-k="${key}" data-v="${val}" aria-pressed="${f[key] === val}">${swatch ? `<span class="swatch" style="background:${swatch}"></span>` : ""}${label}${count != null ? ` <span class="n">${count}</span>` : ""}</button>`;
-    const statusChips = [chip("status", "", "ทั้งหมด", D.cats.length)].concat(Object.keys(STATUS).filter((k) => n((c) => c.status === k)).map((k) => chip("status", k, STATUS[k].label, n((c) => c.status === k))));
-    const coatChips = [chip("coat", "", "ทุกสี")].concat(Object.keys(COATS).filter((k) => n((c) => c.coat === k)).map((k) => chip("coat", k, COATS[k].label, n((c) => c.coat === k), COATS[k].swatch)), n((c) => c.coat === "unknown") ? [chip("coat", "unknown", "ยังไม่ระบุสี", n((c) => c.coat === "unknown"))] : []);
-    const areaChips = [chip("area", "", "ทุกที่")].concat(Object.keys(AREAS).filter((k) => n((c) => c.areas.includes(k))).map((k) => chip("area", k, AREAS[k].label, n((c) => c.areas.includes(k)))));
-    const touchChips = [chip("touch", "", "ทั้งหมด"), chip("touch", "yes", "เป็นมิตร เข้าหาได้", n((c) => c.touch === "yes")), chip("touch", "no", "ไม่ชอบให้จับ", n((c) => c.touch === "no"))];
+    const statusChips = [chip("status", "", L("ทั้งหมด", "All"), D.cats.length)].concat(Object.keys(STATUS).filter((k) => n((c) => c.status === k)).map((k) => chip("status", k, lbl(STATUS[k]), n((c) => c.status === k))));
+    const coatChips = [chip("coat", "", L("ทุกสี", "Any coat"))].concat(Object.keys(COATS).filter((k) => n((c) => c.coat === k)).map((k) => chip("coat", k, lbl(COATS[k]), n((c) => c.coat === k), COATS[k].swatch)), n((c) => c.coat === "unknown") ? [chip("coat", "unknown", L("ยังไม่ระบุสี", "Not recorded"), n((c) => c.coat === "unknown"))] : []);
+    const areaChips = [chip("area", "", L("ทุกที่", "Anywhere"))].concat(Object.keys(AREAS).filter((k) => n((c) => c.areas.includes(k))).map((k) => chip("area", k, lbl(AREAS[k]), n((c) => c.areas.includes(k)))));
+    const touchChips = [chip("touch", "", L("ทั้งหมด", "All")), chip("touch", "yes", L("เป็นมิตร เข้าหาได้", "Friendly"), n((c) => c.touch === "yes")), chip("touch", "no", L("ไม่ชอบให้จับ", "Doesn't like touch"), n((c) => c.touch === "no"))];
     app.innerHTML = `
       <header class="page-head">
-        <span class="eyebrow">แมวในคณะ</span>
-        <h1>แมวทั้ง ${D.cats.length} ตัวในสมุด</h1>
-        <p class="lede">กรองตามสีขน ที่ที่เจอบ่อย หรือดูว่าตัวไหนเข้าหาได้ ไม่รู้ชื่อก็หาเจอ</p>
+        <span class="eyebrow">${L("แมวในคณะ", "Cats")}</span>
+        <h1>${L(`แมวทั้ง ${D.cats.length} ตัวในสมุด`, `All ${D.cats.length} cats in the notebook`)}</h1>
+        <p class="lede">${L("กรองตามสีขน ที่ที่เจอบ่อย หรือดูว่าตัวไหนเข้าหาได้ ไม่รู้ชื่อก็หาเจอ", "Filter by coat, by where they usually are, or by whether you can approach them. No name needed.")}</p>
       </header>
-      <div class="facets" role="group" aria-label="ตัวกรอง">
-        <div class="facet"><span>สถานะ</span><div class="chips">${statusChips.join("")}</div></div>
-        <div class="facet"><span>สีขน</span><div class="chips">${coatChips.join("")}</div></div>
-        <div class="facet"><span>เจอบ่อยที่</span><div class="chips">${areaChips.join("")}</div></div>
-        <div class="facet"><span>เข้าหาได้ไหม</span><div class="chips">${touchChips.join("")}</div></div>
+      <div class="facets" role="group" aria-label="${L("ตัวกรอง", "Filters")}">
+        <div class="facet"><span>${L("สถานะ", "Status")}</span><div class="chips">${statusChips.join("")}</div></div>
+        <div class="facet"><span>${L("สีขน", "Coat")}</span><div class="chips">${coatChips.join("")}</div></div>
+        <div class="facet"><span>${L("เจอบ่อยที่", "Usually at")}</span><div class="chips">${areaChips.join("")}</div></div>
+        <div class="facet"><span>${L("เข้าหาได้ไหม", "Approach?")}</span><div class="chips">${touchChips.join("")}</div></div>
       </div>
-      <div class="toolbar"><p class="summary" id="catSummary" aria-live="polite"></p><span><a href="#/family">ผังครอบครัว</a></span></div>
+      <div class="toolbar"><p class="summary" id="catSummary" aria-live="polite"></p><span><a href="#/family">${L("ผังครอบครัว", "Family tree")}</a></span></div>
       <div class="cats" id="catGrid"></div>`;
     const draw = () => {
       const list = D.cats.filter((c) => (!f.status || c.status === f.status) && (!f.coat || c.coat === f.coat) && (!f.area || c.areas.includes(f.area)) && (!f.touch || c.touch === f.touch)).sort(byStatusThenName);
       const filtered = f.status || f.coat || f.area || f.touch;
-      document.getElementById("catSummary").innerHTML = `แสดง ${list.length} จาก ${D.cats.length} ตัว${filtered ? ` · <button type="button" class="linkbtn" id="clearF">ล้างตัวกรอง</button>` : ""}`;
-      document.getElementById("catGrid").innerHTML = list.length ? list.map((c) => catCard(c)).join("") : `<p class="empty">ไม่มีแมวที่ตรงกับตัวกรองนี้</p>`;
+      document.getElementById("catSummary").innerHTML = L(`แสดง ${list.length} จาก ${D.cats.length} ตัว`, `Showing ${list.length} of ${D.cats.length}`) + (filtered ? ` · <button type="button" class="linkbtn" id="clearF">${L("ล้างตัวกรอง", "Clear filters")}</button>` : "");
+      document.getElementById("catGrid").innerHTML = list.length ? list.map((c) => catCard(c, null, "", met)).join("") : `<p class="empty">${L("ไม่มีแมวที่ตรงกับตัวกรองนี้", "No cats match these filters")}</p>`;
       const cl = document.getElementById("clearF");
       if (cl) cl.addEventListener("click", () => { Object.keys(f).forEach((k) => { f[k] = ""; }); sync(); });
+      rememberList(list.map((c) => c.id), filtered ? "แมวที่กรองไว้" : "แมวในคณะ", filtered ? "Filtered cats" : "Cats");
     };
     const sync = () => {
       const p = new URLSearchParams();
@@ -249,22 +354,24 @@
 
   /* ---------------- find this cat (browse by what you can see: 2.5.1) ---------------- */
   function renderFind(q) {
+    const met = metMap();
     const st = { coat: q.get("coat") || "", area: q.get("area") || "" };
     const places = ["brk", "mcs", "tewalai", "store"].filter((k) => has(AREAS, k));
     app.innerHTML = `
       <header class="page-head">
-        <span class="eyebrow">หาแมวตัวนี้</span>
-        <h1>เจอแมวตัวหนึ่ง แต่ไม่รู้ว่าชื่ออะไร</h1>
-        <p class="lede">ผู้ดูแลบอกว่า <span class="note-hand">“จำแมวจากหน้า”</span> ซึ่งต้องใช้เวลา สำหรับคนมาใหม่ เริ่มจากสิ่งที่เห็นได้ทันที คือสีขนกับที่ที่เจอ</p>
+        <span class="eyebrow">${L("หาแมวตัวนี้", "Find this cat")}</span>
+        <h1>${L("เจอแมวตัวหนึ่ง แต่ไม่รู้ว่าชื่ออะไร", "You met a cat but don't know its name")}</h1>
+        <p class="lede">${L(`ผู้ดูแลบอกว่า <span class="note-hand">“จำแมวจากหน้า”</span> ซึ่งต้องใช้เวลา สำหรับคนมาใหม่ เริ่มจากสิ่งที่เห็นได้ทันที คือสีขนกับที่ที่เจอ`,
+          `The keepers say <span class="note-hand">“I know them by their faces”</span>, which takes time. As a newcomer, start with what you can see straight away: the coat and where you saw it.`)}</p>
       </header>
       <div class="finder">
-        <section class="step-card"><h2><span class="n">ขั้นที่ 1</span>สีขนเป็นแบบไหน</h2><p>เลือกที่ใกล้เคียงที่สุด ถ้าไม่แน่ใจข้ามไปได้</p>
-          <div class="coat-grid">${Object.keys(COATS).map((k) => `<button type="button" data-k="coat" data-v="${k}" aria-pressed="${st.coat === k}"><span class="swatch" style="background:${COATS[k].swatch}"></span>${COATS[k].label}</button>`).join("")}
-            <button type="button" data-k="coat" data-v="" aria-pressed="${!st.coat}">ไม่แน่ใจ</button></div>
+        <section class="step-card"><h2><span class="n">${L("ขั้นที่ 1", "Step 1")}</span>${L("สีขนเป็นแบบไหน", "What colour is its coat?")}</h2><p>${L("เลือกที่ใกล้เคียงที่สุด ถ้าไม่แน่ใจข้ามไปได้", "Pick the closest. Not sure? Skip it.")}</p>
+          <div class="coat-grid">${Object.keys(COATS).map((k) => `<button type="button" data-k="coat" data-v="${k}" aria-pressed="${st.coat === k}"><span class="swatch" style="background:${COATS[k].swatch}"></span>${lbl(COATS[k])}</button>`).join("")}
+            <button type="button" data-k="coat" data-v="" aria-pressed="${!st.coat}">${L("ไม่แน่ใจ", "Not sure")}</button></div>
         </section>
-        <section class="step-card"><h2><span class="n">ขั้นที่ 2</span>เจอที่ไหน</h2><p>แมวหลายตัวมีที่ประจำ แต่บางตัวก็เดินไปทั่วคณะ</p>
-          <div class="area-grid">${places.map((k) => `<button type="button" data-k="area" data-v="${k}" aria-pressed="${st.area === k}">${AREAS[k].label}</button>`).join("")}
-            <button type="button" data-k="area" data-v="" aria-pressed="${!st.area}">ที่อื่น หรือไม่แน่ใจ</button></div>
+        <section class="step-card"><h2><span class="n">${L("ขั้นที่ 2", "Step 2")}</span>${L("เจอที่ไหน", "Where did you see it?")}</h2><p>${L("แมวหลายตัวมีที่ประจำ แต่บางตัวก็เดินไปทั่วคณะ", "Many cats have a regular spot, but some wander all over the faculty.")}</p>
+          <div class="area-grid">${places.map((k) => `<button type="button" data-k="area" data-v="${k}" aria-pressed="${st.area === k}">${lbl(AREAS[k])}</button>`).join("")}
+            <button type="button" data-k="area" data-v="" aria-pressed="${!st.area}">${L("ที่อื่น หรือไม่แน่ใจ", "Somewhere else, or not sure")}</button></div>
         </section>
         <section class="matches" id="matches" aria-live="polite"></section>
       </div>`;
@@ -272,21 +379,22 @@
       const pool = D.cats.filter((c) => c.status !== "passed" && c.status !== "adopted");
       const ranked = pool.map((c) => {
         let s = 0; const why = [];
-        if (st.coat) { if (c.coat === st.coat) { s += 3; why.push("สีขนตรง"); } else if (c.coat === "unknown") { why.push("ยังไม่มีข้อมูลสีขน"); } else return null; }
-        if (st.area) { if (c.areas.includes(st.area)) { s += 2; why.push("เจอบ่อยที่นี่"); } else if (c.status === "commuter" || c.areas.includes("roam")) { s += 1; why.push("เดินไปหลายที่"); } }
+        if (st.coat) { if (c.coat === st.coat) { s += 3; why.push(L("สีขนตรง", "Coat matches")); } else if (c.coat === "unknown") { why.push(L("ยังไม่มีข้อมูลสีขน", "Coat not recorded")); } else return null; }
+        if (st.area) { if (c.areas.includes(st.area)) { s += 2; why.push(L("เจอบ่อยที่นี่", "Often here")); } else if (c.status === "commuter" || c.areas.includes("roam")) { s += 1; why.push(L("เดินไปหลายที่", "Wanders around")); } }
         if (SEEN_NOW(c)) s += 0.5;
         return { c, s, why: why.join(" · "), known: !st.coat || c.coat !== "unknown" };
       }).filter(Boolean).sort((a, b) => b.s - a.s || byStatusThenName(a.c, b.c));
       const sure = ranked.filter((r) => r.known), maybe = ranked.filter((r) => !r.known);
       const el = document.getElementById("matches");
-      if (!st.coat && !st.area) { el.innerHTML = `<h2>เลือกอย่างน้อยหนึ่งข้อ</h2><p>ระบบจะเรียงแมวที่น่าจะเป็นมาให้ดู</p>`; return; }
-      const newCat = `<div class="callout"><h3>ไม่ตรงกับตัวไหนเลย?</h3><p>อาจเป็นแมวที่ยังไม่อยู่ในสมุด แจ้งทีมพร้อมรูปถ้ามี เราจะได้เพิ่มเข้าไป</p><a class="btn pink" href="${shareHref("newcat", null, (st.coat ? "&coat=" + st.coat : "") + (st.area ? "&area=" + st.area : ""))}">แจ้งแมวตัวใหม่</a></div>`;
+      if (!st.coat && !st.area) { el.innerHTML = `<h2>${L("เลือกอย่างน้อยหนึ่งข้อ", "Pick at least one")}</h2><p>${L("ระบบจะเรียงแมวที่น่าจะเป็นมาให้ดู", "We'll list the cats it's most likely to be.")}</p>`; return; }
+      const newCat = `<div class="callout"><h3>${L("ไม่ตรงกับตัวไหนเลย?", "None of these?")}</h3><p>${L("อาจเป็นแมวที่ยังไม่อยู่ในสมุด แจ้งทีมพร้อมรูปถ้ามี เราจะได้เพิ่มเข้าไป", "It may be a cat that isn't in the notebook yet. Tell the team, with a photo if you have one, so we can add it.")}</p><a class="btn pink" href="${shareHref("newcat", null, (st.coat ? "&coat=" + st.coat : "") + (st.area ? "&area=" + st.area : ""))}">${L("แจ้งแมวตัวใหม่", "Report a new cat")}</a></div>`;
       el.innerHTML = `
-        <h2>${sure.length ? `น่าจะเป็น ${sure.length} ตัวนี้` : "ยังไม่พบแมวที่ตรง"}</h2>
-        <p>${sure.length ? "ลองเทียบหน้าและปลอกคอกับรูป แล้วกดเข้าไปดูว่าปกติแมวตัวนั้นเป็นอย่างไร" : "ลองเปลี่ยนสีขนหรือเลือก “ไม่แน่ใจ”"}</p>
-        ${sure.length ? `<div class="cats">${sure.slice(0, 8).map((r) => catCard(r.c, [], r.why)).join("")}</div>` : ""}
-        ${maybe.length ? `<section class="sec"><h2 style="font-size:19px">ยังไม่มีข้อมูลสีขน อาจเป็นตัวใดตัวหนึ่งนี้</h2><div class="mini-cats" style="margin-top:12px">${maybe.map((r) => miniCat(r.c)).join("")}</div></section>` : ""}
+        <h2>${sure.length ? L(`น่าจะเป็น ${sure.length} ตัวนี้`, `Probably one of these ${sure.length}`) : L("ยังไม่พบแมวที่ตรง", "No match yet")}</h2>
+        <p>${sure.length ? L("ลองเทียบหน้าและปลอกคอกับรูป แล้วกดเข้าไปดูว่าปกติแมวตัวนั้นเป็นอย่างไร", "Compare the face and collar with the photos, then open a cat to see what's normal for it.") : L("ลองเปลี่ยนสีขนหรือเลือก “ไม่แน่ใจ”", "Try another coat, or choose “Not sure”.")}</p>
+        ${sure.length ? `<div class="cats">${sure.slice(0, 8).map((r) => catCard(r.c, [], r.why, met)).join("")}</div>` : ""}
+        ${maybe.length ? `<section class="sec"><h2 style="font-size:19px">${L("ยังไม่มีข้อมูลสีขน อาจเป็นตัวใดตัวหนึ่งนี้", "No coat recorded yet, so it could be one of these")}</h2><div class="mini-cats" style="margin-top:12px">${maybe.map((r) => miniCat(r.c)).join("")}</div></section>` : ""}
         ${newCat}`;
+      rememberList(sure.slice(0, 8).map((r) => r.c.id), "ผลการหาแมว", "Find results");
     };
     app.querySelectorAll(".finder button[data-k]").forEach((b) => b.addEventListener("click", () => {
       st[b.dataset.k] = b.dataset.v;
@@ -300,104 +408,124 @@
 
   /* ---------------- newcomer path (internalization → socialization) ---------------- */
   function renderStart() {
-    const KEY = "akc-start-v1";
-    const done = store.get(KEY, {});
-    const noTouch = D.cats.filter((c) => c.touch === "no" && SEEN_NOW(c));
-    const nNow = D.cats.filter(SEEN_NOW).length;
-    const steps = [
-      { id: "know", seci: "Combination", title: "รู้จักแมวที่คุณจะเจอบ่อย", text: `ตอนนี้มีแมวในคณะ ${nNow} ตัว เริ่มจากตัวที่อยู่ในอาคารที่คุณเรียน แล้วลองจำให้ได้ 3 ตัว`, links: [["ดูแมวที่อยู่ในคณะ", "#/cats?status=active"], ["วิธีที่ผู้ดูแลจำแมว", "#/article/a09"]] },
-      { id: "touch", seci: "Internalization", title: "รู้ว่าตัวไหนเข้าหาได้ ตัวไหนไม่ควรจับ", text: noTouch.length ? `${noTouch.map((c) => c.name).join(", ")} ไม่ชอบให้จับ ส่วนตัวอื่นส่วนใหญ่เป็นมิตร แต่ก็ควรอ่านท่าทางก่อนทุกครั้ง` : "ส่วนใหญ่เป็นมิตร แต่ควรอ่านท่าทางแมวก่อนเข้าหาทุกครั้ง", links: [["แมวที่ไม่ชอบให้จับ", "#/cats?touch=no"], ["อ่านภาษากายแมว", "#/article/a04"]] },
-      { id: "feed", seci: "Internalization", title: "ให้อาหารตามธรรมเนียมของคณะ", text: "ให้ในจุดที่ตกลงกันไว้ ไม่ให้ซ้ำกับคนอื่น และเก็บชามหลังแมวกินเสร็จ ธรรมเนียมเหล่านี้ไม่เคยถูกเขียนเป็นกฎ แต่ผู้ดูแลทุกคนทำเหมือนกัน", links: [["การให้อาหาร", "#/article/a01"], ["ความสะอาดของจุดให้อาหาร", "#/article/a05"]] },
-      { id: "sick", seci: "Internalization", title: "รู้ว่าเจอแมวป่วยต้องทำอะไร และแจ้งใคร", text: "สังเกตอาการ ถ่ายรูป จดเวลาและสถานที่ ห้ามให้ยาของคน แล้วแจ้งผู้ดูแล", links: [["เจอแมวป่วย ทำอย่างไร", "#/help"], ["สัญญาณว่าแมวไม่สบาย", "#/article/a02"]] },
-      { id: "join", seci: "Socialization", title: "ไปดูแลจริงกับผู้ดูแลเดิมสักรอบ", text: "บางอย่างเรียนจากการอ่านไม่ได้ เช่น จังหวะการเข้าหาแมวขี้ระแวง หรือวิธีสังเกตว่าแมวกินน้อยกว่าปกติ ขอไปให้อาหารกับผู้ดูแลเดิมสักครั้ง", links: [["ขอไปช่วยดูแลด้วย", shareHref("join")], ["ใครดูแลอะไร", "#/about"]] }
-    ];
+    const done = store.get(START_KEY, {});
+    const steps = startSteps();
+    const met = metMap();
+    const nNow = D.cats.filter(SEEN_NOW).length, nMet = D.cats.filter((c) => SEEN_NOW(c) && met[c.id]).length;
     const count = () => steps.filter((s) => done[s.id]).length;
+    const ptext = () => L(`ทำแล้ว ${count()} จาก ${steps.length} ขั้น · บันทึกไว้ในเบราว์เซอร์นี้`, `${count()} of ${steps.length} steps done · saved in this browser`);
     app.innerHTML = `
       <header class="page-head">
-        <span class="eyebrow">มาใหม่ เริ่มที่นี่</span>
-        <h1>5 ขั้น จากคนที่เห็นแมวผ่าน ๆ สู่ผู้ดูแล</h1>
-        <p class="lede">ทุกปีนิสิตที่ช่วยดูแลแมวเปลี่ยนรุ่น ขั้นตอนนี้สรุปสิ่งที่ผู้ดูแลเดิมอยากให้คนมาใหม่รู้ เริ่มจากอ่าน จบที่ลงมือทำจริงกับผู้ดูแลเดิม</p>
-        <div class="progress" aria-hidden="true"><i id="pbar" style="width:${(count() / steps.length) * 100}%"></i></div>
-        <p class="muted" id="ptext" aria-live="polite" style="font-size:14.5px">ทำแล้ว ${count()} จาก ${steps.length} ขั้น · บันทึกไว้ในเบราว์เซอร์นี้</p>
+        <span class="eyebrow">${L("มาใหม่ เริ่มที่นี่", "New here? Start here")}</span>
+        <h1>${L("5 ขั้น จากคนที่เห็นแมวผ่าน ๆ สู่ผู้ดูแล", "Five steps from passer-by to keeper")}</h1>
+        <p class="lede">${L("ทุกปีนิสิตที่ช่วยดูแลแมวเปลี่ยนรุ่น ขั้นตอนนี้สรุปสิ่งที่ผู้ดูแลเดิมอยากให้คนมาใหม่รู้ เริ่มจากอ่าน จบที่ลงมือทำจริงกับผู้ดูแลเดิม",
+          "Every year the students who help with the cats move on. These steps sum up what the experienced keepers want newcomers to know: start by reading, finish by doing it for real alongside them.")}</p>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="${steps.length}" aria-valuenow="${count()}" aria-label="${L("ความคืบหน้า", "Progress")}"><i id="pbar" style="width:${(count() / steps.length) * 100}%"></i></div>
+        <p class="muted" id="ptext" aria-live="polite" style="font-size:14.5px">${ptext()}</p>
       </header>
       <ol class="path">${steps.map((s) => `
-        <li class="${done[s.id] ? "done" : ""}" data-id="${s.id}">
-          <div><h2>${esc(s.title)}<span class="seci" title="ขั้นใน SECI model">${s.seci}</span></h2><p>${esc(s.text)}</p>
+        <li class="${done[s.id] ? "done" : ""}" data-id="${s.id}" id="step-${s.id}">
+          <div><h2>${esc(s.title)}<span class="seci" title="${L("ขั้นใน SECI model", "Stage in the SECI model")}">${s.seci}</span></h2><p>${esc(s.text)}</p>
+            ${s.id === "know" ? `<p class="met-count"><span class="meter" aria-hidden="true"><i style="width:${nNow ? (Math.min(nMet, nNow) / nNow) * 100 : 0}%"></i></span>${L(`คุณรู้จักแล้ว ${nMet} จาก ${nNow} ตัว`, `You know ${nMet} of ${nNow}`)}</p>` : ""}
             <div class="links">${s.links.map(([t, h]) => `<a href="${esc(h)}">${esc(t)} →</a>`).join("")}</div></div>
-          <label class="done-toggle"><input type="checkbox" ${done[s.id] ? "checked" : ""}> ทำแล้ว</label>
+          <label class="done-toggle"><input type="checkbox" ${done[s.id] ? "checked" : ""}> ${L("ทำแล้ว", "Done")}</label>
         </li>`).join("")}
       </ol>`;
     app.querySelectorAll(".path li").forEach((li) => li.querySelector("input").addEventListener("change", (e) => {
       done[li.dataset.id] = e.target.checked;
-      store.set(KEY, done);
+      store.set(START_KEY, done);
       li.classList.toggle("done", e.target.checked);
       document.getElementById("pbar").style.width = (count() / steps.length) * 100 + "%";
-      document.getElementById("ptext").textContent = `ทำแล้ว ${count()} จาก ${steps.length} ขั้น · บันทึกไว้ในเบราว์เซอร์นี้`;
+      document.querySelector(".progress").setAttribute("aria-valuenow", count());
+      document.getElementById("ptext").textContent = ptext();
     }));
   }
 
   /* ---------------- one cat ---------------- */
   function approachFor(c) {
-    if (c.approach) return c.approach;
-    if (c.touch === "no") return "ไม่ชอบให้จับ ดูอยู่ห่าง ๆ อย่ายื่นมือเข้าไปหรืออุ้ม";
-    if (c.touch === "yes") return "เป็นมิตร นั่งลงให้ตัวต่ำแล้วยื่นมือให้ดมก่อน ถ้าแมวเดินเข้ามาเองค่อยลูบ";
-    return "ยังไม่มีข้อมูล ให้เข้าหาอย่างระวังและอ่านท่าทางก่อน";
+    if (c.approach) return T(c.approach);
+    if (c.touch === "no") return esc(L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ อย่ายื่นมือเข้าไปหรืออุ้ม", "Doesn't like being touched. Watch from a distance; don't reach out or pick it up."));
+    if (c.touch === "yes") return esc(L("เป็นมิตร นั่งลงให้ตัวต่ำแล้วยื่นมือให้ดมก่อน ถ้าแมวเดินเข้ามาเองค่อยลูบ", "Friendly. Crouch down and offer a hand to sniff first; stroke only if the cat comes to you."));
+    return esc(L("ยังไม่มีข้อมูล ให้เข้าหาอย่างระวังและอ่านท่าทางก่อน", "No notes yet. Approach carefully and read its body language first."));
   }
   function renderCat(id) {
     const c = D.byId[lower(id)];
-    if (!c) { app.innerHTML = `<nav class="crumbs"><a href="#/cats">แมวในคณะ</a></nav><p class="empty">ไม่พบแมว “${esc(id)}” ในสมุด <a href="#/find">ลองหาจากสีขนและที่ที่เจอ</a></p>`; return; }
-    document.title = `${c.name} · ${TITLE}`;
+    if (!c) { app.innerHTML = `<nav class="crumbs"><a href="#/cats">${L("แมวในคณะ", "Cats")}</a></nav><p class="empty">${L(`ไม่พบแมว “${esc(id)}” ในสมุด`, `No cat called “${esc(id)}” in the notebook.`)} <a href="#/find">${L("ลองหาจากสีขนและที่ที่เจอ", "Try finding it by coat and place")}</a></p>`; return; }
+    document.title = `${nm(c)} · ${TITLE()}`;
+    const met = metMap();
     const mom = c.mother ? D.byId[c.mother] : null, sibs = siblingsOf(c), kids = childrenOf(c.id);
     const hist = historyFor(c.id), rel = articlesFor(c.id);
-    const strip = [SEX[c.sex], c.age ? "อายุ " + c.age : "", coatLabel(c) ? "สีขน" + coatLabel(c) : ""].filter(Boolean).map((t) => `<li>${esc(t)}</li>`)
-      .concat([`<li class="${c.sterilised === "yes" ? "" : "warn"}">${STERIL[c.sterilised]}</li>`, `<li class="${c.vaccinated === "yes" ? "" : "warn"}">${VACC[c.vaccinated]}</li>`]);
+    const name = esc(nm(c));
+    const strip = [esc(SEX()[c.sex]), c.age ? L("อายุ ", "Age ") + T(c.age) : "", coatLabel(c) ? L("สีขน", "Coat: ") + esc(coatLabel(c)) : ""].filter(Boolean).map((t) => `<li>${t}</li>`)
+      .concat([`<li class="${c.sterilised === "yes" ? "" : "warn"}">${STERIL()[c.sterilised]}</li>`, `<li class="${c.vaccinated === "yes" ? "" : "warn"}">${VACC()[c.vaccinated]}</li>`]);
     const famRow = (label, html) => (html ? `<div class="family-row"><span>${label}</span><div class="mini-cats">${html}</div></div>` : "");
-    const family = famRow("แม่", mom ? miniCat(mom) : "") + famRow("พี่น้อง", sibs.map(miniCat).join("")) + famRow("ลูก", kids.map(miniCat).join(""));
+    const family = famRow(L("แม่", "Mother"), mom ? miniCat(mom) : "") + famRow(L("พี่น้อง", "Siblings"), sibs.map(miniCat).join("")) + famRow(L("ลูก", "Kittens"), kids.map(miniCat).join(""));
     const notes = [c.notes].concat(c.interview).filter(Boolean);
-    const coatNote = c.coatSource === "photo" ? " (ระบุจากรูปถ่าย)" : "";
+    // where the visitor came from: back link and previous / next within that list
+    const from = session.get("akc-list");
+    const inList = from && Array.isArray(from.ids) && from.ids.includes(c.id);
+    const ids = inList ? from.ids : D.cats.slice().sort(byStatusThenName).map((x) => x.id);
+    const pos = ids.indexOf(c.id);
+    const prev = pos > 0 ? D.byId[ids[pos - 1]] : null, next = pos >= 0 && pos < ids.length - 1 ? D.byId[ids[pos + 1]] : null;
+    const backHref = inList ? from.hash : "#/cats", backLabel = inList ? L(from.th, from.en) : L("แมวในคณะ", "Cats");
+    const coatNote = c.coatSource === "photo" ? L(" (ระบุจากรูปถ่าย)", " (identified from photos)") : "";
+    const notesLabel = isEN() ? "From the keepers' interview notes (translated; the Thai original is under each note)" : "จากบันทึกสัมภาษณ์ผู้ดูแล (ข้อความตามที่จดไว้)";
     app.innerHTML = `
-      <nav class="crumbs" aria-label="ตำแหน่ง"><a href="#/cats">แมวในคณะ</a><span>/</span>${esc(c.name)}</nav>
+      <nav class="crumbs" aria-label="${L("ตำแหน่ง", "Breadcrumb")}"><a href="${esc(backHref)}">← ${esc(backLabel)}</a>${inList && ids.length > 1 ? `<span class="crumb-pos">${pos + 1} / ${ids.length}</span>` : ""}</nav>
       <article class="profile">
         <div class="profile-side">${portrait(c, true, true)}${c.gallery.length > 1 ? `
-          <div class="gallery" role="group" aria-label="รูปของ${esc(c.name)} ${c.gallery.length} รูป">${c.gallery.map((p, i) => `<button type="button" class="thumb" aria-pressed="${i === 0}" aria-label="ดูรูปที่ ${i + 1}" data-l="${esc(p.l)}"><img src="${esc(p.s)}" alt="" width="96" height="120" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}
-          ${c.gallery.length ? `<p class="photo-credit">รูปจากโฟลเดอร์ Google Drive ของทีม${window.CAT_PHOTO_SYNCED ? " · อัปเดต " + thDate(window.CAT_PHOTO_SYNCED) : ""}</p>` : `<p class="photo-credit">ยังไม่มีรูป <a href="${shareHref("photo", c)}">มีรูปแมวตัวนี้? ส่งให้ทีม</a></p>`}
+          <div class="gallery" role="group" aria-label="${esc(L(`รูปของ${c.name} ${c.gallery.length} รูป`, `${c.gallery.length} photos of ${nm(c)}`))}">${c.gallery.map((p, i) => `<button type="button" class="thumb" aria-pressed="${i === 0}" aria-label="${L("ดูรูปที่ ", "Show photo ")}${i + 1}" data-l="${esc(p.l)}"><img src="${esc(p.t || p.s)}" alt="" width="96" height="120" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}
+          ${c.gallery.length ? `<p class="photo-credit">${L("รูปจากโฟลเดอร์ Google Drive ของทีม", "Photos from the team's Google Drive folders")}${window.CAT_PHOTO_SYNCED ? L(" · อัปเดต ", " · updated ") + fmtDate(window.CAT_PHOTO_SYNCED) : ""}</p>` : `<p class="photo-credit">${L("ยังไม่มีรูป", "No photo yet.")} <a href="${shareHref("photo", c)}">${L("มีรูปแมวตัวนี้? ส่งให้ทีม", "Have a photo of this cat? Send it in")}</a></p>`}
         </div>
         <div>
-          <h1>${esc(c.name)}</h1>
-          <div class="cat-meta" style="font-size:15px">${statusDot(c)}${STATUS[c.status].hint ? `<span>${esc(STATUS[c.status].hint)}</span>` : ""}${c.lastSeen ? `<span>พบล่าสุด ${thDate(c.lastSeen)}</span>` : ""}</div>
+          <h1>${nmHtml(c)}</h1>
+          <div class="cat-meta" style="font-size:15px">${statusDot(c)}${STATUS[c.status].hint ? `<span>${esc(L(STATUS[c.status].hint, STATUS[c.status].hintEn))}</span>` : ""}${c.lastSeen ? `<span>${L("พบล่าสุด ", "Last seen ")}${fmtDate(c.lastSeen)}</span>` : ""}</div>
           <ul class="facts-strip">${strip.join("")}</ul>
           <div class="actions">
-            <a class="btn" href="${shareHref("sighting", c)}">เห็น${esc(c.name)}วันนี้</a>
-            <a class="btn ghost" href="${shareHref("story", c)}">เล่าเรื่องของ${esc(c.name)}</a>
+            <button type="button" class="btn met-btn" id="metBtn" aria-pressed="${!!met[c.id]}">${CHECK}<span>${met[c.id] ? L(`รู้จัก${c.name}แล้ว`, `You know ${nm(c)}`) : L(`ฉันรู้จัก${c.name}แล้ว`, `I know ${nm(c)} now`)}</span></button>
+            <a class="btn ghost" href="${shareHref("sighting", c)}">${L(`เห็น${c.name}วันนี้`, `Saw ${nm(c)} today`)}</a>
+            <a class="btn ghost" href="${shareHref("story", c)}">${L(`เล่าเรื่องของ${c.name}`, `Tell us about ${nm(c)}`)}</a>
           </div>
 
           <section class="normal-card" aria-labelledby="normalH">
-            <h2 id="normalH">ปกติ${esc(c.name)}เป็นอย่างไร</h2>
-            <p>รู้ว่าปกติเป็นแบบไหน จึงสังเกตได้ว่าเมื่อไรผิดไปจากเดิม</p>
+            <h2 id="normalH">${L(`ปกติ${c.name}เป็นอย่างไร`, `What's normal for ${nm(c)}`)}</h2>
+            <p>${L("รู้ว่าปกติเป็นแบบไหน จึงสังเกตได้ว่าเมื่อไรผิดไปจากเดิม", "Knowing what's normal is how you notice when something changes.")}</p>
             <dl class="normal-list">
-              <div><dt>มักอยู่ที่</dt><dd>${c.locations.length ? esc(c.locations.join(", ")) : c.areas.length ? esc(c.areas.map((a) => AREAS[a].label).join(", ")) : '<span class="muted">ยังไม่มีข้อมูล</span>'}</dd></div>
-              <div><dt>เข้าหาอย่างไร</dt><dd>${esc(approachFor(c))}</dd></div>
-              ${c.health ? `<div><dt>สุขภาพที่ต้องจับตา</dt><dd>${esc(c.health)}</dd></div>` : ""}
-              ${c.marks ? `<div><dt>ลักษณะและข้อสังเกต</dt><dd>${esc(c.marks)}</dd></div>` : ""}
-              ${c.normal ? `<div><dt>กิจวัตรตามที่ผู้ดูแลเล่า</dt><dd class="hand">${esc(c.normal)}</dd></div>` : ""}
+              <div><dt>${L("มักอยู่ที่", "Usually at")}</dt><dd>${c.locations.length ? c.locations.map(T).join(", ") : c.areas.length ? esc(c.areas.map((a) => lbl(AREAS[a])).join(", ")) : `<span class="muted">${L("ยังไม่มีข้อมูล", "Not recorded yet")}</span>`}</dd></div>
+              <div><dt>${L("เข้าหาอย่างไร", "How to approach")}</dt><dd>${approachFor(c)}</dd></div>
+              ${c.health ? `<div><dt>${L("สุขภาพที่ต้องจับตา", "Health to watch")}</dt><dd>${T(c.health)}</dd></div>` : ""}
+              ${c.marks ? `<div><dt>${L("ลักษณะและข้อสังเกต", "Looks and habits")}</dt><dd>${T(c.marks)}</dd></div>` : ""}
+              ${c.normal ? `<div><dt>${L("กิจวัตรตามที่ผู้ดูแลเล่า", "Daily routine, as the keepers tell it")}</dt><dd class="hand">${T(c.normal)}</dd></div>` : ""}
             </dl>
-            ${c.normal ? "" : `<div class="ask">ผู้ดูแลยังไม่ได้บันทึกว่าปกติ${esc(c.name)}กินเวลาไหน นอนตรงไหน หรือมีนิสัยอะไรเป็นพิเศษ ถ้าคุณรู้ <a href="${shareHref("story", c, "&topic=normal")}">ช่วยเล่าให้ทีม</a></div>`}
+            ${c.normal ? "" : `<div class="ask">${L(`ผู้ดูแลยังไม่ได้บันทึกว่าปกติ${esc(c.name)}กินเวลาไหน นอนตรงไหน หรือมีนิสัยอะไรเป็นพิเศษ ถ้าคุณรู้`, `The keepers haven't yet recorded when ${name} usually eats, where they sleep, or any special habits. If you know,`)} <a href="${shareHref("story", c, "&topic=normal")}">${L("ช่วยเล่าให้ทีม", "tell the team")}</a></div>`}
           </section>
 
-          ${notes.length ? `<section class="sec"><span class="label">จากบันทึกสัมภาษณ์ผู้ดูแล (ข้อความตามที่จดไว้)</span><ul class="keeper-notes">${notes.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
+          ${notes.length ? `<section class="sec"><span class="label">${notesLabel}</span><ul class="keeper-notes">${notes.map((t) => `<li>${T(t)}${isEN() && !I.untranslated(t) && Tp(t) !== t ? `<span class="orig" lang="th">${esc(t)}</span>` : ""}</li>`).join("")}</ul></section>` : ""}
 
-          ${family ? `<section class="sec"><span class="label">ครอบครัว</span><div class="family">${family}</div><p style="margin:12px 0 0;font-size:15px"><a href="#/family/${enc(c.id)}">ดูในผังครอบครัว</a></p></section>` : ""}
+          ${family ? `<section class="sec"><span class="label">${L("ครอบครัว", "Family")}</span><div class="family">${family}</div><p style="margin:12px 0 0;font-size:15px"><a href="#/family/${enc(c.id)}">${L("ดูในผังครอบครัว", "See in the family tree")}</a></p></section>` : ""}
 
-          <section class="sec"><span class="label">ประวัติการดูแล</span>
-            ${hist.length ? `<ol class="timeline">${hist.map((h) => `<li><time datetime="${esc(h.date)}">${thDate(h.date)}</time><div><span class="t-type">${HISTORY_TYPES[h.type]}</span>${esc(h.note)}${h.by ? `<span class="t-by">${esc(h.by)}</span>` : ""}</div></li>`).join("")}</ol>`
-              : `<p class="muted">ยังไม่มีบันทึก ถ้าคุณดูแลหรือเห็น${esc(c.name)} <a href="${shareHref("sighting", c)}">บันทึกให้ทีมได้</a></p>`}
+          <section class="sec"><span class="label">${L("ประวัติการดูแล", "Care history")}</span>
+            ${hist.length ? `<ol class="timeline">${hist.map((h) => `<li><time datetime="${esc(h.date)}">${fmtDate(h.date)}</time><div><span class="t-type">${L(HISTORY_TYPES[h.type], HISTORY_EN[h.type])}</span>${T(h.note)}${h.by ? `<span class="t-by">${esc(h.by)}</span>` : ""}</div></li>`).join("")}</ol>`
+              : `<p class="muted">${L(`ยังไม่มีบันทึก ถ้าคุณดูแลหรือเห็น${esc(c.name)}`, `Nothing recorded yet. If you look after or see ${name},`)} <a href="${shareHref("sighting", c)}">${L("บันทึกให้ทีมได้", "let the team know")}</a></p>`}
           </section>
 
-          ${rel.length ? `<section class="sec"><span class="label">ความรู้ที่เกี่ยวกับ${esc(c.name)}</span><ul class="articles">${rel.map((a) => articleRow(a)).join("")}</ul></section>` : ""}
+          ${rel.length ? `<section class="sec"><span class="label">${L(`ความรู้ที่เกี่ยวกับ${esc(c.name)}`, `Reading about ${name}`)}</span><ul class="articles">${rel.map((a) => articleRow(a)).join("")}</ul></section>` : ""}
 
-          <p class="meta-line">ข้อมูลจากชีตข้อมูลแมวของทีม${D.loadedAt ? " อ่านล่าสุด " + TH_TIME.format(D.loadedAt) + " น." : ""}${coatNote ? " · สีขน" + coatNote : ""}${c.source ? " · ที่มา: " + esc(c.source) : ""} · ข้อมูลไม่ถูกต้อง? <a href="${shareHref("fix", c)}">แจ้งแก้</a></p>
+          <p class="meta-line">${L("ข้อมูลจากชีตข้อมูลแมวของทีม", "From the team's cat sheet")}${D.loadedAt ? L(" อ่านล่าสุด ", ", read at ") + fmtTime(D.loadedAt) : ""}${coatNote ? L(" · สีขน", " · coat") + coatNote : ""}${c.source ? L(" · ที่มา: ", " · source: ") + esc(c.source) : ""} · ${L("ข้อมูลไม่ถูกต้อง?", "Something wrong?")} <a href="${shareHref("fix", c)}">${L("แจ้งแก้", "Report a fix")}</a></p>
         </div>
-      </article>`;
+      </article>
+      ${prev || next ? `<nav class="pager" aria-label="${L("แมวตัวอื่นในรายการ", "Other cats in this list")}">
+        ${prev ? `<a href="${catHref(prev)}" rel="prev"><small>← ${L("ก่อนหน้า", "Previous")}</small><b>${nmHtml(prev)}</b></a>` : "<span></span>"}
+        ${next ? `<a href="${catHref(next)}" rel="next" class="next"><small>${L("ถัดไป", "Next")} →</small><b>${nmHtml(next)}</b></a>` : "<span></span>"}
+      </nav>` : ""}`;
+    const mb = document.getElementById("metBtn");
+    mb.addEventListener("click", () => {
+      const m = metMap(), on = !m[c.id];
+      if (on) m[c.id] = true; else delete m[c.id];
+      store.set(MET_KEY, m);
+      mb.setAttribute("aria-pressed", String(on));
+      mb.querySelector("span").textContent = on ? L(`รู้จัก${c.name}แล้ว`, `You know ${nm(c)}`) : L(`ฉันรู้จัก${c.name}แล้ว`, `I know ${nm(c)} now`);
+    });
   }
 
   // profile gallery: thumbnails swap the main photo (event delegation survives re-renders)
@@ -416,142 +544,155 @@
     const n = (k) => D.articles.filter((a) => a.category === k).length;
     app.innerHTML = `
       <header class="page-head">
-        <span class="eyebrow">คลังความรู้</span>
-        <h1>ความรู้การดูแลแมว และเรื่องเล่าจากผู้ดูแล</h1>
-        <p class="lede">ทุกเรื่องบอกที่มาและสถานะการตรวจทาน เรื่องเล่าจากผู้ดูแลมาก่อน เพราะเป็นความรู้ที่หาอ่านที่อื่นไม่ได้</p>
+        <span class="eyebrow">${L("คลังความรู้", "Knowledge")}</span>
+        <h1>${L("ความรู้การดูแลแมว และเรื่องเล่าจากผู้ดูแล", "Cat care, and stories from the keepers")}</h1>
+        <p class="lede">${L("ทุกเรื่องบอกที่มาและสถานะการตรวจทาน เรื่องเล่าจากผู้ดูแลมาก่อน เพราะเป็นความรู้ที่หาอ่านที่อื่นไม่ได้", "Every article shows where it came from and whether it has been reviewed. The keepers' stories come first, because you can't read them anywhere else.")}</p>
       </header>
-      <nav class="tabs" aria-label="หมวดความรู้">
-        <a href="#/knowledge" class="${cat ? "" : "on"}">ทั้งหมด<span class="n">${D.articles.length}</span></a>
-        ${Object.keys(CATEGORIES).filter((k) => n(k)).map((k) => `<a href="#/knowledge/${k}" class="${cat === k ? "on" : ""}">${CATEGORIES[k].label}<span class="n">${n(k)}</span></a>`).join("")}
+      <nav class="tabs" aria-label="${L("หมวดความรู้", "Categories")}">
+        <a href="#/knowledge" class="${cat ? "" : "on"}" ${cat ? "" : 'aria-current="page"'}>${L("ทั้งหมด", "All")}<span class="n">${D.articles.length}</span></a>
+        ${Object.keys(CATEGORIES).filter((k) => n(k)).map((k) => `<a href="#/knowledge/${k}" class="${cat === k ? "on" : ""}" ${cat === k ? 'aria-current="page"' : ""}>${lbl(CATEGORIES[k])}<span class="n">${n(k)}</span></a>`).join("")}
       </nav>
-      ${cat ? `<p class="cat-desc">${esc(CATEGORIES[cat].desc)}</p>` : ""}
-      ${list.length ? `<ul class="articles">${list.map((a) => articleRow(a)).join("")}</ul>` : `<p class="empty">ยังไม่มีเรื่องในหมวดนี้ <a href="${shareHref("story")}">เป็นคนแรกที่เล่า</a></p>`}
-      <aside class="callout"><h3>รู้อะไรที่ผู้ดูแลรุ่นต่อไปควรรู้?</h3><p>เคล็ดลับ บทเรียน หรือเรื่องที่เคยเกิดขึ้นกับแมวในคณะ บอกเท่าที่รู้ก็พอ ทีมจะเรียบเรียงและตรวจทานก่อนเผยแพร่ พร้อมใส่ชื่อคุณเป็นเครดิต</p><a class="btn pink" href="${shareHref("story")}">เล่าให้ทีมฟัง</a></aside>`;
+      ${cat ? `<p class="cat-desc">${esc(L(CATEGORIES[cat].desc, CATEGORIES[cat].descEn))}</p>` : ""}
+      ${list.length ? `<ul class="articles">${list.map((a) => articleRow(a)).join("")}</ul>` : `<p class="empty">${L("ยังไม่มีเรื่องในหมวดนี้", "Nothing in this category yet.")} <a href="${shareHref("story")}">${L("เป็นคนแรกที่เล่า", "Be the first to share")}</a></p>`}
+      <aside class="callout"><h3>${L("รู้อะไรที่ผู้ดูแลรุ่นต่อไปควรรู้?", "Know something the next keepers should know?")}</h3><p>${L("เคล็ดลับ บทเรียน หรือเรื่องที่เคยเกิดขึ้นกับแมวในคณะ บอกเท่าที่รู้ก็พอ ทีมจะเรียบเรียงและตรวจทานก่อนเผยแพร่ พร้อมใส่ชื่อคุณเป็นเครดิต", "A tip, a lesson, or something that happened with the faculty's cats. Just tell us what you know: the team writes it up, reviews it before publishing, and credits you.")}</p><a class="btn pink" href="${shareHref("story")}">${L("เล่าให้ทีมฟัง", "Tell the team")}</a></aside>`;
   }
 
   function renderArticle(id) {
-    const a = D.articleById[lower(id)];
-    if (!a) { app.innerHTML = `<nav class="crumbs"><a href="#/knowledge">คลังความรู้</a></nav><p class="empty">ไม่พบเรื่องนี้</p>`; return; }
-    document.title = `${a.title} · ${TITLE}`;
+    const raw = D.articleById[lower(id)];
+    if (!raw) { app.innerHTML = `<nav class="crumbs"><a href="#/knowledge">${L("คลังความรู้", "Knowledge")}</a></nav><p class="empty">${L("ไม่พบเรื่องนี้", "Article not found")}</p>`; return; }
+    const a = art(raw);
+    document.title = `${a.title} · ${TITLE()}`;
     const cats = a.relatedCats.map((k) => D.byId[k]).filter(Boolean);
     const more = D.articles.filter((x) => x.category === a.category && x.id !== a.id).slice(0, 3);
+    const catLbl = lbl(CATEGORIES[a.category]);
     app.innerHTML = `
-      <nav class="crumbs" aria-label="ตำแหน่ง"><a href="#/knowledge">คลังความรู้</a><span>/</span><a href="#/knowledge/${a.category}">${CATEGORIES[a.category].label}</a></nav>
+      <nav class="crumbs" aria-label="${L("ตำแหน่ง", "Breadcrumb")}"><a href="#/knowledge">${L("คลังความรู้", "Knowledge")}</a><span>/</span><a href="#/knowledge/${a.category}">${catLbl}</a></nav>
       <article class="article">
-        <span class="eyebrow">${CATEGORIES[a.category].label}</span>
-        <h1>${esc(a.title)}</h1>
-        ${a.summary ? `<p class="lede">${esc(a.summary)}</p>` : ""}
+        <span class="eyebrow">${catLbl}</span>
+        ${a.th ? `<p class="lang-note">This article hasn't been translated yet. Here is the Thai original.</p>` : ""}
+        <h1${langAttr(a)}>${esc(a.title)}</h1>
+        ${a.summary ? `<p class="lede"${langAttr(a)}>${esc(a.summary)}</p>` : ""}
         <div class="byline">
-          ${a.author ? `<span>เรียบเรียงโดย <b>${esc(a.author)}</b></span>` : ""}
-          ${a.source ? `<span>ที่มา <b>${esc(a.source)}</b></span>` : ""}
-          ${a.date ? `<span>${thDate(a.date)}</span>` : ""}
-          <span>${a.reviewedBy ? `ตรวจทานโดย <b>${esc(a.reviewedBy)}</b>` : `<span class="flag-warn">ยังไม่ได้ตรวจทาน</span>`}</span>
+          ${a.author ? `<span>${L("เรียบเรียงโดย", "Written up by")} <b>${esc(a.author)}</b></span>` : ""}
+          ${a.source ? `<span>${L("ที่มา", "Source")} <b>${esc(a.source)}</b></span>` : ""}
+          ${a.date ? `<span>${fmtDate(a.date)}</span>` : ""}
+          <span>${a.reviewedBy ? `${L("ตรวจทานโดย", "Reviewed by")} <b>${esc(a.reviewedBy)}</b>` : `<span class="flag-warn">${L("ยังไม่ได้ตรวจทาน", "Not yet reviewed")}</span>`}</span>
         </div>
-        <div class="prose">${renderBody(a.body)}</div>
+        <div class="prose"${langAttr(a)}>${renderBody(a.body)}</div>
         ${a.tags.length ? `<div class="tags">${a.tags.map((t) => `<a class="chip" href="#/search/${enc(t)}">${esc(t)}</a>`).join("")}</div>` : ""}
-        ${cats.length ? `<section class="sec"><span class="label">แมวในเรื่องนี้</span><div class="mini-cats">${cats.map(miniCat).join("")}</div></section>` : ""}
-        ${a.category === "health" ? `<aside class="callout danger"><h3>แมวป่วยหรือบาดเจ็บตอนนี้?</h3><p>คลังนี้ไม่ใช่การวินิจฉัยโรค ดูขั้นตอนเบื้องต้นและช่องทางติดต่อได้ที่หน้าเจอแมวป่วย</p><a class="btn" href="#/help">เจอแมวป่วย</a></aside>` : ""}
-        <div class="feedback"><span>เรื่องนี้ขาดอะไร หรือมีตรงไหนไม่ถูก?</span><a class="btn ghost" href="${shareHref("story", null, "&ctx=" + enc(a.id))}">เพิ่มเติมจากประสบการณ์</a><a class="btn ghost" href="${shareHref("fix", null, "&ctx=" + enc(a.id))}">แจ้งแก้</a></div>
+        ${cats.length ? `<section class="sec"><span class="label">${L("แมวในเรื่องนี้", "Cats in this story")}</span><div class="mini-cats">${cats.map(miniCat).join("")}</div></section>` : ""}
+        ${a.category === "health" ? `<aside class="callout danger"><h3>${L("แมวป่วยหรือบาดเจ็บตอนนี้?", "Is a cat sick or hurt right now?")}</h3><p>${L("คลังนี้ไม่ใช่การวินิจฉัยโรค ดูขั้นตอนเบื้องต้นและช่องทางติดต่อได้ที่หน้าเจอแมวป่วย", "This hub doesn't diagnose illness. The first steps and who to contact are on the sick-cat page.")}</p><a class="btn" href="#/help">${L("เจอแมวป่วย", "Found a sick cat")}</a></aside>` : ""}
+        <div class="feedback"><span>${L("เรื่องนี้ขาดอะไร หรือมีตรงไหนไม่ถูก?", "Something missing or wrong here?")}</span><a class="btn ghost" href="${shareHref("story", null, "&ctx=" + enc(a.id))}">${L("เพิ่มเติมจากประสบการณ์", "Add from experience")}</a><a class="btn ghost" href="${shareHref("fix", null, "&ctx=" + enc(a.id))}">${L("แจ้งแก้", "Report a fix")}</a></div>
       </article>
-      ${more.length ? `<section class="sec"><span class="label">อ่านต่อในหมวด${CATEGORIES[a.category].label}</span><ul class="articles">${more.map((x) => articleRow(x)).join("")}</ul></section>` : ""}`;
+      ${more.length ? `<section class="sec"><span class="label">${L(`อ่านต่อในหมวด${catLbl}`, `More in ${catLbl}`)}</span><ul class="articles">${more.map((x) => articleRow(x)).join("")}</ul></section>` : ""}`;
   }
 
   function renderSearch(q) {
     q = norm(q);
     if (searchInput.value !== q) searchInput.value = q;
     const r = searchAll(q);
-    document.title = `ค้นหา “${q}” · ${TITLE}`;
+    const met = metMap();
+    document.title = `${L("ค้นหา", "Search")} “${q}” · ${TITLE()}`;
     app.innerHTML = `
-      <header class="page-head"><span class="eyebrow">ค้นหา</span><h1>ผลการค้นหา “${esc(q)}”</h1>
-        <p class="lede">${r.cats.length + r.articles.length ? `พบแมว ${r.cats.length} ตัว และความรู้ ${r.articles.length} เรื่อง` : `ไม่พบผลลัพธ์ ถ้าไม่รู้ชื่อแมว <a href="#/find">ลองหาจากสีขนและที่ที่เจอ</a>`}</p></header>
-      ${r.cats.length ? `<section class="results"><h2>แมว</h2><div class="cats">${r.cats.map((c) => catCard(c, r.terms)).join("")}</div></section>` : ""}
-      ${r.articles.length ? `<section class="results"><h2>ความรู้</h2><ul class="articles">${r.articles.map((a) => articleRow(a, r.terms)).join("")}</ul></section>` : ""}`;
+      <header class="page-head"><span class="eyebrow">${L("ค้นหา", "Search")}</span><h1>${L("ผลการค้นหา", "Results for")} “${esc(q)}”</h1>
+        <p class="lede">${r.cats.length + r.articles.length ? L(`พบแมว ${r.cats.length} ตัว และความรู้ ${r.articles.length} เรื่อง`, `${r.cats.length} cat${r.cats.length === 1 ? "" : "s"} and ${r.articles.length} article${r.articles.length === 1 ? "" : "s"}`) : `${L("ไม่พบผลลัพธ์ ถ้าไม่รู้ชื่อแมว", "Nothing found. Don't know the cat's name?")} <a href="#/find">${L("ลองหาจากสีขนและที่ที่เจอ", "Find it by coat and place")}</a>`}</p></header>
+      ${r.cats.length ? `<section class="results"><h2>${L("แมว", "Cats")}</h2><div class="cats">${r.cats.map((c) => catCard(c, r.terms, "", met)).join("")}</div></section>` : ""}
+      ${r.articles.length ? `<section class="results"><h2>${L("ความรู้", "Knowledge")}</h2><ul class="articles">${r.articles.map((a) => articleRow(a, r.terms)).join("")}</ul></section>` : ""}`;
+    if (r.cats.length) rememberList(r.cats.map((c) => c.id), `ค้นหา “${q}”`, `Search “${q}”`);
   }
 
   /* ---------------- share (externalization, with review before publishing) ---------------- */
   const TYPES = {
-    sighting: { label: "เห็นแมววันนี้", ph: "เห็นที่ไหน ทำอะไรอยู่ ดูปกติไหม" },
-    sick: { label: "แมวดูไม่สบาย", ph: "อาการที่เห็น เห็นเมื่อไร ตอนนี้แมวอยู่ที่ไหน" },
-    newcat: { label: "เจอแมวที่ไม่มีในสมุด", ph: "สีขน ลักษณะ เจอที่ไหน มีปลอกคอไหม" },
-    story: { label: "เล่าประสบการณ์ / เคล็ดลับ", ph: "เรื่องที่อยากส่งต่อ เช่น ปกติแมวตัวนี้ทำอะไร หรือเคยแก้ปัญหาอะไรได้" },
-    question: { label: "มีคำถามถึงผู้ดูแล", ph: "อยากรู้อะไร ทีมจะถามผู้ดูแลและตอบในคลัง" },
-    photo: { label: "ส่งรูปแมว", ph: "รูปของแมวตัวไหน ถ่ายที่ไหน (ใส่ลิงก์รูปด้านล่าง)" },
-    fix: { label: "ข้อมูลไม่ถูกต้อง", ph: "ตรงไหนผิด และที่ถูกคืออะไร" },
-    join: { label: "อยากไปช่วยดูแล", ph: "สะดวกช่วงไหน เรียนอยู่อาคารไหน" }
+    sighting: { label: "เห็นแมววันนี้", en: "Saw a cat today", ph: "เห็นที่ไหน ทำอะไรอยู่ ดูปกติไหม", phEn: "Where, what it was doing, did it seem normal" },
+    sick: { label: "แมวดูไม่สบาย", en: "A cat looks unwell", ph: "อาการที่เห็น เห็นเมื่อไร ตอนนี้แมวอยู่ที่ไหน", phEn: "What you saw, when, and where the cat is now" },
+    newcat: { label: "เจอแมวที่ไม่มีในสมุด", en: "A cat that isn't listed", ph: "สีขน ลักษณะ เจอที่ไหน มีปลอกคอไหม", phEn: "Coat, looks, where you saw it, any collar" },
+    story: { label: "เล่าประสบการณ์ / เคล็ดลับ", en: "A story or tip", ph: "เรื่องที่อยากส่งต่อ เช่น ปกติแมวตัวนี้ทำอะไร หรือเคยแก้ปัญหาอะไรได้", phEn: "Something worth passing on, like what this cat usually does, or a problem you solved" },
+    question: { label: "มีคำถามถึงผู้ดูแล", en: "A question for the keepers", ph: "อยากรู้อะไร ทีมจะถามผู้ดูแลและตอบในคลัง", phEn: "What you'd like to know; the team will ask the keepers and answer here" },
+    photo: { label: "ส่งรูปแมว", en: "Send a photo", ph: "รูปของแมวตัวไหน ถ่ายที่ไหน (ใส่ลิงก์รูปด้านล่าง)", phEn: "Which cat, where it was taken (paste the photo link below)" },
+    fix: { label: "ข้อมูลไม่ถูกต้อง", en: "Something is wrong", ph: "ตรงไหนผิด และที่ถูกคืออะไร", phEn: "What's wrong, and what's right" },
+    join: { label: "อยากไปช่วยดูแล", en: "I'd like to help", ph: "สะดวกช่วงไหน เรียนอยู่อาคารไหน", phEn: "When you're free, which building you study in" }
   };
+  const tPh = (k) => L(TYPES[k].ph, TYPES[k].phEn) + "…";
   function renderShare(q) {
     const type = has(TYPES, q.get("type")) ? q.get("type") : "sighting";
     const cat = D.byId[lower(q.get("cat") || "")];
-    const ctx = q.get("ctx") ? D.articleById[lower(q.get("ctx"))] : null;
-    const preset = [q.get("topic") === "normal" && cat ? `ปกติ${cat.name}...` : "", q.get("coat") && has(COATS, q.get("coat")) ? "สีขน: " + COATS[q.get("coat")].label : "", ctx ? `เกี่ยวกับเรื่อง “${ctx.title}”: ` : ""].filter(Boolean).join("\n");
-    const place = q.get("area") && has(AREAS, q.get("area")) ? AREAS[q.get("area")].label : "";
+    const ctxRaw = q.get("ctx") ? D.articleById[lower(q.get("ctx"))] : null;
+    const ctx = ctxRaw ? art(ctxRaw) : null;
+    const preset = [q.get("topic") === "normal" && cat ? L(`ปกติ${cat.name}...`, `Normally ${nm(cat)}...`) : "", q.get("coat") && has(COATS, q.get("coat")) ? L("สีขน: ", "Coat: ") + lbl(COATS[q.get("coat")]) : "", ctx ? L(`เกี่ยวกับเรื่อง “${ctx.title}”: `, `About “${ctx.title}”: `) : ""].filter(Boolean).join("\n");
+    const place = q.get("area") && has(AREAS, q.get("area")) ? lbl(AREAS[q.get("area")]) : "";
     const live = !!norm(CFG.SUBMIT_URL);
     app.innerHTML = `
-      <header class="page-head"><span class="eyebrow">แบ่งปันความรู้</span><h1>บอกเท่าที่รู้ก็พอ</h1>
-        <p class="lede">เห็นแมวเมื่อเช้า หรือดูแลแมวในคณะมาหลายปี ทุกเรื่องช่วยให้สมุดเล่มนี้ทันสมัย ทีมจะตรวจทานก่อนเผยแพร่และใส่ชื่อคุณเป็นเครดิตถ้าต้องการ</p></header>
+      <header class="page-head"><span class="eyebrow">${L("แบ่งปันความรู้", "Share what you know")}</span><h1>${L("บอกเท่าที่รู้ก็พอ", "Just tell us what you know")}</h1>
+        <p class="lede">${L("เห็นแมวเมื่อเช้า หรือดูแลแมวในคณะมาหลายปี ทุกเรื่องช่วยให้สมุดเล่มนี้ทันสมัย ทีมจะตรวจทานก่อนเผยแพร่และใส่ชื่อคุณเป็นเครดิตถ้าต้องการ", "Whether you saw a cat this morning or have looked after the faculty's cats for years, it all keeps this notebook up to date. The team reviews everything before publishing, and credits you if you like.")}</p></header>
       <div class="share-grid">
         <form class="form" id="shareForm" novalidate>
-          <fieldset class="field"><legend>เรื่องที่จะบอก</legend>
-            <div class="type-grid">${Object.keys(TYPES).map((k) => `<label><input type="radio" name="type" value="${k}" ${k === type ? "checked" : ""}>${TYPES[k].label}</label>`).join("")}</div>
+          <fieldset class="field"><legend>${L("เรื่องที่จะบอก", "What is it about?")}</legend>
+            <div class="type-grid">${Object.keys(TYPES).map((k) => `<label><input type="radio" name="type" value="${k}" ${k === type ? "checked" : ""}>${lbl(TYPES[k])}</label>`).join("")}</div>
           </fieldset>
-          <div class="field"><label for="fCat">แมวตัวไหน</label>
-            <select id="fCat" name="cat"><option value="">ไม่ทราบ หรือไม่อยู่ในสมุด</option>${D.cats.slice().sort(byStatusThenName).map((c) => `<option value="${esc(c.name)}" ${cat && cat.id === c.id ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select></div>
-          <div class="field"><label for="fMsg">รายละเอียด</label>
-            <textarea id="fMsg" name="message" required placeholder="${esc(TYPES[type].ph)}…">${esc(preset)}</textarea>
-            <p class="hint" id="msgHint">ไม่ต้องเขียนยาว ทีมจะเรียบเรียงให้</p></div>
+          <div class="field"><label for="fCat">${L("แมวตัวไหน", "Which cat?")}</label>
+            <select id="fCat" name="cat"><option value="">${L("ไม่ทราบ หรือไม่อยู่ในสมุด", "Don't know, or not listed")}</option>${D.cats.slice().sort(byStatusThenName).map((c) => `<option value="${esc(c.name)}" ${cat && cat.id === c.id ? "selected" : ""}>${esc(isEN() && I.nameEn(c.name) ? `${I.nameEn(c.name)} (${c.name})` : c.name)}</option>`).join("")}</select></div>
+          <div class="field"><label for="fMsg">${L("รายละเอียด", "Details")}</label>
+            <textarea id="fMsg" name="message" required aria-describedby="msgHint" placeholder="${esc(tPh(type))}">${esc(preset)}</textarea>
+            <p class="hint" id="msgHint">${L("ไม่ต้องเขียนยาว ทีมจะเรียบเรียงให้", "No need to write much; the team will tidy it up. Thai or English is fine.")}</p></div>
           <div class="two-fields">
-            <div class="field"><label for="fPlace">สถานที่ (ถ้ามี)</label><input id="fPlace" name="place" type="text" autocomplete="off" value="${esc(place)}" placeholder="เช่น BRK ชั้น 1 หน้าป้อม รปภ.…"></div>
-            <div class="field"><label for="fPhoto">ลิงก์รูป (ถ้ามี)</label><input id="fPhoto" name="photo" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="ลิงก์ Google Drive หรือ Google Photos…"></div>
+            <div class="field"><label for="fPlace">${L("สถานที่ (ถ้ามี)", "Place (optional)")}</label><input id="fPlace" name="place" type="text" autocomplete="off" value="${esc(place)}" placeholder="${L("เช่น BRK ชั้น 1 หน้าป้อม รปภ.…", "e.g. BRK 1st floor, by the security post…")}"></div>
+            <div class="field"><label for="fPhoto">${L("ลิงก์รูป (ถ้ามี)", "Photo link (optional)")}</label><input id="fPhoto" name="photo" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="${L("ลิงก์ Google Drive หรือ Google Photos…", "A Google Drive or Google Photos link…")}"></div>
           </div>
           <div class="two-fields">
-            <div class="field"><label for="fName">ชื่อที่ให้ใส่เป็นเครดิต (ถ้าต้องการ)</label><input id="fName" name="name" type="text" autocomplete="nickname" placeholder="เช่น นิสิตปี 2 ภาคภาษาไทย…"></div>
-            <div class="field"><label for="fContact">ช่องทางติดต่อกลับ (ถ้าต้องการ)</label><input id="fContact" name="contact" type="text" autocomplete="off" spellcheck="false" placeholder="LINE ID หรืออีเมล…"></div>
+            <div class="field"><label for="fName">${L("ชื่อที่ให้ใส่เป็นเครดิต (ถ้าต้องการ)", "Name to credit (optional)")}</label><input id="fName" name="name" type="text" autocomplete="nickname" placeholder="${L("เช่น นิสิตปี 2 ภาคภาษาไทย…", "e.g. 2nd-year Thai major…")}"></div>
+            <div class="field"><label for="fContact">${L("ช่องทางติดต่อกลับ (ถ้าต้องการ)", "How to reach you (optional)")}</label><input id="fContact" name="contact" type="text" autocomplete="off" spellcheck="false" placeholder="${L("LINE ID หรืออีเมล…", "LINE ID or email…")}"></div>
           </div>
-          <label class="consent"><input type="checkbox" name="consent" value="yes"> อนุญาตให้ทีมเผยแพร่เรื่องนี้ในคลังหลังตรวจทาน (ถ้าไม่ติ๊ก ทีมจะใช้เพื่อดูแลแมวเท่านั้น)</label>
-          <div class="hp" aria-hidden="true"><label>เว็บไซต์ <input name="website" tabindex="-1" autocomplete="off"></label></div>
+          <label class="consent"><input type="checkbox" name="consent" value="yes"> ${L("อนุญาตให้ทีมเผยแพร่เรื่องนี้ในคลังหลังตรวจทาน (ถ้าไม่ติ๊ก ทีมจะใช้เพื่อดูแลแมวเท่านั้น)", "The team may publish this in the hub after review (if unticked, it's only used for looking after the cats)")}</label>
+          <div class="hp" aria-hidden="true"><label>${L("เว็บไซต์", "Website")} <input name="website" tabindex="-1" autocomplete="off"></label></div>
           <div id="formStatus" role="status" aria-live="polite"></div>
-          <div><button class="btn pink" type="submit" id="fSubmit">ส่งให้ทีม</button></div>
+          <div><button class="btn pink" type="submit" id="fSubmit">${L("ส่งให้ทีม", "Send to the team")}</button></div>
         </form>
         <aside>
-          <span class="label">หลังจากกดส่ง</span>
+          <span class="label">${L("หลังจากกดส่ง", "After you send")}</span>
           <ol class="flow">
-            <li><div><b>เข้าชีตรอตรวจ</b>เรื่องของคุณยังไม่ขึ้นเว็บทันที</div></li>
-            <li><div><b>ผู้ดูแลเนื้อหาตรวจทาน</b>เช็กความถูกต้องและความเป็นส่วนตัว เรื่องสุขภาพจะถามผู้ดูแลหรือสัตวแพทย์ก่อน</div></li>
-            <li><div><b>เผยแพร่พร้อมเครดิต</b>ขึ้นในหน้าแมวหรือคลังความรู้ พร้อมที่มา</div></li>
+            <li><div><b>${L("เข้าชีตรอตรวจ", "It waits for review")}</b>${L("เรื่องของคุณยังไม่ขึ้นเว็บทันที", "It doesn't appear on the site straight away.")}</div></li>
+            <li><div><b>${L("ผู้ดูแลเนื้อหาตรวจทาน", "The content steward checks it")}</b>${L("เช็กความถูกต้องและความเป็นส่วนตัว เรื่องสุขภาพจะถามผู้ดูแลหรือสัตวแพทย์ก่อน", "For accuracy and privacy. Health matters are checked with a keeper or vet first.")}</div></li>
+            <li><div><b>${L("เผยแพร่พร้อมเครดิต", "Published with credit")}</b>${L("ขึ้นในหน้าแมวหรือคลังความรู้ พร้อมที่มา", "On the cat's page or in the knowledge section, with its source.")}</div></li>
           </ol>
-          <div class="callout danger"><h3>แมวป่วยหนักหรือบาดเจ็บ?</h3><p>อย่ารอให้ทีมตรวจ ทำตามขั้นตอนเร่งด่วนก่อน</p><a class="btn" href="#/help">เจอแมวป่วย</a></div>
+          <div class="callout danger"><h3>${L("แมวป่วยหนักหรือบาดเจ็บ?", "Is a cat badly sick or hurt?")}</h3><p>${L("อย่ารอให้ทีมตรวจ ทำตามขั้นตอนเร่งด่วนก่อน", "Don't wait for the team. Follow the urgent steps first.")}</p><a class="btn" href="#/help">${L("เจอแมวป่วย", "Found a sick cat")}</a></div>
         </aside>
       </div>`;
     const form = document.getElementById("shareForm"), msg = document.getElementById("fMsg"), status = document.getElementById("formStatus");
-    form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", () => { msg.placeholder = TYPES[r.value].ph + "…"; }));
+    form.querySelectorAll('input[name="type"]').forEach((r) => r.addEventListener("change", () => { msg.placeholder = tPh(r.value); }));
     const show = (cls, html) => { status.className = "form-status " + cls; status.innerHTML = html; };
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       const data = new FormData(form);
-      if (!norm(data.get("message"))) { show("err", "<b>ยังไม่ได้ใส่รายละเอียด</b>เขียนสั้น ๆ ว่าเห็นอะไรหรืออยากบอกอะไร"); msg.focus(); return; }
+      if (!norm(data.get("message"))) { show("err", `<b>${L("ยังไม่ได้ใส่รายละเอียด", "Please add some details")}</b>${L("เขียนสั้น ๆ ว่าเห็นอะไรหรืออยากบอกอะไร", "A line about what you saw or want to tell us is enough.")}`); msg.setAttribute("aria-invalid", "true"); msg.focus(); return; }
+      msg.removeAttribute("aria-invalid");
       const payload = new URLSearchParams();
       ["type", "cat", "message", "place", "photo", "name", "contact", "website"].forEach((k) => payload.set(k, norm(data.get(k))));
-      payload.set("type", TYPES[data.get("type")] ? TYPES[data.get("type")].label : data.get("type"));
+      payload.set("type", TYPES[data.get("type")] ? TYPES[data.get("type")].label : data.get("type")); // the review sheet stays in Thai
       payload.set("consent", data.get("consent") === "yes" ? "yes" : "no");
       payload.set("page", location.href);
+      payload.set("lang", I.lang);
       if (!live) {
         const text = ["[" + payload.get("type") + "]", payload.get("cat") && "แมว: " + payload.get("cat"), payload.get("message"), payload.get("place") && "สถานที่: " + payload.get("place"), payload.get("photo") && "รูป: " + payload.get("photo"), payload.get("name") && "จาก: " + payload.get("name")].filter(Boolean).join("\n");
         let copied = false;
         try { await navigator.clipboard.writeText(text); copied = true; } catch (err) { /* clipboard blocked */ }
-        show("info", `<b>ระบบรับเรื่องอัตโนมัติยังไม่เปิด</b>${copied ? "คัดลอกข้อความของคุณไว้แล้ว " : ""}ส่งให้ทีมผ่านช่องทางที่ระบุในหน้า <a href="#/about">เกี่ยวกับโครงการ</a> ได้เลย`);
+        show("info", `<b>${L("ระบบรับเรื่องอัตโนมัติยังไม่เปิด", "Automatic sending isn't switched on yet")}</b>${copied ? L("คัดลอกข้อความของคุณไว้แล้ว ", "Your message has been copied. ") : ""}${L("ส่งให้ทีมผ่านช่องทางที่ระบุในหน้า", "Send it to the team through the contacts on the")} <a href="#/about">${L("เกี่ยวกับโครงการ", "About page")}</a>`);
         return;
       }
       const btn = document.getElementById("fSubmit");
-      btn.disabled = true; btn.textContent = "กำลังส่ง…";
+      btn.disabled = true; btn.textContent = L("กำลังส่ง…", "Sending…");
+      const sentCat = D.cats.find((x) => x.name === data.get("cat"));
       try {
         // Apps Script web apps do not send CORS headers: no-cors delivers the post; the sheet is the receipt
         await fetch(CFG.SUBMIT_URL, { method: "POST", mode: "no-cors", body: payload });
         form.reset();
-        show("ok", `<b>ได้รับเรื่องแล้ว ขอบคุณมาก</b>สถานะ: รอทีมตรวจทาน${data.get("type") === "sick" ? ' · ถ้าแมวอาการหนัก ทำตาม<a href="#/help">ขั้นตอนเร่งด่วน</a>ด้วย' : ""}`);
+        show("ok", `<b>${L("ได้รับเรื่องแล้ว ขอบคุณมาก", "Got it, thank you")}</b>${L("สถานะ: รอทีมตรวจทาน", "Status: waiting for the team to review")}${data.get("type") === "sick" ? ` · ${L("ถ้าแมวอาการหนัก ทำตาม", "If the cat is badly unwell, follow the")}<a href="#/help">${L("ขั้นตอนเร่งด่วน", "urgent steps")}</a>${L("ด้วย", "")}` : ""}
+          <span class="next-steps">${sentCat ? `<a class="btn ghost" href="${catHref(sentCat)}">${L(`กลับไปหน้า${sentCat.name}`, `Back to ${nm(sentCat)}`)}</a>` : ""}<button type="button" class="btn ghost" id="again">${L("ส่งอีกเรื่อง", "Send another")}</button><a class="btn ghost" href="#/">${L("หน้าแรก", "Home")}</a></span>`);
+        const again = document.getElementById("again");
+        if (again) again.addEventListener("click", () => { status.className = ""; status.innerHTML = ""; msg.focus(); });
       } catch (err) {
-        show("err", "<b>ส่งไม่สำเร็จ</b>ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วกดส่งอีกครั้ง ข้อความของคุณยังอยู่ในฟอร์ม");
+        show("err", `<b>${L("ส่งไม่สำเร็จ", "Couldn't send")}</b>${L("ตรวจการเชื่อมต่ออินเทอร์เน็ตแล้วกดส่งอีกครั้ง ข้อความของคุณยังอยู่ในฟอร์ม", "Check your internet connection and try again. Your message is still in the form.")}`);
       } finally {
-        btn.disabled = false; btn.textContent = "ส่งให้ทีม";
+        btn.disabled = false; btn.textContent = L("ส่งให้ทีม", "Send to the team");
       }
     });
   }
@@ -561,57 +702,61 @@
     const contacts = (CFG.EMERGENCY_CONTACTS || []).filter((c) => norm(c.value));
     app.innerHTML = `
       <div class="article">
-        <header class="page-head"><span class="eyebrow" style="color:var(--bad)">เร่งด่วน</span><h1>เจอแมวป่วยหรือบาดเจ็บ</h1>
-          <p class="lede">ทำตามนี้ก่อน แล้วติดต่อผู้ดูแลหรือสัตวแพทย์</p></header>
+        <header class="page-head"><span class="eyebrow" style="color:var(--bad)">${L("เร่งด่วน", "Urgent")}</span><h1>${L("เจอแมวป่วยหรือบาดเจ็บ", "You've found a sick or injured cat")}</h1>
+          <p class="lede">${L("ทำตามนี้ก่อน แล้วติดต่อผู้ดูแลหรือสัตวแพทย์", "Do this first, then contact a keeper or a vet.")}</p></header>
         <ol class="steps">
-          <li><div><b>อย่าเพิ่งจับถ้าแมวตกใจหรือขู่</b> แมวที่เจ็บอาจกัดหรือข่วน อยู่ห่างพอดูอาการได้</div></li>
-          <li><div><b>ถ่ายรูปและจดตำแหน่ง</b> แมวตัวไหน อยู่ตรงไหน เห็นอาการอะไร เวลาเท่าไร</div></li>
-          <li><div><b>ห้ามให้ยาของคน</b> ยาบางชนิด เช่น พาราเซตามอล เป็นพิษร้ายแรงต่อแมว</div></li>
-          <li><div><b>ติดต่อผู้ดูแลหรือสัตวแพทย์</b> ตามช่องทางด้านล่าง</div></li>
-          <li><div><b>แจ้งทีมในเว็บ</b> คนอื่นจะได้รู้ว่ามีคนดูแลแล้ว <a href="${shareHref("sick")}">แจ้งว่าแมวไม่สบาย</a></div></li>
+          <li><div><b>${L("อย่าเพิ่งจับถ้าแมวตกใจหรือขู่", "Don't touch it if it's scared or hissing")}</b> ${L("แมวที่เจ็บอาจกัดหรือข่วน อยู่ห่างพอดูอาการได้", "A hurt cat may bite or scratch. Stay close enough to watch.")}</div></li>
+          <li><div><b>${L("ถ่ายรูปและจดตำแหน่ง", "Take a photo and note where it is")}</b> ${L("แมวตัวไหน อยู่ตรงไหน เห็นอาการอะไร เวลาเท่าไร", "Which cat, where, what you saw, and what time.")}</div></li>
+          <li><div><b>${L("ห้ามให้ยาของคน", "Never give human medicine")}</b> ${L("ยาบางชนิด เช่น พาราเซตามอล เป็นพิษร้ายแรงต่อแมว", "Some, like paracetamol, are seriously toxic to cats.")}</div></li>
+          <li><div><b>${L("ติดต่อผู้ดูแลหรือสัตวแพทย์", "Contact a keeper or a vet")}</b> ${L("ตามช่องทางด้านล่าง", "Details below.")}</div></li>
+          <li><div><b>${L("แจ้งทีมในเว็บ", "Tell the team here")}</b> ${L("คนอื่นจะได้รู้ว่ามีคนดูแลแล้ว", "So others know someone is on it.")} <a href="${shareHref("sick")}">${L("แจ้งว่าแมวไม่สบาย", "Report a sick cat")}</a></div></li>
         </ol>
-        <section><span class="label">ติดต่อ</span>
-          ${contacts.length ? `<dl class="contact">${contacts.map((c) => `<div><dt>${esc(c.label)}</dt><dd>${esc(c.value)}${c.href ? ` · <a href="${esc(c.href)}" target="_blank" rel="noopener">ข้อมูลจากจุฬาฯ</a>` : ""}</dd></div>`).join("")}</dl>` : ""}
-          <p class="muted" style="margin-top:14px;font-size:15px">ยังไม่มีเบอร์ของผู้ดูแลแมวในคณะที่ยืนยันแล้ว ระหว่างนี้แจ้งทีมผ่าน<a href="${shareHref("sick")}">ฟอร์มแจ้งแมวไม่สบาย</a></p>
+        <section><span class="label">${L("ติดต่อ", "Contacts")}</span>
+          ${contacts.length ? `<dl class="contact">${contacts.map((c) => `<div><dt>${esc(en(c, "label"))}</dt><dd>${esc(en(c, "value"))}${c.href ? ` · <a href="${esc(c.href)}" target="_blank" rel="noopener">${L("ข้อมูลจากจุฬาฯ", "Chula's page")}</a>` : ""}</dd></div>`).join("")}</dl>` : ""}
+          <p class="muted" style="margin-top:14px;font-size:15px">${L("ยังไม่มีเบอร์ของผู้ดูแลแมวในคณะที่ยืนยันแล้ว ระหว่างนี้แจ้งทีมผ่าน", "We don't have a confirmed phone number for the faculty's keepers yet. For now, tell the team with the")}<a href="${shareHref("sick")}">${L("ฟอร์มแจ้งแมวไม่สบาย", " sick-cat form")}</a></p>
         </section>
-        <p class="muted" style="margin-top:22px;font-size:14.5px">หน้านี้เป็นแนวทางเบื้องต้นสำหรับคนทั่วไป ไม่ใช่การวินิจฉัยหรือรักษา หากไม่แน่ใจให้ปรึกษาสัตวแพทย์</p>
-        <p style="margin-top:10px"><a href="#/article/a02">สัญญาณที่บอกว่าแมวอาจไม่สบาย →</a></p>
+        <p class="muted" style="margin-top:22px;font-size:14.5px">${L("หน้านี้เป็นแนวทางเบื้องต้นสำหรับคนทั่วไป ไม่ใช่การวินิจฉัยหรือรักษา หากไม่แน่ใจให้ปรึกษาสัตวแพทย์", "This page is basic guidance for anyone. It isn't a diagnosis or treatment; if you're unsure, ask a vet.")}</p>
+        <p style="margin-top:10px"><a href="#/article/a02">${L("สัญญาณที่บอกว่าแมวอาจไม่สบาย", "Signs that a cat may be unwell")} →</a></p>
       </div>`;
   }
 
   /* ---------------- about: the KM process made visible ---------------- */
   function renderAbout() {
     const keepers = [...new Set(D.cats.map((c) => c.caretakers).filter(Boolean))];
-    const st = (label, sample) => `<li><span>${label}</span><span class="${sample ? "flag-warn" : ""}">${sample ? "สำเนาในเว็บ" : "ชีตของทีม (สด)"}</span></li>`;
+    const st = (label, sample) => `<li><span>${label}</span><span class="${sample ? "flag-warn" : ""}">${sample ? L("สำเนาในเว็บ", "Saved copy") : L("ชีตของทีม (สด)", "Team sheet (live)")}</span></li>`;
     const steps = [
-      ["1. ระบุความรู้ที่สำคัญ", "ผู้ดูแลใหม่ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว และไม่รู้ว่าแมวป่วยต้องแจ้งใคร", [["หาแมวตัวนี้", "#/find"], ["เจอแมวป่วย", "#/help"]]],
-      ["2. สร้างและแสวงหาความรู้", "สัมภาษณ์ผู้ดูแลเดิม รวบรวมรูปและข้อมูลจากชีตของทีม แปลงเรื่องเล่าเป็นบทความ", [["เรื่องเล่าจากผู้ดูแล", "#/knowledge/experience"]]],
-      ["3. จัดเก็บ", "ประวัติแมวรายตัว หมวดความรู้ แท็ก และเมทาดาต้า (ที่มา วันที่ สถานะตรวจทาน) จัดแบบหลายมิติ ค้นได้จากสีขน ที่ที่เจอ และนิสัย", [["แมวในคณะ", "#/cats"], ["คลังความรู้", "#/knowledge"]]],
-      ["4. แบ่งปัน", "ฟอร์มสั้น บอกเท่าที่รู้ เข้าชีตรอตรวจ เผยแพร่พร้อมเครดิต", [["แบ่งปันความรู้", "#/share"]]],
-      ["5. นำไปใช้", "ผู้ดูแลใหม่ทำตาม 5 ขั้น จนไปดูแลจริงกับผู้ดูแลเดิม แล้วส่งสิ่งที่เรียนรู้กลับมาเป็นความรู้ใหม่", [["มาใหม่ เริ่มที่นี่", "#/start"]]]
+      [L("1. ระบุความรู้ที่สำคัญ", "1. Identify key knowledge"), L("ผู้ดูแลใหม่ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว และไม่รู้ว่าแมวป่วยต้องแจ้งใคร", "New keepers don't know the cats' names, which ones are spayed, or who to tell when a cat is sick."), [[L("หาแมวตัวนี้", "Find this cat"), "#/find"], [L("เจอแมวป่วย", "Sick cat"), "#/help"]]],
+      [L("2. สร้างและแสวงหาความรู้", "2. Create and acquire"), L("สัมภาษณ์ผู้ดูแลเดิม รวบรวมรูปและข้อมูลจากชีตของทีม แปลงเรื่องเล่าเป็นบทความ", "Interview experienced keepers, gather photos and the team's sheet, and turn stories into articles."), [[L("เรื่องเล่าจากผู้ดูแล", "Keepers' stories"), "#/knowledge/experience"]]],
+      [L("3. จัดเก็บ", "3. Store"), L("ประวัติแมวรายตัว หมวดความรู้ แท็ก และเมทาดาต้า (ที่มา วันที่ สถานะตรวจทาน) จัดแบบหลายมิติ ค้นได้จากสีขน ที่ที่เจอ และนิสัย", "A profile per cat, categories, tags and metadata (source, date, review status), organised so you can search by coat, place and personality."), [[L("แมวในคณะ", "Cats"), "#/cats"], [L("คลังความรู้", "Knowledge"), "#/knowledge"]]],
+      [L("4. แบ่งปัน", "4. Share"), L("ฟอร์มสั้น บอกเท่าที่รู้ เข้าชีตรอตรวจ เผยแพร่พร้อมเครดิต", "A short form: say what you know, it waits for review, then is published with credit."), [[L("แบ่งปันความรู้", "Share"), "#/share"]]],
+      [L("5. นำไปใช้", "5. Use"), L("ผู้ดูแลใหม่ทำตาม 5 ขั้น จนไปดูแลจริงกับผู้ดูแลเดิม แล้วส่งสิ่งที่เรียนรู้กลับมาเป็นความรู้ใหม่", "Newcomers follow the five steps through to caring alongside experienced keepers, then feed what they learn back in."), [[L("มาใหม่ เริ่มที่นี่", "Start here"), "#/start"]]]
     ];
+    const list = (thKey, enKey) => esc(((isEN() && CFG[enKey]) || CFG[thKey] || []).join(", "));
     app.innerHTML = `
-      <header class="page-head"><span class="eyebrow">เกี่ยวกับโครงการ</span><h1>ทำไมต้องมีสมุดเล่มนี้</h1>
-        <p class="lede">ความรู้เรื่องแมวในคณะมีอยู่แล้ว แต่กระจายอยู่กับผู้ดูแลไม่กี่คนและแชตหลายกลุ่ม นิสิตที่ช่วยดูแลเปลี่ยนรุ่นทุกปีการศึกษา ความรู้จากประสบการณ์จึงหายไปพร้อมคนที่จบไป คลังนี้รวบรวมไว้ที่เดียว และเปิดให้ทุกคนช่วยเติม</p></header>
+      <header class="page-head"><span class="eyebrow">${L("เกี่ยวกับโครงการ", "About the project")}</span><h1>${L("ทำไมต้องมีสมุดเล่มนี้", "Why this notebook exists")}</h1>
+        <p class="lede">${L("ความรู้เรื่องแมวในคณะมีอยู่แล้ว แต่กระจายอยู่กับผู้ดูแลไม่กี่คนและแชตหลายกลุ่ม นิสิตที่ช่วยดูแลเปลี่ยนรุ่นทุกปีการศึกษา ความรู้จากประสบการณ์จึงหายไปพร้อมคนที่จบไป คลังนี้รวบรวมไว้ที่เดียว และเปิดให้ทุกคนช่วยเติม",
+          "The knowledge about the faculty's cats already exists, but it's scattered across a few keepers and several group chats. The students who help change every academic year, so what they learned leaves with them when they graduate. This hub gathers it in one place, and anyone can add to it.")}</p></header>
       <div class="about-grid">
         <section>
-          <span class="label">กระบวนการจัดการความรู้ 5 ขั้น กับส่วนต่าง ๆ ของเว็บ</span>
-          <table class="km-table"><thead><tr><th scope="col">ขั้น</th><th scope="col">ทำอะไร</th><th scope="col">ดูในเว็บ</th></tr></thead>
+          <span class="label">${L("กระบวนการจัดการความรู้ 5 ขั้น กับส่วนต่าง ๆ ของเว็บ", "The five-step knowledge management process, and where it lives on the site")}</span>
+          <table class="km-table"><thead><tr><th scope="col">${L("ขั้น", "Step")}</th><th scope="col">${L("ทำอะไร", "What happens")}</th><th scope="col">${L("ดูในเว็บ", "On the site")}</th></tr></thead>
             <tbody>${steps.map(([s, d, links]) => `<tr><td>${s}</td><td>${d}</td><td>${links.map(([t, h]) => `<a href="${h}">${t}</a>`).join("<br>")}</td></tr>`).join("")}</tbody></table>
-          <p class="muted" style="font-size:14.5px;margin-top:14px">กลยุทธ์แบบผสม: เก็บความรู้ลงคลังเป็นหลัก (codification) และพาคนมาใหม่ไปเรียนจากผู้ดูแลเดิมโดยตรงเป็นส่วนเสริม (personalization) เพราะความรู้โดยนัยบางส่วนเขียนออกมาไม่ได้ครบ</p>
+          <p class="muted" style="font-size:14.5px;margin-top:14px">${L("กลยุทธ์แบบผสม: เก็บความรู้ลงคลังเป็นหลัก (codification) และพาคนมาใหม่ไปเรียนจากผู้ดูแลเดิมโดยตรงเป็นส่วนเสริม (personalization) เพราะความรู้โดยนัยบางส่วนเขียนออกมาไม่ได้ครบ",
+            "A mixed strategy: mainly codification (writing knowledge down in the hub), with personalization alongside it (newcomers learning directly from experienced keepers), because some tacit knowledge can't be fully written down.")}</p>
         </section>
         <section>
-          <span class="label">ใครดูแลอะไร</span>
-          <ul class="roles">${(CFG.ROLES || []).map((r) => `<li><b>${esc(r.role)}</b><span>${esc(r.who)}</span><span>${esc(r.duty)}</span></li>`).join("")}
-            ${keepers.length ? `<li><b>ผู้ดูแลแมวตามข้อมูลในชีต</b><span>${esc(keepers.join(", "))}</span></li>` : ""}</ul>
-          <span class="label" style="margin-top:26px">ขอบคุณผู้ให้ความรู้</span>
-          <p>${esc((CFG.CREDITS_KNOWLEDGE_HOLDERS || []).join(", "))}</p>
-          <span class="label" style="margin-top:20px">ผู้จัดทำ</span>
-          <p>${esc((CFG.CREDITS_TEAM || []).join(", "))}<br><span class="muted">${esc(CFG.COURSE || "")}</span></p>
-          <span class="label" style="margin-top:20px">สถานะข้อมูล</span>
-          <ul class="data-status">${st("ข้อมูลแมว", D.samples.cats)}${st("คลังความรู้", D.samples.articles)}${st("ประวัติการดูแล", D.samples.history)}
-            <li><span>รูปแมว</span><span>${window.CAT_PHOTO_SYNCED ? "ซิงก์จาก Drive " + thDate(window.CAT_PHOTO_SYNCED) : "ยังไม่ได้ซิงก์"}</span></li>
-            <li><span>ระบบรับเรื่อง</span><span class="${norm(CFG.SUBMIT_URL) ? "" : "flag-warn"}">${norm(CFG.SUBMIT_URL) ? "เปิดใช้งาน" : "ยังไม่เปิด"}</span></li></ul>
+          <span class="label">${L("ใครดูแลอะไร", "Who looks after what")}</span>
+          <ul class="roles">${(CFG.ROLES || []).map((r) => `<li><b>${esc(en(r, "role"))}</b><span>${esc(en(r, "who"))}</span><span>${esc(en(r, "duty"))}</span></li>`).join("")}
+            ${keepers.length ? `<li><b>${L("ผู้ดูแลแมวตามข้อมูลในชีต", "Keepers named in the sheet")}</b><span>${keepers.map(T).join(", ")}</span></li>` : ""}</ul>
+          <span class="label" style="margin-top:26px">${L("ขอบคุณผู้ให้ความรู้", "With thanks to")}</span>
+          <p>${list("CREDITS_KNOWLEDGE_HOLDERS", "CREDITS_KNOWLEDGE_HOLDERS_EN")}</p>
+          <span class="label" style="margin-top:20px">${L("ผู้จัดทำ", "Made by")}</span>
+          <p>${list("CREDITS_TEAM", "CREDITS_TEAM_EN")}<br><span class="muted">${esc(L(CFG.COURSE || "", CFG.COURSE_EN))}</span></p>
+          <span class="label" style="margin-top:20px">${L("สถานะข้อมูล", "Data status")}</span>
+          <ul class="data-status">${st(L("ข้อมูลแมว", "Cats"), D.samples.cats)}${st(L("คลังความรู้", "Knowledge"), D.samples.articles)}${st(L("ประวัติการดูแล", "Care history"), D.samples.history)}
+            <li><span>${L("รูปแมว", "Photos")}</span><span>${window.CAT_PHOTO_SYNCED ? L("ซิงก์จาก Drive ", "Synced from Drive ") + fmtDate(window.CAT_PHOTO_SYNCED) : L("ยังไม่ได้ซิงก์", "Not synced yet")}</span></li>
+            <li><span>${L("ระบบรับเรื่อง", "Submissions")}</span><span class="${norm(CFG.SUBMIT_URL) ? "" : "flag-warn"}">${norm(CFG.SUBMIT_URL) ? L("เปิดใช้งาน", "On") : L("ยังไม่เปิด", "Not on yet")}</span></li>
+            <li><span>${L("ภาษา", "Languages")}</span><span>${L("ไทย · อังกฤษ (แปลโดยทีม)", "Thai · English (translated by the team)")}</span></li></ul>
         </section>
       </div>`;
   }
@@ -619,67 +764,77 @@
   /* ---------------- family graph ---------------- */
   let network = null;
   function renderFamily(focusId) {
+    const tok = renderToken;
     app.innerHTML = `
-      <header class="page-head"><span class="eyebrow">ผังครอบครัว</span><h1>ใครเป็นพี่น้องกับใคร</h1>
-        <p class="lede">เส้นประเชื่อมแมวที่เป็นพี่น้องกัน ลูกศรชี้จากแม่ไปหาลูก แตะที่แมวเพื่อเปิดหน้าของแมวตัวนั้น</p></header>
-      <div id="graph" role="img" aria-label="ผังความสัมพันธ์ของแมว"></div>
-      <section class="sec"><span class="label">ยังไม่มีข้อมูลครอบครัว</span><div class="mini-cats" id="noFamily"></div>
-        <p class="muted" style="margin-top:12px">รู้ว่าแมวตัวไหนเป็นพี่น้องหรือแม่ลูกกัน? <a href="${shareHref("story")}">บอกทีม</a></p></section>`;
+      <header class="page-head"><span class="eyebrow">${L("ผังครอบครัว", "Family tree")}</span><h1>${L("ใครเป็นพี่น้องกับใคร", "Who's related to whom")}</h1>
+        <p class="lede">${L("เส้นประเชื่อมแมวที่เป็นพี่น้องกัน ลูกศรชี้จากแม่ไปหาลูก แตะที่แมวเพื่อเปิดหน้าของแมวตัวนั้น", "Dashed lines join siblings; arrows point from mother to kitten. Tap a cat to open its page.")}</p></header>
+      <div id="graph" role="img" aria-label="${L("ผังความสัมพันธ์ของแมว", "Diagram of how the cats are related")}"><p class="empty">${L("กำลังวาดผัง…", "Drawing the tree…")}</p></div>
+      <section class="sec"><span class="label">${L("ยังไม่มีข้อมูลครอบครัว", "No family recorded yet")}</span><div class="mini-cats" id="noFamily"></div>
+        <p class="muted" style="margin-top:12px">${L("รู้ว่าแมวตัวไหนเป็นพี่น้องหรือแม่ลูกกัน?", "Know which cats are siblings, or mother and kitten?")} <a href="${shareHref("story")}">${L("บอกทีม", "Tell the team")}</a></p></section>`;
     const related = new Set();
     D.cats.forEach((c) => {
       if (c.mother && D.byId[c.mother]) { related.add(c.id); related.add(c.mother); }
       (c.siblings || []).forEach((o) => { if (D.byId[o]) { related.add(c.id); related.add(o); } });
     });
     document.getElementById("noFamily").innerHTML = D.cats.filter((c) => !related.has(c.id)).sort(byStatusThenName).map(miniCat).join("");
-    if (!window.vis) { document.getElementById("graph").innerHTML = `<p class="empty">โหลดตัวแสดงผังไม่ได้ (ต้องต่ออินเทอร์เน็ต)</p>`; return; }
-    if (!related.size) { document.getElementById("graph").innerHTML = `<p class="empty">ยังไม่มีข้อมูลความสัมพันธ์ระหว่างแมว</p>`; return; }
-    const nodes = D.cats.filter((c) => related.has(c.id)).map((c) => {
-      const fill = (DRAW[c.coat] || DRAW.unknown)[0];
-      const base = { id: c.id, label: c.name, font: { color: "#1f1d1a", face: "Google Sans", size: 16 }, borderWidth: 3, color: { border: "#1f1d1a", background: fill, highlight: { border: "#c2416f", background: fill } } };
-      return c.photo ? Object.assign(base, { shape: "circularImage", image: c.photo, size: 30 }) : Object.assign(base, { shape: "dot", size: 20 });
-    });
-    const edges = D.cats.filter((c) => c.mother && D.byId[c.mother]).map((c) => ({ from: c.mother, to: c.id, arrows: "to" }));
-    const seen = new Set();
-    D.cats.forEach((c) => (c.siblings || []).forEach((o) => {
-      const k = [c.id, o].sort().join("|");
-      if (D.byId[o] && !seen.has(k)) { seen.add(k); edges.push({ from: c.id, to: o, dashes: true, color: "#c2416f" }); }
-    }));
-    if (network) { network.destroy(); network = null; }
-    const hasTree = edges.some((e) => e.arrows);
-    network = new vis.Network(document.getElementById("graph"), { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, hasTree ? {
-      layout: { hierarchical: { enabled: true, direction: "UD", sortMethod: "directed", levelSeparation: 110, nodeSpacing: 120 } },
-      physics: false, edges: { color: "#675f54", smooth: { type: "cubicBezier", forceDirection: "vertical" } }, interaction: { hover: true }
-    } : {
-      layout: { randomSeed: 7 },
-      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -180, springLength: 110, avoidOverlap: 1 }, stabilization: { iterations: 400 } },
-      edges: { width: 2, smooth: false }, interaction: { hover: true }
-    });
-    network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); });
-    network.on("click", (p) => { if (p.nodes && p.nodes.length) location.hash = `#/cat/${enc(p.nodes[0])}`; });
-    const f = lower(focusId);
-    if (f && D.byId[f]) network.once("afterDrawing", () => { network.selectNodes([f]); network.focus(f, { scale: 1.3, animation: { duration: 400 } }); });
+    const graph = document.getElementById("graph");
+    if (!related.size) { graph.innerHTML = `<p class="empty">${L("ยังไม่มีข้อมูลความสัมพันธ์ระหว่างแมว", "No relationships recorded yet")}</p>`; return; }
+    loadScript(VIS_JS).then(() => {
+      if (tok !== renderToken || !document.getElementById("graph")) return; // the visitor has moved on
+      graph.innerHTML = "";
+      const nodes = D.cats.filter((c) => related.has(c.id)).map((c) => {
+        const fill = (DRAW[c.coat] || DRAW.unknown)[0];
+        const base = { id: c.id, label: nm(c), font: { color: "#1f1d1a", face: "Manrope, Anuphan, sans-serif", size: 16 }, borderWidth: 3, color: { border: "#1f1d1a", background: fill, highlight: { border: "#c2416f", background: fill } } };
+        return c.photo ? Object.assign(base, { shape: "circularImage", image: c.photo, size: 30 }) : Object.assign(base, { shape: "dot", size: 20 });
+      });
+      const edges = D.cats.filter((c) => c.mother && D.byId[c.mother]).map((c) => ({ from: c.mother, to: c.id, arrows: "to" }));
+      const seen = new Set();
+      D.cats.forEach((c) => (c.siblings || []).forEach((o) => {
+        const k = [c.id, o].sort().join("|");
+        if (D.byId[o] && !seen.has(k)) { seen.add(k); edges.push({ from: c.id, to: o, dashes: true, color: "#c2416f" }); }
+      }));
+      if (network) { network.destroy(); network = null; }
+      const hasTree = edges.some((e) => e.arrows);
+      network = new vis.Network(graph, { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, hasTree ? {
+        layout: { hierarchical: { enabled: true, direction: "UD", sortMethod: "directed", levelSeparation: 110, nodeSpacing: 120 } },
+        physics: false, edges: { color: "#675f54", smooth: { type: "cubicBezier", forceDirection: "vertical" } }, interaction: { hover: true }
+      } : {
+        layout: { randomSeed: 7 },
+        physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -180, springLength: 110, avoidOverlap: 1 }, stabilization: { iterations: 400 } },
+        edges: { width: 2, smooth: false }, interaction: { hover: true }
+      });
+      network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); });
+      network.on("click", (p) => { if (p.nodes && p.nodes.length) location.hash = `#/cat/${enc(p.nodes[0])}`; });
+      const f = lower(focusId);
+      if (f && D.byId[f]) network.once("afterDrawing", () => { network.selectNodes([f]); network.focus(f, { scale: 1.3, animation: { duration: 400 } }); });
+    }).catch(() => { if (tok === renderToken) graph.innerHTML = `<p class="empty">${L("โหลดตัวแสดงผังไม่ได้ (ต้องต่ออินเทอร์เน็ต)", "Couldn't load the diagram (needs an internet connection)")}</p>`; });
   }
 
   /* ---------------- QR sheet ---------------- */
   function renderQR() {
+    const tok = renderToken;
     const u = norm(CFG.SITE_URL);
     const base = u ? (u.endsWith("/") ? u : u + "/") + "cats.html" : location.href.split("#")[0];
     const isLocal = !u && location.protocol === "file:";
     const list = D.cats.filter((c) => SEEN_NOW(c) || c.status === "missing").sort(byStatusThenName);
     app.innerHTML = `
-      <div class="no-print"><header class="page-head"><span class="eyebrow">พิมพ์</span><h1>QR ประจำตัวแมว</h1>
-        <p class="lede">ติดไว้ตรงจุดที่แมวอยู่ประจำ สแกนแล้วเปิดหน้าของแมวตัวนั้น ขออนุญาตคณะก่อนติดประกาศ</p></header>
-        ${isLocal ? `<p class="callout danger">ตอนนี้เปิดไฟล์จากเครื่อง QR จะใช้ในมือถือไม่ได้ ใส่ <code>SITE_URL</code> ใน config.js ก่อนพิมพ์</p>` : ""}
-        <p><button class="btn" type="button" id="printBtn">พิมพ์</button></p></div>
-      <div class="qr-grid">${list.map((c) => `<div class="qr-card"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg><div class="qr-name">${esc(c.name)}</div><div class="qr" data-url="${esc(base + "#/cat/" + enc(c.id))}"></div><div class="qr-hint">สแกนเพื่อรู้จักฉัน · ${esc(TITLE)}</div></div>`).join("")}</div>`;
+      <div class="no-print"><header class="page-head"><span class="eyebrow">${L("พิมพ์", "Print")}</span><h1>${L("QR ประจำตัวแมว", "A QR code for each cat")}</h1>
+        <p class="lede">${L("ติดไว้ตรงจุดที่แมวอยู่ประจำ สแกนแล้วเปิดหน้าของแมวตัวนั้น ขออนุญาตคณะก่อนติดประกาศ", "Put one up where each cat usually stays; scanning it opens that cat's page. Ask the faculty before putting anything up.")}</p></header>
+        ${isLocal ? `<p class="callout danger">${L("ตอนนี้เปิดไฟล์จากเครื่อง QR จะใช้ในมือถือไม่ได้ ใส่ <code>SITE_URL</code> ใน config.js ก่อนพิมพ์", "This is a local file, so the QR codes won't work on phones. Set <code>SITE_URL</code> in config.js before printing.")}</p>` : ""}
+        <p><button class="btn" type="button" id="printBtn">${L("พิมพ์", "Print")}</button></p></div>
+      <div class="qr-grid">${list.map((c) => `<div class="qr-card"><svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg><div class="qr-name" lang="th">${esc(c.name)}</div>${I.nameEn(c.name) ? `<div class="qr-en">${esc(I.nameEn(c.name))}</div>` : ""}<div class="qr" data-url="${esc(base + "#/cat/" + enc(c.id))}"></div><div class="qr-hint">สแกนเพื่อรู้จักฉัน · Scan to meet me</div></div>`).join("")}</div>`;
     document.getElementById("printBtn").addEventListener("click", () => window.print());
-    if (!window.QRCode) return;
-    app.querySelectorAll(".qr").forEach((el) => new QRCode(el, { text: el.getAttribute("data-url"), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }));
+    loadScript(QR_JS).then(() => {
+      if (tok !== renderToken) return;
+      app.querySelectorAll(".qr").forEach((el) => new QRCode(el, { text: el.getAttribute("data-url"), width: 150, height: 150, correctLevel: QRCode.CorrectLevel.M }));
+    }).catch(() => { /* the cards still show the names; codes need the internet */ });
   }
 
   /* ---------------- router ---------------- */
-  const NAV_OF = { "": "", cats: "cats", cat: "cats", family: "cats", find: "find", start: "start", knowledge: "knowledge", article: "knowledge", share: "share", report: "share", help: "help" };
-  function route() {
+  const NAV_OF = { "": "home", cats: "cats", cat: "cats", family: "cats", find: "find", start: "start", knowledge: "knowledge", article: "knowledge", share: "share", report: "share", help: "help", about: "about", qr: "about" };
+  function route(evt) {
+    const keep = evt && evt.keepScroll;
+    renderToken++;
     const raw = location.hash.replace(/^#\/?/, "");
     const qi = raw.indexOf("?");
     const path = qi < 0 ? raw : raw.slice(0, qi);
@@ -688,9 +843,9 @@
     const page = slash < 0 ? path : path.slice(0, slash);
     let arg = slash < 0 ? "" : path.slice(slash + 1);
     try { arg = decodeURIComponent(arg); } catch (e) { /* keep raw */ }
-    document.title = TITLE;
+    document.title = TITLE();
     const navPage = NAV_OF[page] ?? "__";
-    document.querySelectorAll("#nav a").forEach((a) => {
+    document.querySelectorAll("[data-page]").forEach((a) => {
       const on = a.dataset.page === navPage;
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
@@ -712,8 +867,9 @@
       case "help": renderHelp(); break;
       case "about": renderAbout(); break;
       case "qr": renderQR(); break;
-      default: app.innerHTML = `<p class="empty">ไม่พบหน้านี้ <a href="#/">กลับหน้าแรกของคลัง</a></p>`;
+      default: app.innerHTML = `<p class="empty">${L("ไม่พบหน้านี้", "Page not found.")} <a href="#/">${L("กลับหน้าแรกของคลัง", "Back to the hub's home")}</a></p>`;
     }
+    if (keep) return;
     if (page !== "search") { window.scrollTo(0, 0); if (route.navigated) app.focus({ preventScroll: true }); }
     route.navigated = true;
   }
@@ -735,16 +891,37 @@
     });
   }
 
+  // phone menu: a native <dialog> (focus is trapped and Esc closes it)
+  function wireMenu() {
+    const dlg = document.getElementById("menu"), open = document.getElementById("menuOpen");
+    if (!dlg || !open || typeof dlg.showModal !== "function") return;
+    open.addEventListener("click", () => { dlg.showModal(); open.setAttribute("aria-expanded", "true"); });
+    dlg.addEventListener("close", () => open.setAttribute("aria-expanded", "false"));
+    dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.closest("a") || e.target.closest("[data-close]")) dlg.close(); });
+  }
+
+  // texts outside #app that depend on the data and the language
+  function chrome() {
+    const msgs = [];
+    if (D.samples.cats) msgs.push(L("กำลังแสดงสำเนาข้อมูลแมวที่บันทึกไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ", "Showing the saved copy of the cat data, because the latest sheet couldn't be loaded."));
+    else if (D.error) msgs.push(D.error);
+    banner.textContent = msgs.join(" · ");
+    banner.hidden = !msgs.length;
+    const meta = document.getElementById("footMeta");
+    if (meta) meta.textContent = [
+      L(`ข้อมูลแมว ${D.cats.length} ตัวจากชีตของทีม${D.samples.cats ? " (สำเนา)" : ""} · อ่านเมื่อ ${fmtTime(D.loadedAt)}`, `${D.cats.length} cats from the team's sheet${D.samples.cats ? " (saved copy)" : ""} · read at ${fmtTime(D.loadedAt)}`),
+      window.CAT_PHOTO_SYNCED ? L("รูปอัปเดต ", "photos updated ") + fmtDate(window.CAT_PHOTO_SYNCED) : "",
+      L(CFG.COURSE || "", CFG.COURSE_EN)
+    ].filter(Boolean).join(" · ");
+  }
+
   async function init() {
     wireSearch();
+    wireMenu();
     D = await window.CatData.load(CFG);
-    const msgs = [];
-    if (D.samples.cats) msgs.push("กำลังแสดงสำเนาข้อมูลแมวที่บันทึกไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ");
-    else if (D.error) msgs.push(D.error);
-    if (msgs.length) { banner.textContent = msgs.join(" · "); banner.hidden = false; }
-    const meta = document.getElementById("footMeta");
-    if (meta) meta.textContent = [`ข้อมูลแมว ${D.cats.length} ตัวจากชีตของทีม${D.samples.cats ? " (สำเนา)" : ""} · อ่านเมื่อ ${TH_TIME.format(D.loadedAt)} น.`, window.CAT_PHOTO_SYNCED ? "รูปอัปเดต " + TH_DATE.format(new Date(window.CAT_PHOTO_SYNCED)) : "", CFG.COURSE || ""].filter(Boolean).join(" · ");
+    chrome();
     window.addEventListener("hashchange", route);
+    I.on(() => { chrome(); const y = window.scrollY; route({ keepScroll: true }); window.scrollTo(0, y); });
     route();
   }
 

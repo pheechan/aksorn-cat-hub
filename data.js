@@ -6,12 +6,12 @@ window.CatData = (function () {
   "use strict";
 
   const STATUS = {
-    active: { label: "อยู่ในคณะ", cls: "ok", color: "#5fc48a" },
-    missing: { label: "ไม่ได้พบช่วงนี้", cls: "warn", color: "#e0a23a" },
-    commuter: { label: "ไปกลับ", cls: "info", color: "#9b8cf0", hint: "มีบ้านแล้ว แวะมาคณะเป็นครั้งคราว" },
-    adopted: { label: "ได้บ้านใหม่แล้ว", cls: "info", color: "#6ea4e0" },
-    unknown: { label: "ยังไม่ระบุ", cls: "", color: "#6b7570" },
-    passed: { label: "จากไปแล้ว", cls: "", color: "#8f9893" }
+    active: { label: "อยู่ในคณะ", en: "At the faculty", cls: "ok", color: "#5fc48a" },
+    missing: { label: "ไม่ได้พบช่วงนี้", en: "Not seen lately", cls: "warn", color: "#e0a23a" },
+    commuter: { label: "ไปกลับ", en: "Commuter", cls: "info", color: "#9b8cf0", hint: "มีบ้านแล้ว แวะมาคณะเป็นครั้งคราว", hintEn: "Has a home, drops by the faculty now and then" },
+    adopted: { label: "ได้บ้านใหม่แล้ว", en: "Adopted", cls: "info", color: "#6ea4e0" },
+    unknown: { label: "ยังไม่ระบุ", en: "Not recorded", cls: "", color: "#6b7570" },
+    passed: { label: "จากไปแล้ว", en: "Passed away", cls: "", color: "#8f9893" }
   };
   // Values the team types in the sheet's Status column → our status keys
   const STATUS_WORDS = [
@@ -25,22 +25,22 @@ window.CatData = (function () {
 
   // Knowledge-base categories (scope: การให้อาหาร สุขภาพ พฤติกรรม สุขอนามัย + ประสบการณ์จากผู้ดูแล)
   const CATEGORIES = {
-    feeding: { label: "การให้อาหาร", en: "Feeding", desc: "ให้อะไร ให้เท่าไร ให้ที่ไหน และสิ่งที่ไม่ควรให้" },
-    health: { label: "สุขภาพ", en: "Health", desc: "สัญญาณผิดปกติ การทำหมัน วัคซีน และเมื่อไรควรพบสัตวแพทย์" },
-    behavior: { label: "พฤติกรรม", en: "Behaviour", desc: "อ่านภาษากายแมว เข้าหาอย่างไรให้แมวไม่เครียด" },
-    hygiene: { label: "สุขอนามัย", en: "Hygiene", desc: "ความสะอาดของคนและพื้นที่ให้อาหาร" },
-    experience: { label: "ประสบการณ์จากผู้ดูแล", en: "From the keepers", desc: "เรื่องเล่าและบทเรียนจากคนที่ดูแลแมวจริง" }
+    feeding: { label: "การให้อาหาร", en: "Feeding", desc: "ให้อะไร ให้เท่าไร ให้ที่ไหน และสิ่งที่ไม่ควรให้", descEn: "What to give, how much, where, and what never to give" },
+    health: { label: "สุขภาพ", en: "Health", desc: "สัญญาณผิดปกติ การทำหมัน วัคซีน และเมื่อไรควรพบสัตวแพทย์", descEn: "Warning signs, spaying, vaccines, and when to see a vet" },
+    behavior: { label: "พฤติกรรม", en: "Behaviour", desc: "อ่านภาษากายแมว เข้าหาอย่างไรให้แมวไม่เครียด", descEn: "Reading body language, and approaching without stressing the cat" },
+    hygiene: { label: "สุขอนามัย", en: "Hygiene", desc: "ความสะอาดของคนและพื้นที่ให้อาหาร", descEn: "Keeping hands and feeding spots clean" },
+    experience: { label: "ประสบการณ์จากผู้ดูแล", en: "From the keepers", desc: "เรื่องเล่าและบทเรียนจากคนที่ดูแลแมวจริง", descEn: "Stories and lessons from the people who actually care for the cats" }
   };
 
   // Coat colours a passer-by can tell apart at a glance (used by "find this cat" and the cat list filters)
   const COATS = {
-    orange: { label: "ส้ม", swatch: "#d9822b" },
-    black: { label: "ดำ", swatch: "#1f1f22" },
-    bicolor: { label: "ขาวดำ", swatch: "linear-gradient(135deg,#1f1f22 50%,#f4f1ea 50%)" },
-    white: { label: "ขาว", swatch: "#f4f1ea" },
-    calico: { label: "สามสี / กระดองเต่า", swatch: "conic-gradient(#d9822b 0 33%,#1f1f22 0 66%,#f4f1ea 0)" },
-    tabby: { label: "เทา / ลายสลิด", swatch: "repeating-linear-gradient(90deg,#8b8478 0 5px,#5d574e 5px 9px)" },
-    cream: { label: "ครีม / สีอ่อน", swatch: "#e2d3b8" }
+    orange: { label: "ส้ม", en: "Orange", swatch: "#d9822b" },
+    black: { label: "ดำ", en: "Black", swatch: "#1f1f22" },
+    bicolor: { label: "ขาวดำ", en: "Black and white", swatch: "linear-gradient(135deg,#1f1f22 50%,#f4f1ea 50%)" },
+    white: { label: "ขาว", en: "White", swatch: "#f4f1ea" },
+    calico: { label: "สามสี / กระดองเต่า", en: "Calico / tortoiseshell", swatch: "conic-gradient(#d9822b 0 33%,#1f1f22 0 66%,#f4f1ea 0)" },
+    tabby: { label: "เทา / ลายสลิด", en: "Grey / tabby", swatch: "repeating-linear-gradient(90deg,#8b8478 0 5px,#5d574e 5px 9px)" },
+    cream: { label: "ครีม / สีอ่อน", en: "Cream / pale", swatch: "#e2d3b8" }
   };
   const COAT_WORDS = [
     [/สามสี|กระดองเต่า|calico|tortie/i, "calico"], [/ขาว\s*ดำ|ดำ\s*ขาว|ลายวัว|bicolou?r|tuxedo/i, "bicolor"],
@@ -49,17 +49,21 @@ window.CatData = (function () {
   ];
   // Where in the faculty a cat is usually found, grouped from the free-text locations
   const AREAS = {
-    brk: { label: "อาคารบรมราชกุมารี (BRK)", re: /brk|บรม/i },
-    mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", re: /mcs|มหาจักรี/i },
-    tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", re: /เทวาลัย|มหาจุฬา/i },
-    store: { label: "สโตร์แม่บ้าน", re: /สโตร์|แม่บ้าน/i },
-    cage: { label: "พักอยู่ในกรง", re: /กรง/i },
-    roam: { label: "ไม่อยู่ประจำ แวะมาเป็นครั้งคราว", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
+    brk: { label: "อาคารบรมราชกุมารี (BRK)", en: "Boromarajakumari Building (BRK)", re: /brk|บรม/i },
+    mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", en: "Maha Chakri Sirindhorn Building (MCS)", re: /mcs|มหาจักรี/i },
+    tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", en: "Thewalai (Maha Chulalongkorn Building)", re: /เทวาลัย|มหาจุฬา/i },
+    store: { label: "สโตร์แม่บ้าน", en: "Housekeepers' store room", re: /สโตร์|แม่บ้าน/i },
+    cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", re: /กรง/i },
+    roam: { label: "ไม่อยู่ประจำ แวะมาเป็นครั้งคราว", en: "No fixed spot, drops by now and then", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
   };
 
   const HISTORY_TYPES = {
     health: "สุขภาพ", sterilised: "ทำหมัน", vaccine: "วัคซีน", feeding: "อาหาร",
     sighting: "พบเห็น", birth: "เกิด", adopted: "มีบ้าน", other: "บันทึก"
+  };
+  const HISTORY_EN = {
+    health: "Health", sterilised: "Spayed / neutered", vaccine: "Vaccine", feeding: "Food",
+    sighting: "Sighting", birth: "Born", adopted: "Adopted", other: "Note"
   };
 
   const norm = (v) => (v == null ? "" : String(v)).trim();
@@ -173,6 +177,7 @@ window.CatData = (function () {
     const direct = photoUrl(r.photo) || photoUrl(photos[name]);
     c.photo = c.gallery.length ? c.gallery[0].s : direct;
     c.photoLarge = c.gallery.length ? c.gallery[0].l : direct;
+    c.photoThumb = c.gallery.length ? c.gallery[0].t || "" : "";
     return c;
   }
 
@@ -304,5 +309,5 @@ window.CatData = (function () {
     };
   }
 
-  return { STATUS, CATEGORIES, HISTORY_TYPES, COATS, AREAS, norm, lower, esc, load };
+  return { STATUS, CATEGORIES, HISTORY_TYPES, HISTORY_EN, COATS, AREAS, norm, lower, esc, load };
 })();

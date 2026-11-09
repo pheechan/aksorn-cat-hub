@@ -761,7 +761,9 @@
     } else $$("[data-rv]").forEach((el) => el.classList.add("in"));
 
     window.addEventListener("pointermove", (e) => { pointer.x = e.clientX / innerWidth * 2 - 1; pointer.y = e.clientY / innerHeight * 2 - 1; }, { passive: true });
-    const fc = $("#footCourse"); if (fc) fc.textContent = CFG.COURSE || "";
+    const fc = $("#footCourse"); const I = window.I18N;
+    const course = () => { if (fc) fc.textContent = (I && I.lang === "en" && CFG.COURSE_EN) || CFG.COURSE || ""; };
+    course(); if (I) I.on(course);
   }
 
   /* ============================================================ live data */
@@ -773,30 +775,47 @@
     const pct = (k) => (alive.length ? Math.round(100 * alive.filter((c) => c[k] === "yes").length / alive.length) + "%" : "—");
     const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
     set("#stCats", cats.length); set("#stFamilies", active.length); set("#stSteril", pct("sterilised")); set("#stSources", pct("vaccinated"));
-    set("#heroCount", " " + cats.length + " ตัว");
+    const I = window.I18N || { L: (th) => th, lang: "th", nameEn: () => "", tx: (x) => x, on() {} };
+    const L = (th, en) => I.L(th, en);
+    const nm = (c) => (I.lang === "en" && I.nameEn(c.name)) || c.name;
+    let sampleNote = null;
     if (r.usingSample && $(".stats")) {
-      const n = document.createElement("p"); n.className = "card-note"; n.style.marginTop = "14px";
-      n.textContent = "ตัวเลขนี้มาจากสำเนาข้อมูลที่เก็บไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ";
-      $(".stats").after(n);
+      sampleNote = document.createElement("p"); sampleNote.className = "card-note"; sampleNote.style.marginTop = "14px";
+      $(".stats").after(sampleNote);
     }
 
-    const cardsEl = $("#cards"); if (!cardsEl) return;
+    const cardsEl = $("#cards");
     const seenNow = cats.filter((c) => c.status === "active" || c.status === "commuter");
     const picks = seenNow.filter((c) => c.photo).concat(seenNow.filter((c) => !c.photo)).slice(0, 3);
     const hasGL = !document.body.classList.contains("no-gl");
     const used = new Set();
-    cardsEl.innerHTML = picks.map((c, i) => {
-      const meta = [c.locations[0], c.sterilised === "yes" ? "ทำหมันแล้ว" : c.sterilised === "no" ? "ยังไม่ทำหมัน" : ""].filter(Boolean).join(" · ");
+    if (cardsEl) cardsEl.innerHTML = picks.map((c, i) => {
       const visual = c.photo
-        ? `<div class="ph-img"><img src="${esc(c.photo)}" alt="รูปของ ${esc(c.name)}" loading="lazy"></div>`
+        ? `<div class="ph-img"><img src="${esc(c.photo)}" alt="" loading="lazy" data-cat="${i}"></div>`
         : `<div class="vp" data-vp-key="cat:${standInFor(c, used)}" aria-hidden="true"></div>`;
       return `<a class="card" data-rv href="cats.html#/cat/${encodeURIComponent(c.id)}">
         ${visual}
-        <div class="card-cap"><h3>${esc(c.name)}</h3><span>0${i + 1} / 0${picks.length}</span></div>
-        <div class="card-meta">${esc(meta)}</div>
-        ${c.photo ? "" : `<div class="card-note">${hasGL ? "ภาพจำลอง · ยังไม่มีรูปจริง" : "ยังไม่มีรูป"}</div>`}
+        <div class="card-cap"><h3 data-cat-name="${i}"></h3><span>0${i + 1} / 0${picks.length}</span></div>
+        <div class="card-meta" data-cat-meta="${i}"></div>
+        ${c.photo ? "" : `<div class="card-note" data-cat-note="${i}"></div>`}
       </a>`;
     }).join("");
+    // texts that follow the Thai/English switch; the cards themselves (and their 3D viewports) stay put
+    const words = () => {
+      set("#heroCount", L(" " + cats.length + " ตัว", " (" + cats.length + ")"));
+      if (sampleNote) sampleNote.textContent = L("ตัวเลขนี้มาจากสำเนาข้อมูลที่เก็บไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ", "These numbers come from the saved copy of the data, because the latest sheet couldn't be loaded.");
+      picks.forEach((c, i) => {
+        const steril = c.sterilised === "yes" ? L("ทำหมันแล้ว", "Spayed / neutered") : c.sterilised === "no" ? L("ยังไม่ทำหมัน", "Not spayed / neutered") : "";
+        const meta = [c.locations[0] ? I.tx(c.locations[0]) : "", steril].filter(Boolean).join(" · ");
+        const h = $(`[data-cat-name="${i}"]`); if (h) h.textContent = nm(c);
+        const m = $(`[data-cat-meta="${i}"]`); if (m) m.textContent = meta;
+        const n = $(`[data-cat-note="${i}"]`); if (n) n.textContent = hasGL ? L("ภาพจำลอง · ยังไม่มีรูปจริง", "Illustration · no photo yet") : L("ยังไม่มีรูป", "No photo yet");
+        const img = $(`img[data-cat="${i}"]`); if (img) img.alt = L("รูปของ " + c.name, "Photo of " + nm(c));
+      });
+    };
+    words();
+    I.on(words);
+    if (!cardsEl) return;
     if ("IntersectionObserver" in window) {
       const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
       $$("#cards [data-rv]").forEach((el) => io.observe(el));

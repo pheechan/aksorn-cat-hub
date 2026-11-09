@@ -2,18 +2,23 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f6f1e7">
-  <title>คลังความรู้แมวอักษร</title>
-  <meta name="description" content="คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub): สมุดความรู้ของผู้ดูแลแมว คณะอักษรศาสตร์ จุฬาฯ หาแมวจากสีขนและที่ที่เจอ ความรู้การดูแล และเรื่องเล่าจากผู้ดูแล">
+  <title data-en="Aksorn Cat Knowledge Hub">คลังความรู้แมวอักษร</title>
+  <meta name="description" content="คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub): สมุดความรู้ของผู้ดูแลแมว คณะอักษรศาสตร์ จุฬาฯ หาแมวจากสีขนและที่ที่เจอ ความรู้การดูแล และเรื่องเล่าจากผู้ดูแล" data-en-content="Aksorn Cat Knowledge Hub: the cat keepers' notebook for the Faculty of Arts, Chulalongkorn University. Find a cat by coat and place, learn how to care for them, and read the keepers' stories.">
+  <link rel="alternate" hreflang="th" href="https://pheechan.github.io/aksorn-cat-hub/cats.html?lang=th">
+  <link rel="alternate" hreflang="en" href="https://pheechan.github.io/aksorn-cat-hub/cats.html?lang=en">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6f1e7'/%3E%3Cg fill='none' stroke='%231f1d1a' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37'/%3E%3Ccircle cx='19' cy='31' r='5'/%3E%3Cpath d='M45 52C54 55 59 50 58 44'/%3E%3C/g%3E%3Cpath d='M25 15L26 4L33 11ZM38 10L44 3L46 14Z' fill='%231f1d1a'/%3E%3Ccircle cx='31' cy='24' r='2.2' fill='%23c2416f'/%3E%3Ccircle cx='41' cy='24' r='2.2' fill='%23c2416f'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Mali:wght@400;500&display=swap" rel="stylesheet">
+  <!-- Manrope (Latin) + Anuphan (Thai) for text, Mali for the keepers' own words; loaded without blocking the first paint -->
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&family=Mali:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&family=Mali:wght@400;500&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&family=Mali:wght@400;500&display=swap"></noscript>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <a class="skip" href="#app">ข้ามไปเนื้อหา</a>
+  <a class="skip" href="#app" data-en="Skip to content">ข้ามไปเนื้อหา</a>
   <!-- brand mark: the Thai letter อ (for อักษร) drawn as a sitting cat -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="mark" viewBox="0 0 64 64">
@@ -29,49 +34,81 @@
 
   <header class="top">
     <div class="top-row wrap">
-      <a class="brand" href="#/" aria-label="คลังความรู้แมวอักษร หน้าแรกของคลัง">
+      <a class="brand" href="#/">
         <svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>
-        <span class="brand-txt"><b>คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span>
+        <span class="brand-txt"><b data-en="Aksorn Cat Hub">คลังความรู้แมวอักษร</b><small translate="no" data-en="Faculty of Arts · Chula">Aksorn Cat Knowledge Hub</small></span>
       </a>
       <form class="search" id="searchForm" role="search">
-        <label class="sr" for="searchInput">ค้นหาแมวหรือความรู้</label>
+        <label class="sr" for="searchInput" data-en="Search cats or knowledge">ค้นหาแมวหรือความรู้</label>
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
-        <input id="searchInput" name="q" type="search" placeholder="ค้นชื่อแมว ความรู้ หรือคำสำคัญ…" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <input id="searchInput" name="q" type="search" placeholder="ค้นชื่อแมว ความรู้ หรือคำสำคัญ…" data-en-placeholder="Search a cat's name, a place, or a topic…" autocomplete="off" spellcheck="false" enterkeyhint="search">
       </form>
+      <div class="lang" role="group" aria-label="ภาษา / Language">
+        <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ไทย</button>
+        <button type="button" data-set-lang="en" lang="en" aria-pressed="false">EN</button>
+      </div>
     </div>
-    <nav class="nav wrap" id="nav" aria-label="เมนูหลัก">
-      <a href="#/cats" data-page="cats">แมวในคณะ</a>
-      <a href="#/find" data-page="find">หาแมวตัวนี้</a>
-      <a href="#/start" data-page="start">มาใหม่ เริ่มที่นี่</a>
-      <a href="#/knowledge" data-page="knowledge">คลังความรู้</a>
-      <a href="#/share" data-page="share">แบ่งปันความรู้</a>
-      <a href="#/help" data-page="help" class="urgent">เจอแมวป่วย</a>
+    <nav class="nav wrap" id="nav" aria-label="เมนูหลัก" data-en-aria-label="Main menu">
+      <a href="#/cats" data-page="cats" data-en="Cats">แมวในคณะ</a>
+      <a href="#/find" data-page="find" data-en="Find this cat">หาแมวตัวนี้</a>
+      <a href="#/start" data-page="start" data-en="New here? Start">มาใหม่ เริ่มที่นี่</a>
+      <a href="#/knowledge" data-page="knowledge" data-en="Knowledge">คลังความรู้</a>
+      <a href="#/share" data-page="share" data-en="Share">แบ่งปันความรู้</a>
+      <a href="#/help" data-page="help" class="urgent" data-en="Sick cat?">เจอแมวป่วย</a>
     </nav>
   </header>
 
   <div id="banner" class="banner wrap" role="status" hidden></div>
-  <main id="app" class="wrap" tabindex="-1"><p class="muted">กำลังเปิดสมุด…</p></main>
+  <main id="app" class="wrap" tabindex="-1"><p class="muted loading" data-en="Opening the notebook…">กำลังเปิดสมุด…</p></main>
 
   <footer class="foot">
     <div class="wrap foot-grid">
       <div class="foot-brand">
         <svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>
-        <div><b>คลังความรู้แมวอักษร</b><p>สมุดความรู้ที่ผู้ดูแลแมวในคณะอักษรศาสตร์ส่งต่อให้กัน ทุกเรื่องมีที่มาและผู้ตรวจ</p></div>
+        <div><b data-en="Aksorn Cat Knowledge Hub">คลังความรู้แมวอักษร</b><p data-en="The notebook the Faculty of Arts' cat keepers pass on to each other. Every entry has a source and a reviewer.">สมุดความรู้ที่ผู้ดูแลแมวในคณะอักษรศาสตร์ส่งต่อให้กัน ทุกเรื่องมีที่มาและผู้ตรวจ</p></div>
       </div>
-      <nav aria-label="ลิงก์ท้ายหน้า">
-        <a href="index.html">หน้าเรื่องราวโครงการ</a><a href="#/family">ผังครอบครัวแมว</a><a href="#/about">เกี่ยวกับโครงการและทีม</a><a href="#/qr">พิมพ์ QR ประจำตัวแมว</a>
+      <nav aria-label="ลิงก์ท้ายหน้า" data-en-aria-label="Footer links">
+        <a href="index.html" data-en="The project's story">หน้าเรื่องราวโครงการ</a><a href="#/family" data-en="Family tree">ผังครอบครัวแมว</a><a href="#/about" data-en="About the project and team">เกี่ยวกับโครงการและทีม</a><a href="#/qr" data-en="Print QR codes">พิมพ์ QR ประจำตัวแมว</a>
       </nav>
       <p class="foot-meta" id="footMeta"></p>
     </div>
   </footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="config.js"></script>
-  <script src="data-sample.js"></script>
-  <script src="photos/manifest.js"></script>
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+  <!-- phones: the main tasks within thumb reach, the rest in a menu sheet -->
+  <nav class="tabbar" aria-label="เมนูลัด" data-en-aria-label="Quick menu">
+    <a href="#/cats" data-page="cats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20c0-4 2.5-7 7-7s7 3 7 7"/><path d="M7.5 9.5 8 4l3 3h2l3-3 .5 5.5"/><circle cx="12" cy="10" r="4.2"/></svg><span data-en="Cats">แมว</span></a>
+    <a href="#/find" data-page="find"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span data-en="Find">หาแมว</span></a>
+    <a href="#/start" data-page="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span data-en="Start">เริ่มที่นี่</span></a>
+    <a href="#/help" data-page="help" class="urgent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M12 9v5M9.5 11.5h5"/></svg><span data-en="Sick cat">แมวป่วย</span></a>
+    <button type="button" id="menuOpen" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span data-en="Menu">เมนู</span></button>
+  </nav>
+  <dialog class="sheet" id="menu" aria-label="เมนู" data-en-aria-label="Menu">
+    <div class="sheet-head"><b data-en="Menu">เมนู</b><button type="button" class="sheet-close" data-close aria-label="ปิดเมนู" data-en-aria-label="Close menu">×</button></div>
+    <nav class="sheet-links" aria-label="เมนูทั้งหมด" data-en-aria-label="All pages">
+      <a href="#/" data-page="home" data-en="Home">หน้าแรกของคลัง</a>
+      <a href="#/cats" data-page="cats" data-en="Cats">แมวในคณะ</a>
+      <a href="#/find" data-page="find" data-en="Find this cat">หาแมวตัวนี้</a>
+      <a href="#/start" data-page="start" data-en="New here? Start here">มาใหม่ เริ่มที่นี่</a>
+      <a href="#/knowledge" data-page="knowledge" data-en="Knowledge">คลังความรู้</a>
+      <a href="#/share" data-page="share" data-en="Share what you know">แบ่งปันความรู้</a>
+      <a href="#/help" data-page="help" class="urgent" data-en="Found a sick cat">เจอแมวป่วย</a>
+      <a href="#/family" data-en="Family tree">ผังครอบครัวแมว</a>
+      <a href="#/about" data-page="about" data-en="About the project">เกี่ยวกับโครงการ</a>
+      <a href="index.html" data-en="The project's story">หน้าเรื่องราวโครงการ</a>
+    </nav>
+    <div class="lang lang-wide" role="group" aria-label="ภาษา / Language">
+      <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ภาษาไทย</button>
+      <button type="button" data-set-lang="en" lang="en" aria-pressed="false">English</button>
+    </div>
+  </dialog>
+
+  <script src="content-en.js"></script>
+  <script src="i18n.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script defer src="config.js"></script>
+  <script defer src="data-sample.js"></script>
+  <script defer src="photos/manifest.js"></script>
+  <script defer src="data.js"></script>
+  <script defer src="app.js"></script>
 </body>
 </html>

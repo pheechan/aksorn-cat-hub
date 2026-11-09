@@ -17,7 +17,19 @@
 
 ลองเปิดดู: ดับเบิลคลิก `index.html` (ต้องต่ออินเทอร์เน็ต)
 
-## ขั้นที่ 1: สร้าง Google Sheet (คลังข้อมูลหลัก)
+## ข้อมูลแมวตอนนี้มาจากชีตของทีมโดยตรง
+
+เว็บอ่านแท็บ `Cat_profile` ใน Google Sheet ของทีมแบบสด (ตั้งไว้ใน `config.js` ช่อง `SHEET_CSV_URL`) แก้ข้อมูลในชีตแล้วเว็บจะอัปเดตเองภายในไม่กี่นาที ชีตต้องแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
+
+- ระบบหาแถวหัวตารางเอง (แถวที่มีคำว่า Name) แถวหัวข้อกลุ่มด้านบนไม่เป็นปัญหา
+- อ่านคอลัมน์จากชื่อหัว ไม่ใช่ตำแหน่ง: Name, Photo, Distinguishing marks, Sex, Age, Vaccination Status, ทำหมัน, Health notes, Status, Personality, Usual locations, Relationship, Primary caretaker(s), Last seen, Note
+- Status ที่เข้าใจ: active / back home (ไปกลับ) / missing / adopted / passed away ช่องว่าง = ยังไม่ระบุ
+- Relationship เช่น “พี่น้องกับมีตัง” จะเชื่อมแมวสองตัวเป็นพี่น้องในผังครอบครัวให้อัตโนมัติ
+- คอลัมน์ที่ไม่มีหัว (บันทึกสัมภาษณ์) จะแสดงในหน้าแมวตัวนั้นเป็น “บันทึกจากการสัมภาษณ์ผู้ดูแล”
+- รูป: ใส่ลิงก์รูปในช่อง Photo หรือเพิ่มชื่อแมวกับไฟล์รูปใน `CAT_PHOTOS` ใน `config.js`
+- ถ้าโหลดชีตไม่ได้ เว็บจะใช้สำเนาที่เก็บไว้ใน `data-sample.js` และขึ้นแถบแจ้งเตือน
+
+## ขั้นที่ 1: สร้าง Google Sheet (คลังข้อมูลหลัก) (แบบแม่แบบเดิม ใช้ถ้าจะตั้งชีตใหม่)
 
 1. สร้าง Google Sheet ใหม่ ตั้งชื่อชีตว่า `cats`
 2. File → Import → Upload → เลือก `cats_template.csv` → "Replace current sheet"

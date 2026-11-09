@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07090c">
   <title>คลังความรู้แมวอักษร</title>
   <meta name="description" content="คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ: เรื่องเล่าของแมวที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307090c'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ef6d9f'/%3E%3Cpath d='M9 12 L11 5 L14 10 Z M23 12 L21 5 L18 10 Z' fill='%23ef6d9f'/%3E%3C/svg%3E">
@@ -17,24 +18,21 @@
   <div id="grain" aria-hidden="true"></div>
 
   <div id="preloader" role="status" aria-live="polite">
-    <div class="pl-inner">
-      <div class="pl-eyes" aria-hidden="true"><i></i><i></i></div>
-      <div class="pl-title">คลังความรู้แมวอักษร</div>
-      <div class="pl-row"><span>กำลังปลุกแมวในคณะ</span><span id="plPct">0%</span></div>
-      <div class="pl-bar"><i id="plBar"></i></div>
-    </div>
+    <span class="pl-eyes" aria-hidden="true"><i></i><i></i></span>
+    <span>กำลังเตรียมฉากสามมิติ…</span><span id="plPct">0%</span>
+    <span class="pl-bar" aria-hidden="true"><i id="plBar"></i></span>
   </div>
 
   <header class="nav" id="nav">
     <a class="logo" href="#top" aria-label="คลังความรู้แมวอักษร หน้าแรก">
       <span class="logo-mark" aria-hidden="true"></span>
-      <span class="logo-txt"><b>AKSORN CAT</b><small>Knowledge Hub</small></span>
+      <span class="logo-txt"><b>คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span>
     </a>
-    <nav class="nav-links" aria-label="บทต่าง ๆ">
-      <a href="#keepers">Keepers <i>ผู้รู้</i></a>
-      <a href="#field">Field notes <i>บันทึก</i></a>
-      <a href="#process">Process <i>กระบวนการ</i></a>
-      <a href="#care">Care <i>ดูแลต่อ</i></a>
+    <nav class="nav-links" aria-label="เมนูหลัก">
+      <a href="cats.html">แมวในคณะ</a>
+      <a href="cats.html#/knowledge">คลังความรู้</a>
+      <a href="cats.html#/share">แบ่งปันความรู้</a>
+      <a href="cats.html#/help" class="urgent">เจอแมวป่วย</a>
     </nav>
     <a class="nav-cta" href="cats.html">เข้าคลังความรู้ <span aria-hidden="true">→</span></a>
   </header>
@@ -51,29 +49,22 @@
     <!-- 00 · hero -->
     <section class="hero" id="top" data-cam="0">
       <div class="hero-copy">
-        <p class="eyebrow" data-rv><span class="dot"></span>Chapter 00 — คืนหนึ่งในคณะอักษร</p>
+        <p class="eyebrow thai" data-rv><span class="dot"></span>คณะอักษรศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย</p>
         <h1 class="display h-hero" data-rv>แมวทุกตัว<br>มีเรื่องเล่า<br><em>ที่ยังไม่มีใครจด</em></h1>
-        <p class="lede" data-rv>ใครเป็นแม่ใคร ตัวไหนป่วย ตัวไหนทำหมันแล้ว ความรู้พวกนี้อยู่กับพี่ ๆ แม่บ้านไม่กี่คน เราขอฟัง แล้วจดไว้ให้ทุกคน</p>
+        <p class="lede" data-rv>ใครเป็นพี่น้องใคร ตัวไหนป่วย ตัวไหนทำหมันแล้ว ความรู้พวกนี้เคยอยู่กับผู้ดูแลไม่กี่คน เราฟังแล้วจดไว้ให้ทุกคนค้นได้</p>
+        <form class="hero-search" id="heroSearch" role="search" data-rv>
+          <label class="sr" for="heroQ">ค้นหาแมวหรือความรู้</label>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
+          <input id="heroQ" name="q" type="search" placeholder="ชื่อแมว สีขน หรือที่ที่เจอ เช่น ส้มส้ม, BRK…" autocomplete="off" spellcheck="false" enterkeyhint="search">
+          <button type="submit">ค้นหา</button>
+        </form>
+        <ul class="hero-links" data-rv>
+          <li><a href="cats.html">ดูแมวทั้งหมด<span id="heroCount"></span></a></li>
+          <li><a href="cats.html#/knowledge">คลังความรู้การดูแล</a></li>
+          <li><a href="cats.html#/help" class="urgent">เจอแมวป่วย ทำอย่างไร</a></li>
+        </ul>
       </div>
-
-      <aside class="vert" aria-hidden="true"><span>แมว</span><span>อัก</span><span>ษร</span></aside>
-
-      <figure class="vp-card hero-vp" data-vp="hero">
-        <div class="vp" aria-hidden="true"></div>
-        <figcaption><span class="vp-th">บันได</span><span>Front steps — ภาพจำลอง</span></figcaption>
-      </figure>
-
-      <div class="hero-foot">
-        <div class="scroll-cue">Scroll to enter <i></i></div>
-        <ol class="hero-index">
-          <li><a href="#keepers"><b>01</b><span>Keepers</span><small>ความรู้ที่อยู่ในคน</small></a></li>
-          <li><a href="#field"><b>02</b><span>Field notes</span><small>รู้จักแมวทีละตัว</small></a></li>
-          <li><a href="#process"><b>03</b><span>Process</span><small>จากเรื่องเล่าสู่คลัง</small></a></li>
-          <li><a href="#care"><b>04</b><span>Care</span><small>ช่วยกันดูแลต่อ</small></a></li>
-        </ol>
-      </div>
-
-      <div class="wordmark" aria-hidden="true">MAEW</div>
+      <a class="scroll-cue" href="#keepers">อ่านเรื่องราวของโครงการ <i aria-hidden="true"></i></a>
       <svg class="fg-grass" id="fgGrass" aria-hidden="true" preserveAspectRatio="none"></svg>
     </section>
 
@@ -83,15 +74,15 @@
         <p class="eyebrow" data-rv><span class="dot"></span>01 — The Keepers <span class="th">ผู้รู้</span></p>
         <h2 class="display h-sec" data-rv>ความรู้ไม่ได้อยู่ในแฟ้ม<br>มันอยู่ในคน</h2>
         <div class="prose" data-rv>
-          <p>ลองถามพี่แม่บ้านว่าแมวส้มที่นอนหน้าโรงอาหารชื่ออะไร พี่จะเล่าได้ทันทีว่าแม่มันคือตัวไหน คลอดตอนไหน ทำหมันหรือยัง ชอบให้ใครลูบหัว ทั้งหมดนี้ไม่เคยถูกเขียนไว้ที่ไหน</p>
+          <p>ลองถามพี่ ๆ ผู้ดูแลถึงกระทง พี่จะเล่าได้ทันทีว่าอยู่ที่คณะมาสิบกว่าปี ตาเริ่มมองไม่ค่อยเห็น ฟันแทบไม่เหลือ และชอบอยู่แถวสโตร์แม่บ้าน ทั้งหมดนี้ไม่เคยถูกเขียนไว้ที่ไหน</p>
           <p>นี่คือ <b>ความรู้ฝังลึก (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน วันที่พี่เปลี่ยนกะหรือเกษียณ ความรู้นั้นก็หายไปด้วย โครงการนี้จึงเริ่มจากการฟัง</p>
         </div>
         <a class="link-cta" href="#process" data-rv>ดูว่าเราทำอย่างไร</a>
         <dl class="stats" data-rv>
           <div><dt id="stCats">—</dt><dd>แมวในคลัง</dd></div>
-          <div><dt id="stFamilies">—</dt><dd>ครอบครัว</dd></div>
+          <div><dt id="stFamilies">—</dt><dd>อยู่ในคณะตอนนี้</dd></div>
           <div><dt id="stSteril">—</dt><dd>ทำหมันแล้ว</dd></div>
-          <div><dt id="stSources">—</dt><dd>แหล่งความรู้</dd></div>
+          <div><dt id="stSources">—</dt><dd>ฉีดวัคซีนแล้ว</dd></div>
         </dl>
       </div>
     </section>

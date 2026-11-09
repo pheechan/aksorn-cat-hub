@@ -8,9 +8,20 @@ window.CatData = (function () {
   const STATUS = {
     active: { label: "อยู่ในคณะ", cls: "ok", color: "#5fc48a" },
     missing: { label: "ไม่ได้พบช่วงนี้", cls: "warn", color: "#e0a23a" },
+    commuter: { label: "ไปกลับ", cls: "info", color: "#9b8cf0", hint: "มีบ้านแล้ว แวะมาคณะเป็นครั้งคราว" },
     adopted: { label: "ได้บ้านใหม่แล้ว", cls: "info", color: "#6ea4e0" },
+    unknown: { label: "ยังไม่ระบุ", cls: "", color: "#6b7570" },
     passed: { label: "จากไปแล้ว", cls: "", color: "#8f9893" }
   };
+  // Values the team types in the sheet's Status column → our status keys
+  const STATUS_WORDS = [
+    [/^(active|อยู่|อยู่ในคณะ)/i, "active"],
+    [/back ?home|ไปกลับ|ไป-กลับ|commut/i, "commuter"],
+    [/missing|หาย|หาไม่เจอ/i, "missing"],
+    [/adopt|มีบ้าน|รับไปเลี้ยง/i, "adopted"],
+    [/passed|died|dead|เสียชีวิต|จากไป/i, "passed"]
+  ];
+  const PERSONALITY_WORDS = { "friendly": "เป็นมิตร เข้าหาได้", "don't touch": "ไม่ชอบให้จับ", "dont touch": "ไม่ชอบให้จับ", "shy": "ขี้อาย" };
 
   // Knowledge-base categories (scope: การให้อาหาร สุขภาพ พฤติกรรม สุขอนามัย + ประสบการณ์จากผู้ดูแล)
   const CATEGORIES = {
@@ -48,6 +59,8 @@ window.CatData = (function () {
   // Accepts English or Thai values typed into the sheet.
   function yesNo(v) {
     v = lower(v);
+    if (/ยังไม่|ไม่ได้/.test(v)) return "no";
+    if (/แล้ว/.test(v)) return "yes";
     if (["yes", "y", "true", "1", "ใช่", "แล้ว", "ทำแล้ว", "ฉีดแล้ว"].includes(v)) return "yes";
     if (["no", "n", "false", "0", "ไม่", "ยัง", "ยังไม่"].includes(v)) return "no";
     return "unknown";
@@ -71,29 +84,44 @@ window.CatData = (function () {
     if (/ดำ|black/i.test(s)) return "black";
     if (/เทา|grey|gray|สลิด/i.test(s)) return "grey";
     if (/ขาว|white/i.test(s)) return "white";
-    return "tabby";
+    return "unknown"; // coat not recorded: the hub draws a neutral silhouette rather than guessing
   }
 
-  function toCat(r) {
+  function statusOf(v) {
+    v = norm(v);
+    if (!v) return "unknown";
+    if (Object.prototype.hasOwnProperty.call(STATUS, lower(v))) return lower(v);
+    for (const [re, key] of STATUS_WORDS) if (re.test(v)) return key;
+    return "unknown";
+  }
+  const clean = (v) => (/^[-–—?]+$/.test(norm(v)) ? "" : norm(v)); // "-" or "???" in the sheet = no data
+
+  function toCat(r, cfg) {
+    const name = clean(r.name);
+    const photos = (cfg && cfg.CAT_PHOTOS) || {};
     const c = {
-      id: lower(r.id),
-      name: norm(r.name),
+      id: lower(r.id) || name,
+      name,
       nicknames: splitList(r.nicknames),
-      photo: photoUrl(r.photo),
+      photo: photoUrl(r.photo) || photoUrl(photos[name]),
       sex: sexOf(r.sex),
-      age: norm(r.age),
-      marks: norm(r.marks),
+      age: clean(r.age),
+      // "ไปกลับ" typed into the marks column is a status note, not a coat marking
+      marks: /^ไป\s*-?\s*กล.{0,3}บ$/.test(clean(r.marks)) ? "" : clean(r.marks),
       sterilised: yesNo(r.sterilised),
       vaccinated: yesNo(r.vaccinated),
-      health: norm(r.health_notes),
-      personality: norm(r.personality),
-      locations: splitList(r.locations),
+      health: clean(r.health_notes),
+      personality: PERSONALITY_WORDS[lower(r.personality)] || clean(r.personality),
+      locations: splitList(clean(r.locations)),
+      relationship: clean(r.relationship),
+      siblings: [],
+      interview: (r._extra || []).map(clean).filter(Boolean),
       mother: lower(r.mother_id),
-      status: pick(STATUS, lower(r.status), "active"),
-      caretakers: norm(r.caretakers),
-      lastSeen: norm(r.last_seen),
-      source: norm(r.source),
-      notes: norm(r.notes)
+      status: statusOf(r.status),
+      caretakers: clean(r.caretakers),
+      lastSeen: clean(r.last_seen),
+      source: clean(r.source),
+      notes: clean(r.notes)
     };
     c.coat = coatOf(c);
     return c;
@@ -127,14 +155,53 @@ window.CatData = (function () {
     };
   }
 
+  // Column names the team may use (sheet headers, Thai or English) → our field names.
+  const ALIASES = {
+    name: ["name", "ชื่อ", "ชื่อแมว"], photo: ["photo", "รูป", "รูปภาพ"],
+    marks: ["distinguishing marks", "marks", "ลักษณะเด่น", "ลักษณะ"], sex: ["sex", "เพศ"], age: ["age", "อายุ"],
+    vaccinated: ["vaccination status", "vaccinated", "vaccine", "วัคซีน"], sterilised: ["ทำหมัน", "sterilised", "sterilized", "neutered"],
+    health_notes: ["health notes", "health", "สุขภาพ"], status: ["status", "สถานะ"], personality: ["personality", "นิสัย"],
+    locations: ["usual locations", "locations", "location", "ที่อยู่", "จุดที่พบ"], relationship: ["relationship", "ความสัมพันธ์", "ครอบครัว"],
+    caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"], notes: ["note", "notes", "หมายเหตุ"]
+  };
+  function fieldOf(h) {
+    h = lower(h).replace(/^﻿/, "");
+    if (!h) return "";
+    for (const k in ALIASES) if (ALIASES[k].some((a) => h === a || h.startsWith(a + " ") || h.startsWith(a + "("))) return k;
+    return h; // already a field name (our CSV templates)
+  }
+  // Parses a sheet even when it has a title/group row above the real header row.
   async function fetchCsv(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    const text = await res.text();
-    return Papa.parse(text, {
-      header: true, skipEmptyLines: true,
-      transformHeader: (h) => h.replace(/^﻿/, "").trim().toLowerCase()
-    }).data;
+    return parseCsv(await res.text());
+  }
+  function parseCsv(text) {
+    const rows = Papa.parse(text, { header: false, skipEmptyLines: true }).data;
+    let hi = rows.findIndex((r) => r.some((v) => /^(name|id|title|date)$/i.test(norm(v).replace(/^﻿/, ""))));
+    if (hi < 0) hi = 0;
+    const keys = rows[hi].map(fieldOf);
+    return rows.slice(hi + 1).map((r) => {
+      const o = { _extra: [] };
+      r.forEach((v, i) => { if (keys[i]) o[keys[i]] = v; else if (norm(v)) o._extra.push(v); });
+      return o;
+    });
+  }
+
+  // Link cats named in each other's Relationship text ("พี่น้องกับมีตัง") as siblings, both ways.
+  const fold = (s) => norm(s).replace(/[์็]/g, "").replace(/ร(?=โ|ค)/g, ""); // ignore ์ ็ and ชาร์โคล/ชาโคล-style spellings
+  function linkSiblings(cats) {
+    for (const c of cats) {
+      if (!c.relationship) continue;
+      const rel = fold(c.relationship);
+      for (const o of cats) {
+        if (o === c || !o.name || o.name.length < 2) continue;
+        if (rel.includes(fold(o.name))) {
+          if (!c.siblings.includes(o.id)) c.siblings.push(o.id);
+          if (!o.siblings.includes(c.id)) o.siblings.push(c.id);
+        }
+      }
+    }
   }
 
   // Load one sheet tab; falls back to the sample rows when the URL is empty or the fetch fails.
@@ -144,7 +211,7 @@ window.CatData = (function () {
       if (!window.Papa) errors.push("โหลดตัวอ่าน CSV ไม่ได้ (ตรวจการเชื่อมต่ออินเทอร์เน็ต)");
       else {
         try {
-          const rows = (await fetchCsv(url)).map(map).filter(keep);
+          const rows = (await fetchCsv(url)).map((r) => map(r, cfgRef)).filter(keep);
           if (rows.length) return { rows, sample: false };
           errors.push(`ชีต${label}ไม่มีข้อมูล (ตรวจชื่อหัวคอลัมน์)`);
         } catch (e) {
@@ -153,17 +220,22 @@ window.CatData = (function () {
         }
       }
     }
-    return { rows: (sample || []).map(map).filter(keep), sample: true };
+    // offline copy: a CSV snapshot of the sheet (same parser as live), else plain objects
+    const base = typeof sample === "string" ? (window.Papa ? parseCsv(sample) : []) : (sample || []);
+    return { rows: base.map((r) => map(r, cfgRef)).filter(keep), sample: true };
   }
 
+  let cfgRef = {};
   async function load(cfg) {
     cfg = cfg || {};
+    cfgRef = cfg;
     const errors = [];
     const [cats, articles, history] = await Promise.all([
-      loadTab(cfg.SHEET_CSV_URL, window.SAMPLE_CATS, toCat, (c) => c.id && c.name, "แมว", errors),
+      loadTab(cfg.SHEET_CSV_URL, window.SAMPLE_CATS_CSV || window.SAMPLE_CATS, toCat, (c) => c.id && c.name, "แมว", errors),
       loadTab(cfg.ARTICLES_CSV_URL, window.SAMPLE_ARTICLES, toArticle, (a) => a.id && a.title && a.published, "บทความ", errors),
       loadTab(cfg.HISTORY_CSV_URL, window.SAMPLE_HISTORY, toHistory, (h) => h.cat && h.published, "ประวัติการดูแล", errors)
     ]);
+    linkSiblings(cats.rows);
     const byId = {};
     cats.rows.forEach((c) => { byId[c.id] = c; });
     const articleById = {};

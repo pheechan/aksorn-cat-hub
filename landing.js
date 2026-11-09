@@ -733,7 +733,8 @@
   /* ============================================================ page wiring */
   function wirePage() {
     sections = $$("[data-cam]");
-    const navLinks = $$(".nav-links a"), rail = $$("#rail a");
+    // the nav links to hub pages now; only in-page (#) links take part in chapter highlighting
+    const navLinks = $$('.nav-links a[href^="#"]'), rail = $$("#rail a");
     const wordmark = $(".wordmark"), grass = $("#fgGrass");
     const nav = $("#nav");
     const onScroll = () => {
@@ -766,20 +767,21 @@
   async function fillData() {
     if (!window.CatData) return;
     const r = await window.CatData.load(CFG);
-    const cats = r.cats, active = cats.filter((c) => c.status === "active");
-    const moms = new Set(cats.filter((c) => c.mother && r.byId[c.mother]).map((c) => c.mother));
-    const steril = active.length ? Math.round(100 * active.filter((c) => c.sterilised === "yes").length / active.length) : 0;
-    const sources = new Set(cats.map((c) => c.source).filter(Boolean));
+    const cats = r.cats, alive = cats.filter((c) => c.status !== "passed");
+    const active = cats.filter((c) => c.status === "active");
+    const pct = (k) => (alive.length ? Math.round(100 * alive.filter((c) => c[k] === "yes").length / alive.length) + "%" : "—");
     const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
-    set("#stCats", cats.length); set("#stFamilies", moms.size); set("#stSteril", steril + "%"); set("#stSources", sources.size);
+    set("#stCats", cats.length); set("#stFamilies", active.length); set("#stSteril", pct("sterilised")); set("#stSources", pct("vaccinated"));
+    set("#heroCount", " " + cats.length + " ตัว");
     if (r.usingSample && $(".stats")) {
       const n = document.createElement("p"); n.className = "card-note"; n.style.marginTop = "14px";
-      n.textContent = "ตัวเลขนี้มาจากข้อมูลตั้งต้นที่ดึงจาก Instagram @aksorncats ยังไม่ได้ยืนยัน";
+      n.textContent = "ตัวเลขนี้มาจากสำเนาข้อมูลที่เก็บไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ";
       $(".stats").after(n);
     }
 
     const cardsEl = $("#cards"); if (!cardsEl) return;
-    const picks = active.filter((c) => c.photo).concat(active.filter((c) => !c.photo)).slice(0, 3);
+    const seenNow = cats.filter((c) => c.status === "active" || c.status === "commuter");
+    const picks = seenNow.filter((c) => c.photo).concat(seenNow.filter((c) => !c.photo)).slice(0, 3);
     const hasGL = !document.body.classList.contains("no-gl");
     const used = new Set();
     cardsEl.innerHTML = picks.map((c, i) => {
@@ -801,7 +803,18 @@
   }
 
   /* ============================================================ boot */
+  // hero search hands the query to the hub's search page
+  function wireHeroSearch() {
+    const form = $("#heroSearch"); if (!form) return;
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const q = ($("#heroQ").value || "").trim();
+      location.href = q ? "cats.html#/search/" + encodeURIComponent(q) : "cats.html";
+    });
+  }
+
   function boot() {
+    wireHeroSearch();
     const t0 = performance.now();
     makeGrain(); makeGrass(); setProgress(10);
     const heroVp = $(".hero-vp .vp"); if (heroVp) heroVp.dataset.vpKey = "hero";

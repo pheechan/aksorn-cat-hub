@@ -18,20 +18,22 @@
   const STERIL = { yes: "ทำหมันแล้ว", no: "ยังไม่ทำหมัน", unknown: "ไม่ทราบ" };
   const VACC = { yes: "ฉีดแล้ว", no: "ยังไม่ฉีด", unknown: "ไม่ทราบ" };
   const SEX = { male: "ตัวผู้", female: "ตัวเมีย", unknown: "ไม่ทราบ" };
-  const STATUS_ORDER = { active: 0, missing: 1, adopted: 2, passed: 3 };
+  const STATUS_ORDER = { active: 0, commuter: 1, missing: 2, unknown: 3, adopted: 4, passed: 5 };
   const enc = encodeURIComponent;
 
   /* ---------------- small helpers ---------------- */
+  // ISO date → Thai date (e.g. 9 พ.ย. 2569) via Intl; free text from the sheet is shown as typed
+  const TH_DATE = new Intl.DateTimeFormat("th-TH", { day: "numeric", month: "short", year: "numeric" });
   function thDate(iso) {
     const m = norm(iso).match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (!m) return esc(iso);
-    const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-    return `${+m[3]} ${months[+m[2] - 1]} ${+m[1] + 543}`;
+    return TH_DATE.format(new Date(+m[1], +m[2] - 1, +m[3]));
   }
   const statusDot = (c) => `<span class="dot ${STATUS[c.status].cls}">${STATUS[c.status].label}</span>`;
   const catHref = (c) => `#/cat/${enc(c.id)}`;
   const childrenOf = (id) => D.cats.filter((c) => c.mother === id);
-  const siblingsOf = (c) => (c.mother ? D.cats.filter((x) => x.mother === c.mother && x.id !== c.id) : []);
+  // siblings = same mother, or named in the sheet's Relationship column
+  const siblingsOf = (c) => D.cats.filter((x) => x.id !== c.id && ((c.mother && x.mother === c.mother) || (c.siblings || []).includes(x.id)));
   const articlesFor = (id) => D.articles.filter((a) => a.relatedCats.includes(id));
   const historyFor = (id) => D.history.filter((h) => h.cat === id);
 
@@ -39,11 +41,12 @@
   const COATS = {
     orange: { fill: "#c8782f", dark: "#a35f22" }, black: { fill: "#1d1e22", dark: "#111214" },
     grey: { fill: "#6f757b", dark: "#565b60" }, white: { fill: "#e3dfd5", dark: "#c9c3b6" },
-    tabby: { fill: "#8a6a4a", dark: "#5f4730" }, calico: { fill: "#e3dfd5", dark: "#c9c3b6" }
+    tabby: { fill: "#8a6a4a", dark: "#5f4730" }, calico: { fill: "#e3dfd5", dark: "#c9c3b6" },
+    unknown: { fill: "#3b434a", dark: "#2c3338" } // coat not recorded yet: neutral, not a made-up colour
   };
   let svgId = 0;
   function silhouette(c) {
-    const k = COATS[c.coat] || COATS.tabby, id = "s" + (++svgId);
+    const k = COATS[c.coat] || COATS.unknown, id = "s" + (++svgId);
     const body = "M58 230 C50 190 56 150 78 128 L122 128 C144 150 150 190 142 230 Z";
     let extra = "";
     if (c.coat === "calico") {
@@ -66,7 +69,7 @@
   }
   function portrait(c, note) {
     if (c.photo) {
-      return `<div class="portrait"><img src="${esc(c.photo)}" alt="รูปของ ${esc(c.name)}" loading="lazy"></div>`;
+      return `<div class="portrait"><img src="${esc(c.photo)}" alt="รูปของ ${esc(c.name)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
     }
     return `<div class="portrait">${silhouette(c)}${note ? '<span class="ph-note">ยังไม่มีรูป</span>' : ""}</div>`;
   }
@@ -152,14 +155,14 @@
       <header class="page-head">
         <span class="eyebrow">Cats of the faculty</span>
         <h1>แมวในคณะอักษรศาสตร์</h1>
-        <p class="lede">ทำความรู้จักแมวทีละตัว ชื่อที่คนเรียก นิสัย ที่ที่มักอยู่ และใครเป็นแม่ของใคร ทั้งหมดรวบรวมจากผู้ดูแลที่เห็นแมวทุกวัน</p>
+        <p class="lede">ทำความรู้จักแมวทีละตัว นิสัย ที่ที่มักอยู่ สุขภาพ และใครเป็นพี่น้องกับใคร ทั้งหมดรวบรวมจากผู้ดูแลที่เห็นแมวทุกวัน</p>
       </header>
-      <div class="tabs" role="tablist" aria-label="สถานะแมว">
-        ${tabs.map(([k, label, n]) => `<button role="tab" aria-selected="${catFilter.status === k}" class="${catFilter.status === k ? "on" : ""}" data-status="${k}">${label}<span class="n">${n}</span></button>`).join("")}
+      <div class="tabs" role="group" aria-label="กรองตามสถานะแมว">
+        ${tabs.filter(([k, , n]) => !k || n).map(([k, label, n]) => `<button type="button" aria-pressed="${catFilter.status === k}" class="${catFilter.status === k ? "on" : ""}" data-status="${k}"${STATUS[k] && STATUS[k].hint ? ` title="${esc(STATUS[k].hint)}"` : ""}>${label}<span class="n">${n}</span></button>`).join("")}
       </div>
       <div class="toolbar">
         <p class="summary" id="catSummary"></p>
-        <label class="check"><input type="checkbox" id="needSteril" ${catFilter.needSteril ? "checked" : ""}> เฉพาะตัวที่ยังไม่ทำหมันหรือไม่ทราบ (${needSteril})</label>
+        ${needSteril || catFilter.needSteril ? `<label class="check"><input type="checkbox" id="needSteril" ${catFilter.needSteril ? "checked" : ""}> เฉพาะตัวที่ยังไม่ทำหมันหรือไม่ทราบ (${needSteril})</label>` : ""}
       </div>
       <div class="cats" id="catGrid"></div>`;
     const draw = () => {
@@ -168,12 +171,21 @@
       document.getElementById("catSummary").textContent = `แสดง ${list.length} จาก ${D.cats.length} ตัว`;
       document.getElementById("catGrid").innerHTML = list.length ? list.map((c) => catCard(c)).join("") : `<p class="empty">ไม่มีแมวในหมวดนี้</p>`;
     };
+    // keep the filter in the URL so a refresh or a shared link shows the same list
+    const syncUrl = () => {
+      const q = new URLSearchParams();
+      if (catFilter.status) q.set("status", catFilter.status);
+      if (catFilter.needSteril) q.set("steril", "1");
+      const qs = q.toString();
+      history.replaceState(null, "", "#/" + (qs ? "?" + qs : ""));
+    };
     app.querySelectorAll("[data-status]").forEach((b) => b.addEventListener("click", () => {
       catFilter.status = b.dataset.status;
-      app.querySelectorAll("[data-status]").forEach((x) => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-selected", on); });
-      draw();
+      app.querySelectorAll("[data-status]").forEach((x) => { const on = x === b; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+      syncUrl(); draw();
     }));
-    document.getElementById("needSteril").addEventListener("change", (e) => { catFilter.needSteril = e.target.checked; draw(); });
+    const ns = document.getElementById("needSteril");
+    if (ns) ns.addEventListener("change", (e) => { catFilter.needSteril = e.target.checked; syncUrl(); draw(); });
     draw();
   }
 
@@ -204,7 +216,7 @@
         <div>
           <h1>${esc(c.name)}</h1>
           ${c.nicknames.length ? `<p class="aka">ชื่อที่คนเรียก: ${esc(c.nicknames.join(" · "))}</p>` : ""}
-          <div class="status-line">${statusDot(c)}${c.lastSeen ? `<span>พบล่าสุด ${thDate(c.lastSeen)}</span>` : ""}</div>
+          <div class="status-line">${statusDot(c)}${STATUS[c.status].hint ? `<span>${esc(STATUS[c.status].hint)}</span>` : ""}${c.lastSeen ? `<span>พบล่าสุด ${thDate(c.lastSeen)}</span>` : ""}</div>
           <div class="actions">
             <a class="btn" href="${esc(ru)}"${extAttrs(ru)}>แจ้งข่าวเกี่ยวกับ${esc(c.name)}</a>
             <a class="btn ghost" href="#/family/${enc(c.id)}">ดูในผังครอบครัว</a>
@@ -231,7 +243,8 @@
           <section class="sec"><span class="label">ครอบครัว</span>
             <div class="family">
               ${famRow("แม่", mom ? miniCat(mom) : c.mother ? esc(c.mother) : "")}
-              ${famRow("พี่น้องแม่เดียวกัน", sibs.map(miniCat).join(""))}
+              ${famRow("พี่น้อง", sibs.map(miniCat).join(""))}
+              ${c.relationship && !sibs.length ? `<p class="muted" style="margin:0">${esc(c.relationship)}</p>` : ""}
               ${famRow("ลูก", kids.map(miniCat).join(""))}
             </div>
           </section>
@@ -242,6 +255,8 @@
           </section>
 
           ${rel.length ? `<section class="sec"><span class="label">ความรู้ที่เกี่ยวข้อง</span><ul class="articles">${rel.map((a) => articleRow(a)).join("")}</ul></section>` : ""}
+
+          ${c.interview && c.interview.length ? `<section class="sec"><span class="label">บันทึกจากการสัมภาษณ์ผู้ดูแล (ข้อความตามที่จดไว้)</span><ul class="interview">${c.interview.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></section>` : ""}
 
           ${c.source ? `<p class="source">ที่มาของข้อมูล: ${esc(c.source)}</p>` : ""}
         </div>
@@ -380,20 +395,42 @@
   function renderFamily(focusId) {
     app.innerHTML = `
       <header class="page-head"><span class="eyebrow">Family tree</span><h1>ผังครอบครัวแมว</h1>
-        <p class="lede">ลูกศรชี้จากแม่ไปหาลูก แตะที่แมวเพื่อเปิดประวัติ ลากเพื่อเลื่อน และซูมด้วยสองนิ้วหรือล้อเมาส์</p></header>
-      <div class="legend">${Object.keys(STATUS).map((k) => `<span class="dot" style="--c:${STATUS[k].color}">${STATUS[k].label}</span>`).join("")}</div>
-      <div id="graph"></div>`;
+        <p class="lede">เส้นประเชื่อมแมวที่เป็นพี่น้องกัน ลูกศรชี้จากแม่ไปหาลูก แตะที่แมวเพื่อเปิดประวัติ</p></header>
+      <div class="legend">${Object.keys(STATUS).filter((k) => D.cats.some((c) => c.status === k)).map((k) => `<span class="dot" style="--c:${STATUS[k].color}">${STATUS[k].label}</span>`).join("")}</div>
+      <div id="graph"></div>
+      <section class="sec"><span class="label">ยังไม่มีข้อมูลครอบครัว</span><div class="mini-cats" id="noFamily"></div>
+        <p class="muted" style="margin-top:12px">รู้ว่าแมวตัวไหนเป็นพี่น้องหรือแม่ลูกกัน? <a href="#/share">แบ่งปันให้ทีม</a></p></section>`;
+    // only cats with a known relation go in the graph; the rest are listed below it
+    const related = new Set();
+    D.cats.forEach((c) => {
+      if (c.mother && D.byId[c.mother]) { related.add(c.id); related.add(c.mother); }
+      (c.siblings || []).forEach((o) => { if (D.byId[o]) { related.add(c.id); related.add(o); } });
+    });
+    document.getElementById("noFamily").innerHTML = D.cats.filter((c) => !related.has(c.id)).map(miniCat).join("");
     if (!window.vis) { document.getElementById("graph").innerHTML = `<p class="empty">โหลดตัวแสดงผังไม่ได้ (ต้องต่ออินเทอร์เน็ต)</p>`; return; }
-    const nodes = D.cats.map((c) => {
+    if (!related.size) { document.getElementById("graph").innerHTML = `<p class="empty">ยังไม่มีข้อมูลความสัมพันธ์ระหว่างแมว</p>`; return; }
+    const nodes = D.cats.filter((c) => related.has(c.id)).map((c) => {
       const base = { id: c.id, label: c.name, title: [c.name].concat(c.nicknames).join(" / "), font: { color: "#e6ece7", face: "Google Sans", size: 16 }, borderWidth: 3, color: { border: STATUS[c.status].color, background: (COATS[c.coat] || COATS.tabby).fill, highlight: { border: "#ef6d9f", background: (COATS[c.coat] || COATS.tabby).fill } } };
       return c.photo ? Object.assign(base, { shape: "circularImage", image: c.photo, size: 26 }) : Object.assign(base, { shape: "dot", size: 17 });
     });
     const edges = D.cats.filter((c) => c.mother && D.byId[c.mother]).map((c) => ({ from: c.mother, to: c.id, arrows: "to" }));
+    const seen = new Set(); // sibling links from the Relationship column, drawn once as dashed lines
+    D.cats.forEach((c) => (c.siblings || []).forEach((o) => {
+      const k = [c.id, o].sort().join("|");
+      if (D.byId[o] && !seen.has(k)) { seen.add(k); edges.push({ from: c.id, to: o, dashes: true, color: "#9b8cf0" }); }
+    }));
     if (network) { network.destroy(); network = null; }
-    network = new vis.Network(document.getElementById("graph"), { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, {
+    // tree layout only when there are mother→kitten links; sibling-only data reads better as small clusters
+    const hasTree = edges.some((e) => e.arrows);
+    network = new vis.Network(document.getElementById("graph"), { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, hasTree ? {
       layout: { hierarchical: { enabled: true, direction: "UD", sortMethod: "directed", levelSeparation: 110, nodeSpacing: 120 } },
       physics: false, edges: { color: "#7f8a84", smooth: { type: "cubicBezier", forceDirection: "vertical" } }, interaction: { hover: true }
+    } : {
+      layout: { randomSeed: 7 },
+      physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -180, springLength: 110, avoidOverlap: 1 }, stabilization: { iterations: 400 } },
+      edges: { width: 2, smooth: false }, nodes: { size: 26 }, interaction: { hover: true }
     });
+    network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); });
     network.on("click", (p) => { if (p.nodes && p.nodes.length) location.hash = `#/cat/${enc(p.nodes[0])}`; });
     const f = lower(focusId);
     if (f && D.byId[f]) network.once("afterDrawing", () => { network.selectNodes([f]); network.focus(f, { scale: 1.3, animation: { duration: 400 } }); });
@@ -420,7 +457,13 @@
 
   /* ---------------- router ---------------- */
   function route() {
-    const raw = location.hash.replace(/^#\/?/, "");
+    let raw = location.hash.replace(/^#\/?/, "");
+    if (raw.startsWith("?")) { // cat list filters: #/?status=commuter&steril=1
+      const q = new URLSearchParams(raw.slice(1));
+      catFilter.status = Object.prototype.hasOwnProperty.call(STATUS, q.get("status")) ? q.get("status") : "";
+      catFilter.needSteril = q.get("steril") === "1";
+      raw = "";
+    }
     const slash = raw.indexOf("/");
     const page = slash < 0 ? raw : raw.slice(0, slash);
     let arg = slash < 0 ? "" : raw.slice(slash + 1);
@@ -471,8 +514,9 @@
     const parts = [];
     if (D.samples.articles) parts.push("คลังความรู้");
     const msgs = [];
-    if (D.error) msgs.push(D.error);
-    if (D.samples.cats) msgs.push("ข้อมูลแมวและประวัติตั้งต้นดึงจาก Instagram @aksorncats ยังไม่ได้ยืนยันกับผู้ดูแล");
+    // the cat list falls back to a saved copy of the team sheet: say so once, without the raw load error
+    if (D.samples.cats) msgs.push("กำลังแสดงสำเนาข้อมูลแมวที่บันทึกไว้ เพราะโหลดชีตล่าสุดไม่สำเร็จ");
+    else if (D.error) msgs.push(D.error);
     if (parts.length) msgs.push(`${parts.join(" ")} ยังเป็นบทความตัวอย่าง รอตรวจทาน`);
     if (msgs.length) { banner.textContent = msgs.join(" · "); banner.hidden = false; }
     window.addEventListener("hashchange", route);

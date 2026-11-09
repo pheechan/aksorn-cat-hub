@@ -9,7 +9,8 @@ window.SITE_CONFIG = {
 
   // ---- Google Sheet: แต่ละแท็บ Publish to web เป็น CSV แยกกัน (ดู README) ----
   // เว้นว่าง = ใช้ข้อมูลตัวอย่างใน data-sample.js
-  SHEET_CSV_URL: "",      // แท็บ cats (ข้อมูลแมว)
+  // แท็บ Cat_profile ในชีตของทีม (ชีตต้องแชร์แบบ "ทุกคนที่มีลิงก์ดูได้") แก้ในชีตแล้วเว็บอัปเดตเอง
+  SHEET_CSV_URL: "https://docs.google.com/spreadsheets/d/1LFBVHk6D9GHRL2BPJldPS-qql6UkGWmlpr8B-0B1J70/gviz/tq?tqx=out:csv&sheet=Cat_profile",
   ARTICLES_CSV_URL: "",   // แท็บ articles (คลังความรู้)
   HISTORY_CSV_URL: "",    // แท็บ history (ประวัติการดูแล)
 
@@ -20,6 +21,13 @@ window.SITE_CONFIG = {
   FORM_CAT_ENTRY: "",
   // ฟอร์มแบ่งปันความรู้: ส่งบทความ เคล็ดลับ หรือประสบการณ์การดูแลแมว (ผ่านการตรวจก่อนเผยแพร่)
   SHARE_FORM_URL: "",
+
+  // รูปแมวที่เก็บไว้กับเว็บ (ใช้เมื่อช่อง Photo ในชีตไม่ใช่ลิงก์รูป) — ชื่อต้องตรงกับช่อง Name ในชีต
+  CAT_PHOTOS: {
+    "ส้มส้ม": "photos/somsom.jpg",
+    "ชาโคล": "photos/charcoal.jpg",
+    "มีตัง": "photos/mitang.jpg"
+  },
 
   // URL จริงของเว็บหลังขึ้น GitHub Pages เช่น "https://yourname.github.io/arts-cats/" (ใช้สร้าง QR)
   SITE_URL: "https://pheechan.github.io/aksorn-cat-hub/",

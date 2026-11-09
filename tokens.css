@@ -1,0 +1,60 @@
+/* แมวอักษร design tokens, shared by the hub (style.css) and the landing page (landing.css).
+   Day: white, ink, one pink. Night: deep ink, the same pink a step lighter. หนูดำ is the mascot by day, ส้มส้ม (orange) at night. */
+
+:root, [data-theme="light"] {
+  --bg: #ffffff;
+  --surface: #f5f5f3;
+  --surface-2: #ecebe7;
+  --card: #ffffff;
+  --ink: #16181d;
+  --ink-2: #41454d;
+  --muted: #6a6e76;
+  --line: #e7e5e0;
+  --line-strong: #d4d1ca;
+  --pink: #e2447a;
+  --pink-ink: #b8285b;
+  --pink-soft: #fde8ef;
+  --ok: #1f7a4d;
+  --ok-soft: #e4f3ea;
+  --warn: #8f5500;
+  --warn-soft: #fbf0dc;
+  --bad: #c0352b;
+  --bad-soft: #fce7e4;
+  --violet: #5b4ab3;
+  --shadow: 0 1px 2px rgba(22, 24, 29, .05), 0 10px 30px -18px rgba(22, 24, 29, .28);
+  /* mascot: หนูดำ */
+  --cat: #16181d; --cat-eye: #ffffff; --sock: #ffffff; --tag: #3fbf7f;
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #171a20;
+  --surface-2: #20242b;
+  --card: #171a20;
+  --ink: #f1f0ec;
+  --ink-2: #c9c8c2;
+  --muted: #9a9ca3;
+  --line: #262a31;
+  --line-strong: #363b44;
+  --pink: #f06a9a;
+  --pink-ink: #f58db2;
+  --pink-soft: #3a1d29;
+  --ok: #5ccf92;
+  --ok-soft: #15291f;
+  --warn: #f0b45a;
+  --warn-soft: #2e2312;
+  --bad: #ff7a6e;
+  --bad-soft: #351816;
+  --violet: #a89bff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 14px 34px -18px rgba(0, 0, 0, .7);
+  /* mascot at night: ส้มส้ม, the orange cat, so she stands out on dark */
+  --cat: #e8923f; --cat-eye: #1b1206; --sock: #fff3e2; --tag: #3fbf7f;
+  color-scheme: dark;
+}
+:root {
+  --sans: "Google Sans", "Leelawadee UI", "Tahoma", system-ui, sans-serif;
+  --hand: "Mali", "Google Sans", "Leelawadee UI", sans-serif;
+  --r: 18px;
+  --r-sm: 12px;
+  --gap: clamp(56px, 8vw, 104px);
+}

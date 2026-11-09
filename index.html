@@ -1,151 +1,187 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07090c">
-  <title data-en="Aksorn Cat Knowledge Hub">คลังความรู้แมวอักษร</title>
-  <meta name="description" content="คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ: เรื่องเล่าของแมวที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน" data-en-content="The cat knowledge hub of the Faculty of Arts, Chulalongkorn University: stories about the faculty's cats that used to live only in the keepers' memories, listened to, written down and passed on.">
+  <meta name="theme-color" content="#ffffff">
+  <title data-en="Aksorn Cats">คลังความรู้แมวอักษร</title>
+  <meta name="description" content="แมวทุกตัวในคณะอักษรศาสตร์ จุฬาฯ มีเรื่องเล่า เราไปฟังพี่ ๆ ผู้ดูแลมา แล้วจดไว้ให้ทุกคนค้นได้" data-en-content="Every cat at the Faculty of Arts, Chulalongkorn University has a story. We listened to the keepers and wrote it all down for anyone to look up.">
   <link rel="alternate" hreflang="th" href="https://pheechan.github.io/aksorn-cat-hub/?lang=th">
   <link rel="alternate" hreflang="en" href="https://pheechan.github.io/aksorn-cat-hub/?lang=en">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090c'/%3E%3Cg fill='none' stroke='%23e4ebe5' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37'/%3E%3Ccircle cx='19' cy='31' r='5'/%3E%3Cpath d='M45 52C54 55 59 50 58 44'/%3E%3C/g%3E%3Cpath d='M25 15L26 4L33 11ZM38 10L44 3L46 14Z' fill='%23e4ebe5'/%3E%3Ccircle cx='31' cy='24' r='2.4' fill='%23ef6d9f'/%3E%3Ccircle cx='41' cy='24' r='2.4' fill='%23ef6d9f'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 30 11 8.5 27 19.5Z M50 30 53 8.5 37 19.5Z' fill='%2316181d' stroke='%2316181d' stroke-width='4' stroke-linejoin='round'/%3E%3Cellipse cx='32' cy='35' rx='23' ry='20.5' fill='%2316181d'/%3E%3Cellipse cx='23.5' cy='34' rx='3.6' ry='4.2' fill='%23fff'/%3E%3Cellipse cx='40.5' cy='34' rx='3.6' ry='4.2' fill='%23fff'/%3E%3Cpath d='M29.6 41.5h4.8L32 44.3Z' fill='%23e2447a'/%3E%3Cpath d='M17 52.5Q32 60.5 47 52.5' fill='none' stroke='%23e2447a' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='58.6' r='3.3' fill='%233fbf7f'/%3E%3C/svg%3E">
+  <script>try{var t=localStorage.getItem("akc-theme");document.documentElement.setAttribute("data-theme",t==="dark"||t==="light"?t:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))}catch(e){}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&display=swap">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&display=swap" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@400..700&family=Manrope:wght@400..800&display=swap"></noscript>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap"></noscript>
+  <link rel="stylesheet" href="tokens.css">
   <link rel="stylesheet" href="landing.css">
 </head>
 <body class="is-loading">
-  <!-- brand mark: the Thai letter อ (for อักษร) drawn as a sitting cat -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="mark" viewBox="0 0 64 64">
-      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37"/>
-        <circle cx="19" cy="31" r="5"/>
-        <path d="M45 52C54 55 59 50 58 44"/>
-      </g>
-      <path d="M25 15L26 4L33 11ZM38 10L44 3L46 14Z" fill="currentColor"/>
-      <circle cx="31" cy="24" r="2.4" fill="#ef6d9f"/><circle cx="41" cy="24" r="2.4" fill="#ef6d9f"/>
-    </symbol>
-  </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
+  <!-- หนูดำ (Nu Dam), the faculty's best-known cat, as the brand mascot: black coat, white socks,
+       pink collar with a green tag (as in her photos). Colours come from CSS variables so she works on light and dark pages:
+       --cat (coat), --cat-line (outline, used on dark pages), --cat-eye, --pink, --tag. -->
+  <symbol id="nd-head" viewBox="0 0 64 64">
+    <path d="M14 30 11 8.5 27 19.5Z M50 30 53 8.5 37 19.5Z" style="fill:var(--cat,#16181d);stroke:var(--cat,#16181d);stroke-width:4;stroke-linejoin:round"/>
+    <ellipse cx="32" cy="35" rx="23" ry="20.5" style="fill:var(--cat,#16181d);stroke:var(--cat-line,transparent);stroke-width:2.4"/>
+    <path d="M14 30 11 8.5 27 19.5 M50 30 53 8.5 37 19.5" style="fill:none;stroke:var(--cat-line,transparent);stroke-width:2.4;stroke-linejoin:round"/>
+    <ellipse cx="23.5" cy="34" rx="3.6" ry="4.2" style="fill:var(--cat-eye,#fff)"/>
+    <ellipse cx="40.5" cy="34" rx="3.6" ry="4.2" style="fill:var(--cat-eye,#fff)"/>
+    <path d="M29.6 41.5h4.8L32 44.3Z" style="fill:var(--pink,#e2447a)"/>
+    <path d="M17 52.5Q32 60.5 47 52.5" style="fill:none;stroke:var(--pink,#e2447a);stroke-width:4;stroke-linecap:round"/>
+    <circle cx="32" cy="58.6" r="3.3" style="fill:var(--tag,#3fbf7f)"/>
+  </symbol>
+
+  <symbol id="nd-sit" viewBox="0 0 120 130">
+    <path d="M86 116C110 116 116 96 104 82" style="fill:none;stroke:var(--cat,#16181d);stroke-width:10;stroke-linecap:round"/>
+    <path d="M36 116C33 92 41 70 60 68C79 70 87 92 84 116C84 121 80 124 75 124H45C40 124 36 121 36 116Z" style="fill:var(--cat,#16181d);stroke:var(--cat-line,transparent);stroke-width:2.4"/>
+    <ellipse cx="51" cy="122" rx="6.5" ry="4" style="fill:var(--sock,#fff)"/>
+    <ellipse cx="69" cy="122" rx="6.5" ry="4" style="fill:var(--sock,#fff)"/>
+    <use href="#nd-head" x="28" y="14" width="64" height="64"/>
+  </symbol>
+
+  <symbol id="nd-sleep" viewBox="0 0 140 90">
+    <path d="M30 80C10 80 8 62 22 58" style="fill:none;stroke:var(--cat,#16181d);stroke-width:9;stroke-linecap:round"/>
+    <ellipse cx="78" cy="62" rx="48" ry="24" style="fill:var(--cat,#16181d);stroke:var(--cat-line,transparent);stroke-width:2.4"/>
+    <path d="M30 56 26 36 42 46Z M56 50 62 31 70 47Z" style="fill:var(--cat,#16181d);stroke:var(--cat,#16181d);stroke-width:4;stroke-linejoin:round"/>
+    <ellipse cx="46" cy="62" rx="22" ry="18" style="fill:var(--cat,#16181d);stroke:var(--cat-line,transparent);stroke-width:2.4"/>
+    <path d="M35 61q4 3.5 8 0 M50 61q4 3.5 8 0" style="fill:none;stroke:var(--cat-eye,#fff);stroke-width:2.4;stroke-linecap:round"/>
+    <path d="M44.6 67h3.4l-1.7 2Z" style="fill:var(--pink,#e2447a)"/>
+    <ellipse cx="60" cy="83" rx="9" ry="4" style="fill:var(--sock,#fff)"/>
+    <text x="96" y="30" style="fill:var(--pink,#e2447a);font:700 15px sans-serif">z</text>
+    <text x="108" y="18" style="fill:var(--pink,#e2447a);font:700 11px sans-serif;opacity:.7">z</text>
+  </symbol>
+
+  <symbol id="nd-peek" viewBox="0 0 120 80">
+    <use href="#nd-head" x="28" y="6" width="64" height="64"/>
+    <ellipse cx="44" cy="70" rx="9" ry="5.5" style="fill:var(--sock,#fff);stroke:var(--cat,#16181d);stroke-width:2.4"/>
+    <ellipse cx="76" cy="70" rx="9" ry="5.5" style="fill:var(--sock,#fff);stroke:var(--cat,#16181d);stroke-width:2.4"/>
+    <path d="M4 74H116" style="stroke:var(--cat,#16181d);stroke-width:3;stroke-linecap:round"/>
+  </symbol>
+</svg>
   <canvas id="gl" aria-hidden="true"></canvas>
   <div id="grain" aria-hidden="true"></div>
 
   <div id="preloader" role="status" aria-live="polite">
     <span class="pl-eyes" aria-hidden="true"><i></i><i></i></span>
-    <span data-en="Setting up the 3D scene…">กำลังเตรียมฉากสามมิติ…</span><span id="plPct">0%</span>
+    <span data-en="Building the campus in 3D…">กำลังสร้างคณะแบบสามมิติ…</span><span id="plPct">0%</span>
     <span class="pl-bar" aria-hidden="true"><i id="plBar"></i></span>
   </div>
 
   <header class="nav" id="nav">
     <a class="logo" href="#top">
-      <svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg>
-      <span class="logo-txt"><b data-en="Aksorn Cat Hub">คลังความรู้แมวอักษร</b><small translate="no" data-en="Faculty of Arts · Chula">Aksorn Cat Knowledge Hub</small></span>
+      <svg class="logo-mark" aria-hidden="true"><use href="#nd-head"/></svg>
+      <span class="logo-txt" data-en="Aksorn Cats">แมวอักษร</span>
     </a>
     <nav class="nav-links" aria-label="เมนูหลัก" data-en-aria-label="Main menu">
-      <a href="cats.html#/cats" data-en="Cats">แมวในคณะ</a>
-      <a href="cats.html#/find" data-en="Find this cat">หาแมวตัวนี้</a>
-      <a href="cats.html#/start" data-en="New here? Start">มาใหม่ เริ่มที่นี่</a>
-      <a href="cats.html#/help" class="urgent" data-en="Sick cat?">เจอแมวป่วย</a>
+      <a href="cats.html#/cats" data-en="Cats">แมวทั้งหมด</a>
+      <a href="cats.html#/find" data-en="Find a cat">หาแมว</a>
+      <a href="cats.html#/start" data-en="Start here">มือใหม่เริ่มที่นี่</a>
+      <a href="cats.html#/knowledge" data-en="Know-how">ความรู้</a>
     </nav>
-    <a class="nav-cta" href="cats.html" data-en="Open the notebook &lt;span aria-hidden=&quot;true&quot;&gt;→&lt;/span&gt;">เปิดสมุดผู้ดูแล <span aria-hidden="true">→</span></a>
-    <div class="lang" role="group" aria-label="ภาษา / Language">
-      <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ไทย</button>
-      <button type="button" data-set-lang="en" lang="en" aria-pressed="false">EN</button>
+    <div class="nav-tools">
+      <a class="help-pill" href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a>
+      <div class="lang" role="group" aria-label="ภาษา / Language">
+        <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ไทย</button>
+        <button type="button" data-set-lang="en" lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" data-toggle-theme aria-pressed="false" aria-label="เปลี่ยนเป็นโหมดกลางคืน"><svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
+      <a class="btn small nav-cta" href="cats.html" data-en="Open the hub">เข้าสู่คลังความรู้</a>
     </div>
   </header>
 
-  <nav class="rail" id="rail" aria-label="ความคืบหน้า" data-en-aria-label="Chapters">
-    <a href="#top" data-i="0"><span>00</span></a>
-    <a href="#keepers" data-i="1"><span>01</span></a>
-    <a href="#field" data-i="2"><span>02</span></a>
-    <a href="#process" data-i="3"><span>03</span></a>
-    <a href="#care" data-i="4"><span>04</span></a>
+  <nav class="rail" id="rail" aria-label="ส่วนของหน้า" data-en-aria-label="Sections">
+    <a href="#top" data-i="0"><span data-en="Top">บนสุด</span></a>
+    <a href="#keepers" data-i="1"><span data-en="The keepers">ผู้ดูแล</span></a>
+    <a href="#field" data-i="2"><span data-en="The cats">แมว</span></a>
+    <a href="#process" data-i="3"><span data-en="How it works">วิธีทำ</span></a>
+    <a href="#care" data-i="4"><span data-en="Help out">ช่วยกัน</span></a>
   </nav>
 
   <main class="page">
-    <!-- 00 · hero -->
     <section class="hero" id="top" data-cam="0">
-      <div class="hero-copy">
-        <p class="eyebrow thai" data-rv><span class="dot"></span><span data-en="Faculty of Arts, Chulalongkorn University">คณะอักษรศาสตร์ จุฬาลงกรณ์มหาวิทยาลัย</span></p>
-        <h1 class="display h-hero" data-rv data-en="Every cat<br>has a story<br><em>no one has written down</em>">แมวทุกตัว<br>มีเรื่องเล่า<br><em>ที่ยังไม่มีใครจด</em></h1>
-        <p class="lede" data-rv data-en="Who's related to whom, which cat is sick, which ones are spayed. This knowledge used to live with a few keepers. We listened, and wrote it down so anyone can look it up.">ใครเป็นพี่น้องใคร ตัวไหนป่วย ตัวไหนทำหมันแล้ว ความรู้พวกนี้เคยอยู่กับผู้ดูแลไม่กี่คน เราฟังแล้วจดไว้ให้ทุกคนค้นได้</p>
-        <form class="hero-search" id="heroSearch" role="search" data-rv>
-          <label class="sr" for="heroQ" data-en="Search cats or knowledge">ค้นหาแมวหรือความรู้</label>
+      <div class="hero-copy panel" data-rv>
+        <svg class="hero-cat" aria-hidden="true"><use href="#nd-sit"/></svg>
+        <h1 class="h-hero" data-en="Every cat at the faculty&lt;br&gt;has a story">แมวทุกตัวในคณะ<br>มีเรื่องเล่า</h1>
+        <p class="lede" data-en="Who's related to whom, which cat is sick, which are spayed. Only a few keepers used to know. So we sat down, listened, and wrote it all down for anyone to look up.">ใครเป็นพี่น้องกับใคร ตัวไหนป่วย ตัวไหนทำหมันแล้ว เรื่องพวกนี้เคยรู้กันอยู่ไม่กี่คน เราเลยไปนั่งฟังพี่ ๆ ผู้ดูแล แล้วจดไว้ให้ทุกคนค้นได้</p>
+        <form class="hero-search" id="heroSearch" role="search">
+          <label class="sr" for="heroQ" data-en="Search cats or know-how">ค้นหาแมวหรือความรู้</label>
           <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
-          <input id="heroQ" name="q" type="search" placeholder="ชื่อแมว สีขน หรือที่ที่เจอ เช่น ส้มส้ม, BRK…" data-en-placeholder="A cat's name, coat or place, e.g. Som-Som, BRK…" autocomplete="off" spellcheck="false" enterkeyhint="search">
-          <button type="submit" data-en="Search">ค้นหา</button>
+          <input id="heroQ" name="q" type="search" placeholder="ชื่อแมว สีขน หรือจุดที่เจอ…" data-en-placeholder="A name, a coat or a place…" autocomplete="off" spellcheck="false" enterkeyhint="search">
+          <button class="btn" type="submit" data-en="Search">ค้นหา</button>
         </form>
-        <ul class="hero-links" data-rv>
-          <li><a href="cats.html#/find" data-en="Met a cat but don't know its name? Find it by coat">เจอแมวแต่ไม่รู้ชื่อ? หาจากสีขน</a></li>
-          <li><a href="cats.html#/start" data-en="New here? Start here">มาใหม่ เริ่มที่นี่</a></li>
-          <li><a href="cats.html#/cats"><span data-en="All the cats">ดูแมวทั้งหมด</span><span id="heroCount"></span></a></li>
-          <li><a href="cats.html#/help" class="urgent" data-en="Found a sick cat">เจอแมวป่วย</a></li>
-        </ul>
-      </div>
-      <a class="scroll-cue" href="#keepers"><span data-en="Read the project's story">อ่านเรื่องราวของโครงการ</span> <i aria-hidden="true"></i></a>
-    </section>
-
-    <!-- 01 · keepers -->
-    <section class="sec" id="keepers" data-cam="1">
-      <div class="sec-inner col-left">
-        <p class="eyebrow" data-rv><span class="dot"></span>01 — The Keepers <span class="th" data-en="">ผู้รู้</span></p>
-        <h2 class="display h-sec" data-rv data-en="Knowledge isn't kept in files.<br>It's kept in people.">ความรู้ไม่ได้อยู่ในแฟ้ม<br>มันอยู่ในคน</h2>
-        <div class="prose" data-rv>
-          <p data-en="Ask the keepers about Krathong and they'll tell you straight away: he has lived at the faculty for over ten years, his eyes are failing, he has hardly any teeth left, and he likes to stay near the housekeepers' store room. None of this had ever been written down.">ลองถามพี่ ๆ ผู้ดูแลถึงกระทง พี่จะเล่าได้ทันทีว่าอยู่ที่คณะมาสิบกว่าปี ตาเริ่มมองไม่ค่อยเห็น ฟันแทบไม่เหลือ และชอบอยู่แถวสโตร์แม่บ้าน ทั้งหมดนี้ไม่เคยถูกเขียนไว้ที่ไหน</p>
-          <p data-en="This is &lt;b&gt;tacit knowledge&lt;/b&gt;: it lives in the experience of a few people. The students who help with the cats change every academic year, so what they know leaves with them when they graduate, and newcomers start from zero every time. So this project began by listening.">นี่คือ <b>ความรู้โดยนัย (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน นิสิตที่ช่วยดูแลเปลี่ยนรุ่นทุกปีการศึกษา ความรู้จึงหายไปพร้อมคนที่จบไป คนมาใหม่ต้องเริ่มจากศูนย์ทุกครั้ง โครงการนี้จึงเริ่มจากการฟัง</p>
+        <div class="hero-actions">
+          <a class="btn ghost" href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a>
+          <a class="btn ghost" href="cats.html#/start" data-en="New here? Start here">มือใหม่เริ่มที่นี่</a>
         </div>
-        <a class="link-cta" href="#process" data-rv data-en="See how we did it">ดูว่าเราทำอย่างไร</a>
-        <dl class="stats" data-rv>
+        <dl class="stats">
           <div><dt id="stCats">—</dt><dd data-en="cats in the hub">แมวในคลัง</dd></div>
-          <div><dt id="stFamilies">—</dt><dd data-en="at the faculty now">อยู่ในคณะตอนนี้</dd></div>
+          <div><dt id="stFamilies">—</dt><dd data-en="at the faculty now">อยู่ในคณะ</dd></div>
           <div><dt id="stSteril">—</dt><dd data-en="spayed or neutered">ทำหมันแล้ว</dd></div>
           <div><dt id="stSources">—</dt><dd data-en="vaccinated">ฉีดวัคซีนแล้ว</dd></div>
         </dl>
       </div>
+      <a class="scroll-cue" href="#keepers"><span data-en="Scroll to read on">เลื่อนลงเพื่ออ่านต่อ</span><i aria-hidden="true"></i></a>
     </section>
 
-    <!-- 02 · field notes -->
-    <section class="sec" id="field" data-cam="2">
-      <div class="sec-inner col-wide">
-        <div class="sec-head">
-          <p class="eyebrow" data-rv><span class="dot"></span>02 — Field notes <span class="th" data-en="">บันทึก</span></p>
-          <h2 class="display h-sec" data-rv data-en="Meet the cats, one by one">รู้จักแมวทีละตัว</h2>
+    <section class="sec" id="keepers" data-cam="1">
+      <div class="sec-inner col-left panel" data-rv>
+        <h2 class="h-sec" data-en="Knowledge isn't kept in files.&lt;br&gt;It's kept in people.">ความรู้ไม่ได้อยู่ในแฟ้ม<br>แต่อยู่ในคน</h2>
+        <div class="prose">
+          <p data-en="Ask the keepers about Krathong and they'll tell you straight away: he has lived at the faculty for over ten years, his eyes are failing, he has hardly any teeth left, and he likes to sleep by the housekeepers' store room. None of this had ever been written down.">ถามพี่ ๆ ผู้ดูแลถึงกระทง พี่เล่าได้ทันทีว่าอยู่คณะมาสิบกว่าปีแล้ว ตาเริ่มมองไม่ค่อยเห็น ฟันแทบไม่เหลือ ชอบนอนแถวสโตร์แม่บ้าน แต่เรื่องพวกนี้ไม่เคยมีใครเขียนไว้ที่ไหน</p>
+          <p data-en="This is &lt;b&gt;tacit knowledge&lt;/b&gt;: it lives in the experience of a few people. The students who help with the cats change every year, so what they know leaves with them when they graduate, and newcomers start from zero. So this project began by listening.">นี่คือ <b>ความรู้โดยนัย (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน นิสิตที่ช่วยดูแลแมวก็เปลี่ยนรุ่นทุกปี จบไปทีความรู้ก็หายไปด้วย คนมาใหม่ต้องเริ่มจากศูนย์ทุกครั้ง โครงการนี้เลยเริ่มจากการฟัง</p>
         </div>
-        <div class="cards" id="cards"></div>
-        <a class="link-cta" href="cats.html" data-rv data-en="See every cat in the hub">ดูแมวทั้งหมดในคลัง</a>
+        <a class="more" href="#process" data-en="See how we did it →">ดูว่าเราทำยังไง →</a>
       </div>
     </section>
 
-    <!-- 03 · process -->
+    <section class="sec" id="field" data-cam="2">
+      <div class="sec-inner col-wide panel" data-rv>
+        <div class="show-head">
+          <div>
+            <h2 class="h-sec" data-en="Meet the cats, one by one">รู้จักแมวทีละตัว</h2>
+            <p data-en="Every cat in the hub. Tap one to see what's normal for it.">แมวทุกตัวในคลัง กดที่ตัวไหนก็ได้ เพื่อดูว่าปกติแต่ละตัวเป็นยังไง</p>
+          </div>
+          <div class="show-ctl">
+            <button type="button" id="showPrev" aria-label="ก่อนหน้า" data-en-aria-label="Previous"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+            <span class="pos" id="showPos" aria-live="polite"></span>
+            <button type="button" id="showNext" aria-label="ถัดไป" data-en-aria-label="Next"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          </div>
+        </div>
+        <div class="track" id="track" tabindex="0" aria-label="แมวทั้งหมด" data-en-aria-label="All cats"></div>
+        <div class="show-foot">
+          <span class="show-bar" aria-hidden="true"><i id="showBar"></i></span>
+          <a class="more" href="cats.html#/cats" data-en="See every cat →">ดูแมวทั้งหมด →</a>
+        </div>
+      </div>
+    </section>
+
     <section class="sec" id="process" data-cam="3">
-      <div class="sec-inner col-right">
-        <p class="eyebrow" data-rv><span class="dot"></span>03 — Process <span class="th" data-en="">กระบวนการ</span></p>
-        <h2 class="display h-sec" data-rv data-en="Five steps, from stories<br>to a knowledge hub">ห้าขั้น จากเรื่องเล่า<br>สู่คลังความรู้</h2>
-        <p class="sec-lede" data-rv data-en="A five-step knowledge management process, from deciding which knowledge matters to putting it to use. Each step changes the form of the knowledge, following the SECI cycle.">กระบวนการจัดการความรู้ 5 ขั้น ตั้งแต่ระบุว่าความรู้ไหนสำคัญ จนถึงการนำไปใช้จริง แต่ละขั้นเปลี่ยนรูปความรู้ตามวงจร SECI</p>
+      <div class="sec-inner col-right panel" data-rv>
+        <h2 class="h-sec" data-en="Five steps from stories&lt;br&gt;to a knowledge hub">5 ขั้น จากเรื่องเล่า<br>สู่คลังความรู้</h2>
+        <p class="sec-lede" data-en="A five-step knowledge management process, from deciding which knowledge matters to putting it to use. Each step changes the form of the knowledge, following the SECI cycle.">กระบวนการจัดการความรู้ 5 ขั้น ตั้งแต่เลือกว่าความรู้ไหนสำคัญ จนถึงเอาไปใช้จริง แต่ละขั้นเปลี่ยนรูปความรู้ตามวงจร SECI</p>
         <ol class="steps">
-          <li data-rv><b>01</b><div><h3 data-en="Identify">ระบุ <span>Identify</span></h3><p data-en="Where new keepers get stuck: not knowing the cats' names, which ones are spayed, or who to tell when a cat is sick.">ผู้ดูแลใหม่ติดตรงไหน: ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องแจ้งใคร</p></div><small data-en="Key knowledge">ความรู้ที่สำคัญ</small></li>
-          <li data-rv><b>02</b><div><h3 data-en="Listen and record &lt;span&gt;Externalization&lt;/span&gt;">ฟังและจด <span>Externalization</span></h3><p data-en="Interview the experienced keepers and turn their stories into notes and articles, with sources.">สัมภาษณ์ผู้ดูแลเดิม แปลงเรื่องเล่าเป็นบันทึกและบทความ พร้อมระบุที่มา</p></div><small data-en="Create and acquire">สร้างและแสวงหา</small></li>
-          <li data-rv><b>03</b><div><h3 data-en="Store &lt;span&gt;Combination&lt;/span&gt;">จัดเก็บ <span>Combination</span></h3><p data-en="The team's sheet is the shared store, searchable by name, coat, place and personality, so you can find a cat without knowing its name.">ชีตของทีมเป็นคลังกลาง ค้นได้ทั้งจากชื่อ สีขน ที่ที่เจอ และนิสัย ไม่รู้ชื่อก็หาเจอ</p></div><small data-en="Store">จัดเก็บ</small></li>
-          <li data-rv><b>04</b><div><h3 data-en="Share">แบ่งปัน <span>Share</span></h3><p data-en="A short form: say what you know, it waits for review, then it's published with credit to whoever shared it.">ฟอร์มสั้น บอกเท่าที่รู้ เข้าชีตรอตรวจ แล้วเผยแพร่พร้อมเครดิตผู้ให้ความรู้</p></div><small data-en="Share">แบ่งปัน</small></li>
-          <li data-rv><b>05</b><div><h3 data-en="Use &lt;span&gt;Internalization · Socialization&lt;/span&gt;">นำไปใช้ <span>Internalization · Socialization</span></h3><p data-en="New keepers follow five steps until they're caring for the cats alongside experienced keepers, then feed what they learn back in as new knowledge.">ผู้ดูแลใหม่ทำตาม 5 ขั้น จนไปดูแลจริงกับผู้ดูแลเดิม แล้วส่งสิ่งที่เรียนรู้กลับมาเป็นความรู้ใหม่</p></div><small data-en="Use">นำไปใช้</small></li>
+          <li data-rv><b>01</b><div><h3><span data-en="Identify">ระบุ</span> <span>Identify</span></h3><p data-en="Where newcomers get stuck: not knowing the cats&#x27; names, which are spayed, or who to tell when one is sick.">มือใหม่ติดตรงไหน: ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องบอกใคร</p></div></li>
+          <li data-rv><b>02</b><div><h3><span data-en="Listen and record">ฟังและจด</span> <span>Externalization</span></h3><p data-en="Interview the experienced keepers and write their stories up as notes and articles, with sources.">สัมภาษณ์ผู้ดูแลรุ่นก่อน แล้วเรียบเรียงเรื่องเล่าเป็นบันทึกกับบทความ พร้อมบอกที่มา</p></div></li>
+          <li data-rv><b>03</b><div><h3><span data-en="Store">จัดเก็บ</span> <span>Combination</span></h3><p data-en="The team&#x27;s sheet is the shared store, searchable by name, coat, place and personality, so you can find a cat without knowing its name.">ชีตของทีมเป็นคลังกลาง ค้นได้ทั้งจากชื่อ สีขน จุดที่เจอ และนิสัย ไม่รู้ชื่อก็หาเจอ</p></div></li>
+          <li data-rv><b>04</b><div><h3><span data-en="Share">แบ่งปัน</span> <span>Share</span></h3><p data-en="A short form: say what you know, the team checks it, then it goes up with credit to whoever shared it.">ฟอร์มสั้น ๆ บอกเท่าที่รู้ ทีมตรวจก่อน แล้วขึ้นเว็บพร้อมเครดิตคนที่เล่า</p></div></li>
+          <li data-rv><b>05</b><div><h3><span data-en="Use">นำไปใช้</span> <span>Internalization · Socialization</span></h3><p data-en="Newcomers follow five steps until they&#x27;re caring for the cats alongside experienced keepers, then feed what they learn back in.">มือใหม่ทำตาม 5 ขั้น จนได้ไปดูแลจริงกับผู้ดูแลรุ่นก่อน แล้วเอาสิ่งที่ได้เรียนรู้กลับมาเติม</p></div></li>
         </ol>
       </div>
     </section>
 
-    <!-- 04 · care -->
-    <section class="sec fin" id="care" data-cam="4">
-      <div class="sec-inner col-center">
-        <p class="eyebrow" data-rv><span class="dot"></span>Chapter 04 — Care <span class="th" data-en="">ดูแลต่อ</span></p>
-        <h2 class="display h-fin" data-rv data-en="Tonight, the cats are still waiting">คืนนี้ แมวยังรออยู่</h2>
-        <p class="sec-lede" data-rv data-en="Seen a cat, found a new one, or spotted something wrong? Tell us. This hub grows because everyone adds to it.">เห็นแมวตัวไหน เจอตัวใหม่ หรือข้อมูลไม่ตรง บอกเราได้ คลังนี้โตได้เพราะทุกคนช่วยกันเติม</p>
-        <div class="cta-row" data-rv>
-          <a class="btn" href="cats.html" data-en="Open the notebook">เปิดสมุดผู้ดูแล</a>
-          <a class="btn ghost" href="cats.html#/find" data-en="Find this cat">หาแมวตัวนี้</a>
-          <a class="btn ghost" href="cats.html#/start" data-en="New here? Start here">มาใหม่ เริ่มที่นี่</a>
-          <a class="btn ghost warn" href="cats.html#/help" data-en="Found a sick cat?">เจอแมวป่วย?</a>
+    <section class="sec" id="care" data-cam="4">
+      <div class="sec-inner col-center panel" data-rv>
+        <svg class="care-cat" aria-hidden="true"><use href="#nd-sit"/></svg>
+        <h2 class="h-fin"><span class="only-day" data-en="The cats are still&lt;br&gt;waiting today">วันนี้แมว<br>ก็ยังรออยู่</span><span class="only-night" data-en="The cats are still&lt;br&gt;waiting tonight">คืนนี้แมว<br>ก็ยังรออยู่</span></h2>
+        <p class="sec-lede" data-en="Seen a cat, found a new one, or spotted something wrong? Tell us. This hub grows because everyone adds to it.">เห็นแมวตัวไหน เจอตัวใหม่ หรือเจอข้อมูลที่ไม่ตรง บอกเราได้เลย คลังนี้โตได้เพราะทุกคนช่วยกันเติม</p>
+        <div class="cta-row">
+          <a class="btn" href="cats.html" data-en="Open the hub">เข้าสู่คลังความรู้</a>
+          <a class="btn ghost" href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a>
+          <a class="btn warn" href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a>
         </div>
       </div>
     </section>
@@ -153,14 +189,13 @@
     <footer class="foot">
       <div class="foot-grid">
         <div class="foot-about">
-          <div class="logo static"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><span class="logo-txt"><b data-en="Aksorn Cat Hub">คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span></div>
-          <p data-en="The cat keepers' notebook of the Faculty of Arts, Chula. What used to live only in the memories of a few keepers, listened to, written down and passed on to the next generation.">สมุดความรู้ของผู้ดูแลแมว คณะอักษรศาสตร์ จุฬาฯ เรื่องที่เคยอยู่แค่ในความทรงจำของผู้ดูแลไม่กี่คน ถูกฟัง จด และส่งต่อให้คนรุ่นต่อไป</p>
+          <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#nd-head"/></svg><span class="logo-txt" data-en="Aksorn Cats">คลังความรู้แมวอักษร</span></div>
+          <p data-en="Everything about the cats of the Faculty of Arts, Chula, from the people who know them best.">เรื่องแมวในคณะอักษรศาสตร์ จุฬาฯ จากคนที่รู้จักแมวดีที่สุด</p>
         </div>
-        <div><h3>Chapters</h3><a href="#keepers">Keepers</a><a href="#field">Field notes</a><a href="#process">Process</a><a href="#care">Care</a></div>
-        <div><h3 data-en="Keepers' notebook">สมุดผู้ดูแล</h3><a href="cats.html#/cats" data-en="Cats">แมวในคณะ</a><a href="cats.html#/find" data-en="Find this cat">หาแมวตัวนี้</a><a href="cats.html#/start" data-en="New here? Start here">มาใหม่ เริ่มที่นี่</a><a href="cats.html#/knowledge" data-en="Knowledge">คลังความรู้</a><a href="cats.html#/share" data-en="Share what you know">แบ่งปันความรู้</a><a href="cats.html#/help" data-en="Found a sick cat">เจอแมวป่วย</a></div>
-        <div><h3 data-en="Project">โครงการ</h3><a href="cats.html#/about" data-en="About the project">เกี่ยวกับโครงการ</a><span id="footCourse"></span></div>
+        <div><h3 data-en="The hub">คลังความรู้</h3><a href="cats.html#/cats" data-en="All cats">แมวทั้งหมด</a><a href="cats.html#/find" data-en="Find a cat">หาแมว</a><a href="cats.html#/start" data-en="Start here">มือใหม่เริ่มที่นี่</a><a href="cats.html#/knowledge" data-en="Know-how">ความรู้</a><a href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a><a href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a></div>
+        <div><h3 data-en="The project">โครงการ</h3><a href="cats.html#/about" data-en="About">เกี่ยวกับเว็บนี้</a><span id="footCourse"></span></div>
       </div>
-      <div class="foot-base"><span>© 2569 คลังความรู้แมวอักษร · Aksorn Cat Knowledge Hub</span><span data-en="Every story has an owner. Thank you to everyone who shared what they know.">ทุกเรื่องเล่ามีเจ้าของ ขอบคุณผู้ให้ความรู้ทุกท่าน</span><span>WebGL · Manrope · Anuphan</span></div>
+      <div class="foot-base"><span>© 2569 คลังความรู้แมวอักษร · Aksorn Cats</span><span data-en="Thank you to every keeper who told us their stories.">ขอบคุณพี่ ๆ ผู้ดูแลแมวทุกคนที่เล่าให้เราฟัง</span></div>
     </footer>
   </main>
 

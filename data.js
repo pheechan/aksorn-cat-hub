@@ -7,9 +7,9 @@ window.CatData = (function () {
 
   const STATUS = {
     active: { label: "อยู่ในคณะ", en: "At the faculty", cls: "ok", color: "#5fc48a" },
-    missing: { label: "ไม่ได้พบช่วงนี้", en: "Not seen lately", cls: "warn", color: "#e0a23a" },
-    commuter: { label: "ไปกลับ", en: "Commuter", cls: "info", color: "#9b8cf0", hint: "มีบ้านแล้ว แวะมาคณะเป็นครั้งคราว", hintEn: "Has a home, drops by the faculty now and then" },
-    adopted: { label: "ได้บ้านใหม่แล้ว", en: "Adopted", cls: "info", color: "#6ea4e0" },
+    missing: { label: "ช่วงนี้ไม่เห็น", en: "Not seen lately", cls: "warn", color: "#e0a23a" },
+    commuter: { label: "แมวไปกลับ", en: "Commuter", cls: "info", color: "#9b8cf0", hint: "มีบ้านแล้ว แวะมาคณะเป็นบางวัน", hintEn: "Has a home, drops by the faculty now and then" },
+    adopted: { label: "ได้บ้านแล้ว", en: "Adopted", cls: "info", color: "#6ea4e0" },
     unknown: { label: "ยังไม่ระบุ", en: "Not recorded", cls: "", color: "#6b7570" },
     passed: { label: "จากไปแล้ว", en: "Passed away", cls: "", color: "#8f9893" }
   };
@@ -25,11 +25,11 @@ window.CatData = (function () {
 
   // Knowledge-base categories (scope: การให้อาหาร สุขภาพ พฤติกรรม สุขอนามัย + ประสบการณ์จากผู้ดูแล)
   const CATEGORIES = {
-    feeding: { label: "การให้อาหาร", en: "Feeding", desc: "ให้อะไร ให้เท่าไร ให้ที่ไหน และสิ่งที่ไม่ควรให้", descEn: "What to give, how much, where, and what never to give" },
-    health: { label: "สุขภาพ", en: "Health", desc: "สัญญาณผิดปกติ การทำหมัน วัคซีน และเมื่อไรควรพบสัตวแพทย์", descEn: "Warning signs, spaying, vaccines, and when to see a vet" },
-    behavior: { label: "พฤติกรรม", en: "Behaviour", desc: "อ่านภาษากายแมว เข้าหาอย่างไรให้แมวไม่เครียด", descEn: "Reading body language, and approaching without stressing the cat" },
-    hygiene: { label: "สุขอนามัย", en: "Hygiene", desc: "ความสะอาดของคนและพื้นที่ให้อาหาร", descEn: "Keeping hands and feeding spots clean" },
-    experience: { label: "ประสบการณ์จากผู้ดูแล", en: "From the keepers", desc: "เรื่องเล่าและบทเรียนจากคนที่ดูแลแมวจริง", descEn: "Stories and lessons from the people who actually care for the cats" }
+    feeding: { label: "อาหาร", en: "Feeding", desc: "ให้อะไร ให้แค่ไหน ให้ตรงไหน และอะไรที่ห้ามให้", descEn: "What to give, how much, where, and what never to give" },
+    health: { label: "สุขภาพ", en: "Health", desc: "อาการที่ต้องระวัง ทำหมัน วัคซีน และเมื่อไหร่ควรพาไปหาหมอ", descEn: "Warning signs, spaying, vaccines, and when to see a vet" },
+    behavior: { label: "นิสัยแมว", en: "Behaviour", desc: "อ่านภาษากายแมว และเข้าหายังไงไม่ให้แมวเครียด", descEn: "Reading body language, and approaching without stressing the cat" },
+    hygiene: { label: "ความสะอาด", en: "Hygiene", desc: "ล้างมือ เก็บชาม และดูแลจุดให้อาหาร", descEn: "Keeping hands and feeding spots clean" },
+    experience: { label: "เรื่องเล่าจากผู้ดูแล", en: "From the keepers", desc: "เรื่องที่ผู้ดูแลเจอมากับตัว และบทเรียนที่ได้", descEn: "Stories and lessons from the people who actually care for the cats" }
   };
 
   // Coat colours a passer-by can tell apart at a glance (used by "find this cat" and the cat list filters)
@@ -54,7 +54,7 @@ window.CatData = (function () {
     tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", en: "Thewalai (Maha Chulalongkorn Building)", re: /เทวาลัย|มหาจุฬา/i },
     store: { label: "สโตร์แม่บ้าน", en: "Housekeepers' store room", re: /สโตร์|แม่บ้าน/i },
     cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", re: /กรง/i },
-    roam: { label: "ไม่อยู่ประจำ แวะมาเป็นครั้งคราว", en: "No fixed spot, drops by now and then", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
+    roam: { label: "ไม่มีที่ประจำ แวะมาบางวัน", en: "No fixed spot, drops by now and then", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
   };
 
   const HISTORY_TYPES = {

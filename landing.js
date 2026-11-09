@@ -102,7 +102,16 @@
 
   /* ============================================================ the world */
   let renderer, scene, camera;
-  const world = { cats: [], lampGlow: null, blossoms: null, eyeGlow: null, models: {}, fallback: null };
+  const world = { cats: [], lampGlow: null, blossoms: null, eyeGlow: null, models: {}, fallback: null,
+    day: !window.I18N || window.I18N.theme !== "dark" };
+  /* ---- day / night: follows the site's theme switch (I18N.onTheme). Night is the original scene. ---- */
+  const DN = [];
+  const onDN = (f) => { DN.push(f); f(world.day); };
+  const nightOnly = (o) => onDN((d) => { o.visible = !d; });
+  const dayOnly = (o) => onDN((d) => { o.visible = d; });
+  const dnColor = (mat, dayHex) => { const night = mat.color.getHex(); onDN((d) => mat.color.setHex(d ? dayHex : night)); };
+  const dnLight = (l, dayI, dayColor) => { const n = l.intensity, nc = l.color.getHex(); onDN((d) => { l.intensity = d ? dayI : n; l.color.setHex(d && dayColor != null ? dayColor : nc); }); };
+  function setDay(d) { world.day = d; DN.forEach((f) => f(d)); }
 
   function initGL() {
     if (!window.THREE) return false;
@@ -114,6 +123,7 @@
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x07090c);
     scene.fog = new THREE.FogExp2(0x0b0e14, isMobile ? 0.0052 : 0.0046);
+    onDN((d) => { scene.background.setHex(d ? 0xcfe3ef : 0x07090c); scene.fog.color.setHex(d ? 0xdce8ef : 0x0b0e14); scene.fog.density = (isMobile ? 0.0052 : 0.0046) * (d ? 0.6 : 1); });
     camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 1000);
     window.__aksornLanding = { renderer, scene, camera }; // handy for debugging/perf checks in devtools
     return true;
@@ -164,6 +174,12 @@
     const dome = new THREE.Mesh(new THREE.CylinderGeometry(560, 560, 340, 32, 1, true),
       new THREE.MeshBasicMaterial({ map: grad, side: THREE.BackSide, fog: false, depthWrite: false }));
     dome.position.y = 110; dome.renderOrder = -2; scene.add(dome);
+    const dayGrad = canvasTex(4, 256, (x, w, h) => {
+      const g = x.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, "#7fb5de"); g.addColorStop(0.45, "#a9cfea"); g.addColorStop(0.72, "#d6e7f1"); g.addColorStop(0.82, "#f1eee6"); g.addColorStop(1, "#dfe7ea");
+      x.fillStyle = g; x.fillRect(0, 0, w, h);
+    });
+    onDN((d) => { dome.material.map = d ? dayGrad : grad; dome.material.needsUpdate = true; });
 
     const r = rng(11), n = isMobile ? 500 : 900, pos = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
@@ -171,7 +187,8 @@
       pos[i * 3] = R * Math.sin(ph) * Math.cos(th); pos[i * 3 + 1] = R * Math.cos(ph) + 20; pos[i * 3 + 2] = R * Math.sin(ph) * Math.sin(th);
     }
     const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-    scene.add(new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xcfd8e6, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.75, depthWrite: false })));
+    const stars = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xcfd8e6, size: 1.6, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.75, depthWrite: false }));
+    scene.add(stars); nightOnly(stars);
 
     // moon (upper right of the hero view, above MCS) with soft craters and a pink halo
     const moonTex = canvasTex(512, 512, (x, s) => {
@@ -194,6 +211,15 @@
     moon.position.copy(world.moonPos); moon.scale.set(62, 62, 1); moon.renderOrder = -1; scene.add(moon);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xef6d9f, fog: false, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false }));
     halo.position.copy(world.moonPos); halo.scale.set(240, 240, 1); halo.renderOrder = -1; scene.add(halo);
+    nightOnly(moon); nightOnly(halo);
+    // the sun sits where the moon is, a soft warm disc with a wide pale glow
+    const sunTex = canvasTex(256, 256, (x, s2) => {
+      const g = x.createRadialGradient(s2 / 2, s2 / 2, 0, s2 / 2, s2 / 2, s2 / 2);
+      g.addColorStop(0, "rgba(255,252,240,1)"); g.addColorStop(0.18, "rgba(255,246,220,1)"); g.addColorStop(0.24, "rgba(255,240,205,.55)"); g.addColorStop(1, "rgba(255,240,210,0)");
+      x.fillStyle = g; x.fillRect(0, 0, s2, s2);
+    });
+    const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, fog: false, transparent: true, depthWrite: false }));
+    sun.position.copy(world.moonPos); sun.scale.set(150, 150, 1); sun.renderOrder = -1; scene.add(sun); dayOnly(sun);
 
     // distant Bangkok skyline ring: one instanced draw call, windows from a shared emissive texture
     const winTex = canvasTex(64, 128, (x, w, h) => {
@@ -206,7 +232,9 @@
       const h = 14 + Math.pow(rc(), 2) * 120, w = 14 + rc() * 22;
       items.push({ p: [Math.cos(a) * R, h / 2, Math.sin(a) * R], s: [w, h, w], r: [0, rc() * Math.PI, 0] });
     }
-    instanced(new THREE.BoxGeometry(1, 1, 1), lambert(0x0a0d13, { emissive: 0xffffff, emissiveMap: winTex }), items);
+    const skyMat = lambert(0x0a0d13, { emissive: 0xffffff, emissiveMap: winTex });
+    instanced(new THREE.BoxGeometry(1, 1, 1), skyMat, items);
+    onDN((d) => { skyMat.color.setHex(d ? 0xb4bec9 : 0x0a0d13); skyMat.emissiveIntensity = d ? 0 : 1; });
   }
 
   function buildGround(TEX) {
@@ -215,7 +243,14 @@
       for (let i = 0; i < 2600; i++) { x.fillStyle = `rgba(${30 + r() * 30},${45 + r() * 30},${35 + r() * 20},${0.08 + r() * 0.12})`; x.fillRect(r() * s, r() * s, 1 + r() * 2, 1 + r() * 2); }
     });
     grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping; grassTex.repeat.set(160, 160);
-    scene.add(flatPlane(1400, 1400, lambert(0xffffff, { map: grassTex }), 0, 0, 0));
+    const grassDay = canvasTex(256, 256, (x, s2) => {
+      x.fillStyle = "#86a96f"; x.fillRect(0, 0, s2, s2); const r = rng(3);
+      for (let i = 0; i < 2600; i++) { x.fillStyle = `rgba(${70 + r() * 50},${110 + r() * 50},${55 + r() * 30},${0.12 + r() * 0.2})`; x.fillRect(r() * s2, r() * s2, 1 + r() * 2, 1 + r() * 2); }
+    });
+    grassDay.wrapS = grassDay.wrapT = THREE.RepeatWrapping; grassDay.repeat.set(160, 160);
+    const grassMat = lambert(0xffffff, { map: grassTex });
+    scene.add(flatPlane(1400, 1400, grassMat, 0, 0, 0));
+    onDN((d) => { grassMat.map = d ? grassDay : grassTex; grassMat.needsUpdate = true; });
 
     // ลานอักษรสิทธิ์: square stone paving in front of BRK and MCS
     const pave = canvasTex(256, 256, (x, s) => {
@@ -225,29 +260,40 @@
     pave.wrapS = pave.wrapT = THREE.RepeatWrapping;
     const P = SITE.plaza, pw = P.x1 - P.x0, pd = P.z1 - P.z0;
     pave.repeat.set(pw / 4, pd / 4);
-    scene.add(flatPlane(pw, pd, lambert(0xffffff, { map: pave }), (P.x0 + P.x1) / 2, 0.02, (P.z0 + P.z1) / 2));
+    const paveDay = canvasTex(256, 256, (x, s2) => {
+      x.fillStyle = "#a19c92"; x.fillRect(0, 0, s2, s2); const r = rng(13);
+      for (let i = 0; i < 8; i++) for (let j = 0; j < 8; j++) { const v = 168 + r() * 20; x.fillStyle = `rgb(${v},${v - 4},${v - 11})`; x.fillRect(i * 32 + 1, j * 32 + 1, 30, 30); }
+    });
+    paveDay.wrapS = paveDay.wrapT = THREE.RepeatWrapping; paveDay.repeat.set(pw / 4, pd / 4);
+    const paveMat = lambert(0xffffff, { map: pave });
+    scene.add(flatPlane(pw, pd, paveMat, (P.x0 + P.x1) / 2, 0.02, (P.z0 + P.z1) / 2));
+    onDN((d) => { paveMat.map = d ? paveDay : pave; paveMat.needsUpdate = true; });
     // apron under BRK/MCS so the buildings never float on grass
-    scene.add(flatPlane(170, 46, lambert(0x24262a), 49, 0.015, -2));
+    const apron = lambert(0x24262a); dnColor(apron, 0xb3b1aa);
+    scene.add(flatPlane(170, 46, apron, 49, 0.015, -2));
 
     // roads: along the south edge of the plaza, south to the auditorium, and the service lane behind BRK
-    const asphalt = lambert(0x16181b);
+    const asphalt = lambert(0x16181b); dnColor(asphalt, 0x707479);
     scene.add(flatPlane(190, 7, asphalt, 35, 0.03, 55));
     scene.add(flatPlane(7, 130, asphalt, -21, 0.03, 118));
     scene.add(flatPlane(170, 6, asphalt, 50, 0.03, -23));
-    const kerb = lambert(0x3a3d42);
+    const kerb = lambert(0x3a3d42); dnColor(kerb, 0xc6c7c4);
     scene.add(flatPlane(190, 0.25, kerb, 35, 0.035, 51.6)); scene.add(flatPlane(190, 0.25, kerb, 35, 0.035, 58.4));
 
     // garden south of the road (way 1119285458): lawn, low clipped hedges and a central path
     const G = SITE.garden;
-    scene.add(flatPlane(G.x1 - G.x0, G.z1 - G.z0, lambert(0x0f1b13), (G.x0 + G.x1) / 2, 0.025, (G.z0 + G.z1) / 2));
-    scene.add(flatPlane(4, G.z1 - G.z0, lambert(0x2a2c2f), 32, 0.03, (G.z0 + G.z1) / 2));
+    const lawn = lambert(0x0f1b13), gpath = lambert(0x2a2c2f); dnColor(lawn, 0x7ea866); dnColor(gpath, 0xcbc6ba);
+    scene.add(flatPlane(G.x1 - G.x0, G.z1 - G.z0, lawn, (G.x0 + G.x1) / 2, 0.025, (G.z0 + G.z1) / 2));
+    scene.add(flatPlane(4, G.z1 - G.z0, gpath, 32, 0.03, (G.z0 + G.z1) / 2));
     const hedges = [];
     for (let x = G.x0 + 4; x < G.x1 - 4; x += 9) for (const z of [G.z0 + 4, G.z1 - 4]) if (Math.abs(x - 32) > 5) hedges.push({ p: [x, 0.45, z], s: [7, 0.9, 1.2] });
     for (let z = G.z0 + 10; z < G.z1 - 8; z += 9) for (const x of [26, 38]) hedges.push({ p: [x, 0.45, z], s: [1.2, 0.9, 6.5] });
-    instanced(new THREE.BoxGeometry(1, 1, 1), lambert(0x14261a), hedges);
+    const hedge = lambert(0x14261a); dnColor(hedge, 0x4f7d45);
+    instanced(new THREE.BoxGeometry(1, 1, 1), hedge, hedges);
 
     // the Chula front lawn and the flagpole roundabout get a slightly different grass so the far view reads
-    scene.add(flatPlane(110, 50, lambert(0x0d1912), -77, 0.02, 85));
+    const frontLawn = lambert(0x0d1912); dnColor(frontLawn, 0x8bb072);
+    scene.add(flatPlane(110, 50, frontLawn, -77, 0.02, 85));
   }
 
   /* ---------- building materials: daytime photo textures re-lit for night, with lit windows ---------- */
@@ -277,8 +323,10 @@
     o = Object.assign({ tint: 0x7d8296, glow: 1.25, lit: 0.34, seed: 0, glassLo: 0.17, glassHi: 0.36 }, o || {});
     const m = new THREE.MeshPhongMaterial({ map, color: o.tint, flatShading: true, shininess: 0, specular: 0x000000, side: THREE.DoubleSide });
     m.extensions = { derivatives: true };
+    onDN((d) => { m.color.setHex(d ? 0xf4f4f2 : o.tint); if (m.userData.sh) m.userData.sh.uniforms.uGlow.value = d ? 0 : o.glow; });
     m.onBeforeCompile = (sh) => {
-      sh.uniforms.uGlow = { value: o.glow }; sh.uniforms.uLit = { value: o.lit }; sh.uniforms.uSeed = { value: o.seed };
+      m.userData.sh = sh;
+      sh.uniforms.uGlow = { value: world.day ? 0 : o.glow }; sh.uniforms.uLit = { value: o.lit }; sh.uniforms.uSeed = { value: o.seed };
       sh.uniforms.uGlassLo = { value: o.glassLo }; sh.uniforms.uGlassHi = { value: o.glassHi };
       sh.vertexShader = "varying vec3 vWPos;\n" + sh.vertexShader.replace("#include <project_vertex>", "#include <project_vertex>\n  vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
       sh.fragmentShader = "varying vec3 vWPos;\nuniform float uGlow; uniform float uLit; uniform float uSeed; uniform float uGlassLo; uniform float uGlassHi;\n"
@@ -347,19 +395,20 @@
       x.globalCompositeOperation = "destination-out"; x.fillStyle = rg; x.fillRect(0, 0, w, h);
     });
     const washMat = new THREE.MeshBasicMaterial({ map: washTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 });
+    onDN((d) => { washMat.visible = !d; });
     const wash = (x, zz, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), washMat); m.position.set(x, h / 2 + 0.1, zz); scene.add(m); };
     [-21, -15, 17, 23].forEach((x) => wash(x, 14.92, 5, 13));
     wash(g.legL + 0.6, z + 0.05, 3.2, 17); wash(g.legR - 0.6, z + 0.05, 3.2, 17);
     // lobby glow behind the entrance
     const lobby = new THREE.Mesh(new THREE.PlaneGeometry(11, 9), new THREE.MeshBasicMaterial({ map: TEX.glow, color: 0xffc48a, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
-    lobby.position.set(1, 4, 15.2); scene.add(lobby);
-    const L = new THREE.PointLight(0xffb36a, 1.6, 26, 2); L.position.set(1, 5, 21); scene.add(L);
+    lobby.position.set(1, 4, 15.2); scene.add(lobby); nightOnly(lobby);
+    const L = new THREE.PointLight(0xffb36a, 1.6, 26, 2); L.position.set(1, 5, 21); scene.add(L); dnLight(L, 0);
   }
 
   // soft floodlight on the far auditorium so it reads as a warm silhouette
   function enhanceAuditorium(TEX) {
     const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.glow, color: 0xffb070, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.position.set(SITE.auditorium[0], 10, SITE.auditorium[1] - 20); glow.scale.set(110, 40, 1); scene.add(glow);
+    glow.position.set(SITE.auditorium[0], 10, SITE.auditorium[1] - 20); glow.scale.set(110, 40, 1); scene.add(glow); nightOnly(glow);
   }
 
   async function loadCampus(TEX) {
@@ -409,12 +458,14 @@
       if (i === 4 || i === 5) continue;
       const p = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 2.0), r() > 0.16 ? lit : dark); p.position.set(-12.6 + i * 2.8, 3.5 + row * 2.6, 5.02); g.add(p);
     }
-    const door = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshBasicMaterial({ color: 0xffd79a })); door.position.set(0, 3.7, 5.02); g.add(door);
+    const door = new THREE.MeshBasicMaterial({ color: 0xffd79a });
+    const doorM = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), door); doorM.position.set(0, 3.7, 5.02); g.add(doorM);
     g.add(box(31, 0.45, 14, wood, 0, 8.0, 0));
     const t1 = gable(32, 5.2, 14.5, roof, gold); t1.position.set(0, 8.2, 0); g.add(t1);
     const t2 = gable(23, 8.4, 11, roof, gold); t2.position.set(0, 9.2, 1.4); g.add(t2);
     const t3 = gable(14, 6.4, 4, roof, gold); t3.position.set(0, 8.2, 6.9); g.add(t3);
-    const light = new THREE.PointLight(0xffb870, 1.4, 34, 2); light.position.set(0, 4, 9); g.add(light);
+    const light = new THREE.PointLight(0xffb870, 1.4, 34, 2); light.position.set(0, 4, 9); g.add(light); dnLight(light, 0);
+    dnColor(lit, 0x55606c); dnColor(door, 0x3a3027); [stone, wall].forEach((m) => dnColor(m, 0x9c9a94));
     scene.add(root); world.fallback = root;
   }
 
@@ -451,27 +502,31 @@
         }
       }
     }
-    const bark = lambert(0x1b1510);
+    const bark = lambert(0x1b1510); dnColor(bark, 0x5c4a3a);
     instanced(new THREE.CylinderGeometry(0.4, 0.75, 4.4, 7), bark, trunks);
     instanced(new THREE.CylinderGeometry(0.16, 0.32, 3.4, 5), bark, branches);
-    instanced(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }), canopy);
+    const leaves = new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true });
+    onDN((d) => (d ? leaves.color.setRGB(2.0, 2.3, 1.35) : leaves.color.setScalar(1)));
+    instanced(new THREE.IcosahedronGeometry(1, 1), leaves, canopy);
     const pg = new THREE.BufferGeometry(); pg.setAttribute("position", new THREE.BufferAttribute(new Float32Array(bl), 3));
-    scene.add(new THREE.Points(pg, new THREE.PointsMaterial({ map: TEX.blossom, color: 0xff8fbd, size: 0.7, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 })));
+    const bloom = new THREE.PointsMaterial({ map: TEX.blossom, color: 0xff8fbd, size: 0.7, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 });
+    onDN((d) => { bloom.blending = d ? THREE.NormalBlending : THREE.AdditiveBlending; bloom.color.setHex(d ? 0xf27aa8 : 0xff8fbd); bloom.needsUpdate = true; });
+    scene.add(new THREE.Points(pg, bloom));
   }
 
   /* ---------- lamps and benches (instanced) ---------- */
   const LAMPS = [[-4, 24], [6, 24], [-4, 34], [6, 34], [-14, 45], [18, 42], [30, 22], [48, 22], [66, 22], [-24, 30], [20, 53], [-16, 53], [50, 53]];
   const LIT_LAMPS = [[-4, 34], [-4, 24], [48, 22]];
   function buildLamps(TEX) {
-    const metal = new THREE.MeshPhongMaterial({ color: 0x1c1e20, shininess: 20 });
+    const metal = new THREE.MeshPhongMaterial({ color: 0x1c1e20, shininess: 20 }); dnColor(metal, 0x3a3d40);
     instanced(new THREE.CylinderGeometry(0.07, 0.11, 4.4, 8), metal, LAMPS.map(([x, z]) => ({ p: [x, 2.2, z] })));
     instanced(new THREE.BoxGeometry(0.62, 0.16, 0.62), metal, LAMPS.map(([x, z]) => ({ p: [x, 4.62, z] })));
     instanced(new THREE.CylinderGeometry(0.22, 0.16, 0.42, 8), new THREE.MeshBasicMaterial({ color: 0xffe3b5 }), LAMPS.map(([x, z]) => ({ p: [x, 4.33, z] })));
     const pools = instanced(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: TEX.pool, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
       LAMPS.map(([x, z]) => ({ p: [x, 0.05, z], r: [-Math.PI / 2, 0, 0] })));
-    pools.renderOrder = 1;
-    world.lampGlow = glowPoints(LAMPS.flatMap(([x, z]) => [x, 4.33, z]), 0xffb867, 3.4, 3, TEX.glow, 0.85);
-    LIT_LAMPS.forEach(([x, z]) => { const l = new THREE.PointLight(0xffb15e, 1.3, 14, 2); l.position.set(x, 4.1, z); scene.add(l); });
+    pools.renderOrder = 1; nightOnly(pools);
+    world.lampGlow = glowPoints(LAMPS.flatMap(([x, z]) => [x, 4.33, z]), 0xffb867, 3.4, 3, TEX.glow, 0.85); nightOnly(world.lampGlow);
+    LIT_LAMPS.forEach(([x, z]) => { const l = new THREE.PointLight(0xffb15e, 1.3, 14, 2); l.position.set(x, 4.1, z); scene.add(l); dnLight(l, 0); });
   }
   // concrete benches facing the plaza walkway (BRK's entrance axis is x≈1)
   const BENCHES = [[-6.2, 28, Math.PI / 2], [-6.2, 38, Math.PI / 2], [8.2, 28, -Math.PI / 2], [8.2, 38, -Math.PI / 2], [-8.5, 31.6, 0], [26, 36, Math.PI / 2], [44, 32, 0], [60, 32, 0]];
@@ -548,7 +603,7 @@
       path3: placeCat(GREY, "sit", 0.2, 0, 26.0, 1, 60, S),
       tree: placeCat(WHITE, "sit", -5.0, 0, 41.6, 4, 60, S)                // at the base of an OSM plaza tree
     };
-    world.eyeGlow = glowPoints(new Array(world.cats.length * 2 * 3).fill(0), 0xc6f55a, 0.16, 2.6, TEX.glow, 1);
+    world.eyeGlow = glowPoints(new Array(world.cats.length * 2 * 3).fill(0), 0xc6f55a, 0.16, 2.6, TEX.glow, 1); nightOnly(world.eyeGlow);
   }
   const _v = new THREE.Vector3();
   function updateEyeGlow() {
@@ -584,9 +639,13 @@
       })
     };
     world.TEX = TEX;
-    scene.add(new THREE.HemisphereLight(0x6070a0, 0x0b0907, 0.85));
+    const hemi = new THREE.HemisphereLight(0x6070a0, 0x0b0907, 0.85); scene.add(hemi);
+    const hemiGround = hemi.groundColor.getHex();
+    onDN((d) => { hemi.color.setHex(d ? 0xf3f7ff : 0x6070a0); hemi.groundColor.setHex(d ? 0x8f8a78 : hemiGround); hemi.intensity = d ? 0.95 : 0.85; });
     const moonLight = new THREE.DirectionalLight(0xffd6e4, 0.5); moonLight.position.set(150, 212, -360); scene.add(moonLight);
+    dnLight(moonLight, 0.85, 0xfff1d8);
     const fill = new THREE.DirectionalLight(0x5c76b8, 0.3); fill.position.set(-80, 60, 160); scene.add(fill);
+    dnLight(fill, 0.45, 0xdfe9ff);
 
     buildSky(TEX); setProgress(25);
     buildGround(TEX);
@@ -778,48 +837,70 @@
     const I = window.I18N || { L: (th) => th, lang: "th", nameEn: () => "", tx: (x) => x, on() {} };
     const L = (th, en) => I.L(th, en);
     const nm = (c) => (I.lang === "en" && I.nameEn(c.name)) || c.name;
+    const { STATUS, COATS } = window.CatData;
     let sampleNote = null;
     if (r.usingSample && $(".stats")) {
-      sampleNote = document.createElement("p"); sampleNote.className = "card-note"; sampleNote.style.marginTop = "14px";
+      sampleNote = document.createElement("p"); sampleNote.className = "stats-note";
       $(".stats").after(sampleNote);
     }
 
-    const cardsEl = $("#cards");
-    const seenNow = cats.filter((c) => c.status === "active" || c.status === "commuter");
-    const picks = seenNow.filter((c) => c.photo).concat(seenNow.filter((c) => !c.photo)).slice(0, 3);
-    const hasGL = !document.body.classList.contains("no-gl");
-    const used = new Set();
-    if (cardsEl) cardsEl.innerHTML = picks.map((c, i) => {
-      const visual = c.photo
-        ? `<div class="ph-img"><img src="${esc(c.photo)}" alt="" loading="lazy" data-cat="${i}"></div>`
-        : `<div class="vp" data-vp-key="cat:${standInFor(c, used)}" aria-hidden="true"></div>`;
-      return `<a class="card" data-rv href="cats.html#/cat/${encodeURIComponent(c.id)}">
-        ${visual}
-        <div class="card-cap"><h3 data-cat-name="${i}"></h3><span>0${i + 1} / 0${picks.length}</span></div>
-        <div class="card-meta" data-cat-meta="${i}"></div>
-        ${c.photo ? "" : `<div class="card-note" data-cat-note="${i}"></div>`}
-      </a>`;
-    }).join("");
-    // texts that follow the Thai/English switch; the cards themselves (and their 3D viewports) stay put
+    /* every cat, as a slideshow: photo when there is one, otherwise the mascot drawn in the cat's coat colour */
+    const track = $("#track"); if (!track) return;
+    const ORDER = { active: 0, commuter: 1, missing: 2, unknown: 3, adopted: 4, passed: 5 };
+    const COAT_FILL = { orange: "#d9822b", black: "#232326", bicolor: "#232326", white: "#efe9dd", calico: "#e3c9a4", tabby: "#8b8478", cream: "#e2d3b8", unknown: "#b9b2a6" };
+    const STATUS_DOT = { ok: "var(--ok)", warn: "var(--warn)", info: "var(--violet)" };
+    const list = cats.slice().sort((a, b) => ORDER[a.status] - ORDER[b.status] || (b.photo ? 1 : 0) - (a.photo ? 1 : 0));
+    const draw = () => {
+      track.innerHTML = list.map((c) => {
+        const st = STATUS[c.status] || {};
+        const pic = c.photo
+          ? `<img src="${esc(c.photoThumb || c.photo)}"${c.photoThumb ? ` srcset="${esc(c.photoThumb)} 240w, ${esc(c.photo)} 480w" sizes="(max-width: 760px) 62vw, 240px"` : ""} alt="${esc(L("รูปของ" + c.name, "Photo of " + nm(c)))}" loading="lazy" decoding="async" width="240" height="300">`
+          : `<svg aria-hidden="true" style="--cat:${COAT_FILL[c.coat] || COAT_FILL.unknown}"><use href="#nd-sit"/></svg><span class="no-photo">${L("ยังไม่มีรูป", "No photo yet")}</span>`;
+        const place = c.locations[0] ? I.tx(c.locations[0]) : "";
+        const en = I.lang === "en" && I.nameEn(c.name);
+        return `<a class="slide" href="cats.html#/cat/${encodeURIComponent(c.id)}">
+          <div class="pic">${pic}</div>
+          <h3>${esc(en || c.name)}${en ? `<small lang="th">${esc(c.name)}</small>` : ""}</h3>
+          <p><span class="st" style="--c:${STATUS_DOT[st.cls] || "var(--muted)"}">${esc(L(st.label || "", st.en || st.label || ""))}</span>${place ? " · " + esc(place) : ""}</p>
+        </a>`;
+      }).join("");
+      update();
+    };
+    // position, progress bar and arrows follow the scroll position of the track
+    const pos = $("#showPos"), bar = $("#showBar");
+    const step = () => { const s = track.querySelector(".slide"); return s ? s.getBoundingClientRect().width + 16 : 240; };
+    const index = () => Math.round(track.scrollLeft / step());
+    const perView = () => Math.max(1, Math.floor((track.clientWidth + 16) / step()));
+    function update() {
+      const i = Math.min(list.length - 1, index());
+      if (pos) pos.textContent = `${i + 1} / ${list.length}`;
+      if (bar) bar.style.width = (100 * Math.min(list.length, i + perView()) / list.length) + "%";
+    }
+    const go = (dir) => {
+      const max = track.scrollWidth - track.clientWidth - 2;
+      if (dir > 0 && track.scrollLeft >= max) track.scrollTo({ left: 0 });
+      else if (dir < 0 && track.scrollLeft <= 2) track.scrollTo({ left: max });
+      else track.scrollBy({ left: dir * step() });
+    };
+    $("#showPrev").addEventListener("click", () => { go(-1); pauseFor(8000); });
+    $("#showNext").addEventListener("click", () => { go(1); pauseFor(8000); });
+    track.addEventListener("scroll", () => requestAnimationFrame(update), { passive: true });
+    track.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") { e.preventDefault(); go(1); } if (e.key === "ArrowLeft") { e.preventDefault(); go(-1); } });
+    // gentle autoplay while the section is on screen; stops on hover, focus or touch, and never with reduced motion
+    let paused = 0, visible = false, held = false;
+    const pauseFor = (ms) => { paused = Date.now() + ms; };
+    ["pointerenter", "focusin", "touchstart"].forEach((ev) => track.addEventListener(ev, () => { held = true; }, { passive: true }));
+    ["pointerleave", "focusout"].forEach((ev) => track.addEventListener(ev, () => { held = false; pauseFor(3000); }));
+    if ("IntersectionObserver" in window) new IntersectionObserver((es) => { visible = es[0].isIntersecting; }, { threshold: 0.4 }).observe(track);
+    if (!reduce) setInterval(() => { if (visible && !held && Date.now() > paused && !document.hidden) go(1); }, 3800);
+
+    // texts that follow the Thai/English switch
     const words = () => {
-      set("#heroCount", L(" " + cats.length + " ตัว", " (" + cats.length + ")"));
-      if (sampleNote) sampleNote.textContent = L("ตัวเลขนี้มาจากสำเนาข้อมูลที่เก็บไว้ในเว็บ เพราะโหลดชีตล่าสุดไม่สำเร็จ", "These numbers come from the saved copy of the data, because the latest sheet couldn't be loaded.");
-      picks.forEach((c, i) => {
-        const steril = c.sterilised === "yes" ? L("ทำหมันแล้ว", "Spayed / neutered") : c.sterilised === "no" ? L("ยังไม่ทำหมัน", "Not spayed / neutered") : "";
-        const meta = [c.locations[0] ? I.tx(c.locations[0]) : "", steril].filter(Boolean).join(" · ");
-        const h = $(`[data-cat-name="${i}"]`); if (h) h.textContent = nm(c);
-        const m = $(`[data-cat-meta="${i}"]`); if (m) m.textContent = meta;
-        const n = $(`[data-cat-note="${i}"]`); if (n) n.textContent = hasGL ? L("ภาพจำลอง · ยังไม่มีรูปจริง", "Illustration · no photo yet") : L("ยังไม่มีรูป", "No photo yet");
-        const img = $(`img[data-cat="${i}"]`); if (img) img.alt = L("รูปของ " + c.name, "Photo of " + nm(c));
-      });
+      if (sampleNote) sampleNote.textContent = L("ตัวเลขนี้มาจากข้อมูลสำรองในเว็บ เพราะโหลดชีตล่าสุดไม่ได้", "These numbers come from the saved copy, because the latest sheet couldn't be loaded.");
+      draw();
     };
     words();
     I.on(words);
-    if (!cardsEl) return;
-    if ("IntersectionObserver" in window) {
-      const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
-      $$("#cards [data-rv]").forEach((el) => io.observe(el));
-    } else $$("#cards [data-rv]").forEach((el) => el.classList.add("in"));
   }
 
   /* ============================================================ boot */
@@ -835,6 +916,7 @@
 
   function boot() {
     wireHeroSearch();
+    if (window.I18N) window.I18N.onTheme((t) => setDay(t !== "dark"));
     const t0 = performance.now();
     makeGrain(); makeGrass(); setProgress(10);
     const heroVp = $(".hero-vp .vp"); if (heroVp) heroVp.dataset.vpKey = "hero";

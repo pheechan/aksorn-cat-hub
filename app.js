@@ -479,7 +479,7 @@
         </div>
         <div>
           <h1>${nmHtml(c)}</h1>
-          <div class="cat-meta" style="font-size:15px">${statusDot(c)}${STATUS[c.status].hint ? `<span>${esc(L(STATUS[c.status].hint, STATUS[c.status].hintEn))}</span>` : ""}${c.lastSeen ? `<span>${L("พบล่าสุด ", "Last seen ")}${fmtDate(c.lastSeen)}</span>` : ""}</div>
+          <div class="cat-meta" style="font-size:15px">${statusDot(c)}${STATUS[c.status].hint ? `<span>${esc(L(STATUS[c.status].hint, STATUS[c.status].hintEn))}</span>` : ""}${c.lastSeen ? `<span>${/^\d{4}-\d{2}-\d{2}/.test(c.lastSeen) ? L("พบล่าสุด ", "Last seen ") + fmtDate(c.lastSeen) : T(c.lastSeen)}</span>` : ""}</div>
           <ul class="facts-strip">${strip.join("")}</ul>
           <div class="actions">
             <button type="button" class="btn met-btn" id="metBtn" aria-pressed="${!!met[c.id]}">${CHECK}<span>${met[c.id] ? L(`รู้จัก${c.name}แล้ว`, `You know ${nm(c)}`) : L(`ฉันรู้จัก${c.name}แล้ว`, `I know ${nm(c)} now`)}</span></button>

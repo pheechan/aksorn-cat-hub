@@ -26,7 +26,7 @@ window.CONTENT_EN = {
     // marks, health, notes
     "มอม แก่แล้ว มองไม่ค่อยเห็น ฟันไม่ค่อยมี": "Scruffy and old; can't see well and has few teeth left",
     "เคยหนีไปวิดวะ หลายวันอยู่ เป็น 10-15 วัน บางทีก็เดินไปโรงรถ เครียด ๆ หนี โลกส่วนตัวสูง": "Once ran off to the Engineering faculty for 10–15 days. Sometimes wanders off to the garage; slips away when stressed. Very much keeps to herself.",
-    "ยังไม่เคยเห็น": "Not seen yet", "หาไม่เจอ": "Can't be found",
+    "ยังไม่เคยเห็น": "Not seen yet", "หาไม่เจอ": "Can't be found", "เคยมีลูก": "Has had kittens before",
     "อาจมีโรคประจำตัว": "May have a chronic condition", "ไต": "Kidney problems",
     "ตามองไม่ค่อยเห็น ไม่มีฟัน": "Poor eyesight, no teeth", "แมวหลงมา อาจารย์เก็บมา": "A stray; a lecturer took her in",
     // family

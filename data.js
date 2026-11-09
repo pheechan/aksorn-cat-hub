@@ -32,6 +32,31 @@ window.CatData = (function () {
     experience: { label: "ประสบการณ์จากผู้ดูแล", en: "From the keepers", desc: "เรื่องเล่าและบทเรียนจากคนที่ดูแลแมวจริง" }
   };
 
+  // Coat colours a passer-by can tell apart at a glance (used by "find this cat" and the cat list filters)
+  const COATS = {
+    orange: { label: "ส้ม", swatch: "#d9822b" },
+    black: { label: "ดำ", swatch: "#1f1f22" },
+    bicolor: { label: "ขาวดำ", swatch: "linear-gradient(135deg,#1f1f22 50%,#f4f1ea 50%)" },
+    white: { label: "ขาว", swatch: "#f4f1ea" },
+    calico: { label: "สามสี / กระดองเต่า", swatch: "conic-gradient(#d9822b 0 33%,#1f1f22 0 66%,#f4f1ea 0)" },
+    tabby: { label: "เทา / ลายสลิด", swatch: "repeating-linear-gradient(90deg,#8b8478 0 5px,#5d574e 5px 9px)" },
+    cream: { label: "ครีม / สีอ่อน", swatch: "#e2d3b8" }
+  };
+  const COAT_WORDS = [
+    [/สามสี|กระดองเต่า|calico|tortie/i, "calico"], [/ขาว\s*ดำ|ดำ\s*ขาว|ลายวัว|bicolou?r|tuxedo/i, "bicolor"],
+    [/ส้ม|orange|ginger/i, "orange"], [/สลิด|เทา|tabby|gr[ae]y/i, "tabby"], [/ครีม|cream/i, "cream"],
+    [/ดำ|black/i, "black"], [/ขาว|white/i, "white"]
+  ];
+  // Where in the faculty a cat is usually found, grouped from the free-text locations
+  const AREAS = {
+    brk: { label: "อาคารบรมราชกุมารี (BRK)", re: /brk|บรม/i },
+    mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", re: /mcs|มหาจักรี/i },
+    tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", re: /เทวาลัย|มหาจุฬา/i },
+    store: { label: "สโตร์แม่บ้าน", re: /สโตร์|แม่บ้าน/i },
+    cage: { label: "พักอยู่ในกรง", re: /กรง/i },
+    roam: { label: "ไม่อยู่ประจำ แวะมาเป็นครั้งคราว", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
+  };
+
   const HISTORY_TYPES = {
     health: "สุขภาพ", sterilised: "ทำหมัน", vaccine: "วัคซีน", feeding: "อาหาร",
     sighting: "พบเห็น", birth: "เกิด", adopted: "มีบ้าน", other: "บันทึก"
@@ -78,14 +103,24 @@ window.CatData = (function () {
     return !v || ["published", "publish", "yes", "เผยแพร่", "เผยแพร่แล้ว", "ok"].includes(v);
   }
   // Rough coat colour from the description, used for the illustrated placeholder when there is no photo.
-  function coatOf(c) {
-    const s = [c.marks, c.name].concat(c.nicknames || []).join(" ");
-    if (/สามสี|calico|tortie|กระดองเต่า/i.test(s)) return "calico";
-    if (/ส้ม|orange|ginger/i.test(s)) return "orange";
-    if (/ดำ|black/i.test(s)) return "black";
-    if (/เทา|grey|gray|สลิด/i.test(s)) return "grey";
-    if (/ขาว|white/i.test(s)) return "white";
-    return "unknown"; // coat not recorded: the hub draws a neutral silhouette rather than guessing
+  function coatWord(s) {
+    s = norm(s);
+    if (!s) return "";
+    if (Object.prototype.hasOwnProperty.call(COATS, lower(s))) return lower(s);
+    for (const [re, key] of COAT_WORDS) if (re.test(s)) return key;
+    return "";
+  }
+  // coat: the sheet's coat column, then the team's curated list in config.js, then words in the marks.
+  // Unknown stays unknown: the hub draws a neutral silhouette rather than guessing.
+  function coatOf(r, c, extra) {
+    if (coatWord(r.coat)) return { coat: coatWord(r.coat), coatSource: "sheet" };
+    if (extra && coatWord(extra.coat)) return { coat: coatWord(extra.coat), coatSource: "photo" };
+    const fromMarks = coatWord(c.marks);
+    return fromMarks ? { coat: fromMarks, coatSource: "marks" } : { coat: "unknown", coatSource: "" };
+  }
+  function areasOf(locations) {
+    const text = locations.join(" ");
+    return Object.keys(AREAS).filter((k) => AREAS[k].re.test(text));
   }
 
   function statusOf(v) {
@@ -125,12 +160,19 @@ window.CatData = (function () {
       caretakers: clean(r.caretakers),
       lastSeen: clean(r.last_seen),
       source: clean(r.source),
-      notes: clean(r.notes)
+      notes: clean(r.notes),
+      // "what is normal for this cat" (habits, eating, sleeping spots): the knowledge that lets a keeper notice change
+      normal: clean(r.normal),
+      approach: clean(r.approach)
     };
+    const extra = ((cfg && cfg.CAT_EXTRA) || {})[name] || {};
+    if (!c.normal && extra.normal) c.normal = extra.normal;
+    Object.assign(c, coatOf(r, c, extra));
+    c.areas = areasOf(c.locations);
+    c.touch = /ไม่ชอบให้จับ|don.?t touch|ห้ามจับ|อย่าจับ/i.test(c.personality) ? "no" : (/เป็นมิตร|friendly/i.test(c.personality) ? "yes" : "unknown");
     const direct = photoUrl(r.photo) || photoUrl(photos[name]);
     c.photo = c.gallery.length ? c.gallery[0].s : direct;
     c.photoLarge = c.gallery.length ? c.gallery[0].l : direct;
-    c.coat = coatOf(c);
     return c;
   }
 
@@ -169,7 +211,10 @@ window.CatData = (function () {
     vaccinated: ["vaccination status", "vaccinated", "vaccine", "วัคซีน"], sterilised: ["ทำหมัน", "sterilised", "sterilized", "neutered"],
     health_notes: ["health notes", "health", "สุขภาพ"], status: ["status", "สถานะ"], personality: ["personality", "นิสัย"],
     locations: ["usual locations", "locations", "location", "ที่อยู่", "จุดที่พบ"], relationship: ["relationship", "ความสัมพันธ์", "ครอบครัว"],
-    caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"], notes: ["note", "notes", "หมายเหตุ"]
+    caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"], notes: ["note", "notes", "หมายเหตุ"],
+    coat: ["coat", "coat colour", "coat color", "colour", "color", "สีขน", "ลายขน"],
+    normal: ["normal", "what's normal", "habits", "routine", "ปกติ", "กิจวัตร", "ข้อควรรู้"],
+    approach: ["approach", "how to approach", "วิธีเข้าหา"]
   };
   function fieldOf(h) {
     h = lower(h).replace(/^﻿/, "");
@@ -254,9 +299,10 @@ window.CatData = (function () {
       history: history.rows,
       usingSample: cats.sample, // kept for the landing page
       samples: { cats: cats.sample, articles: articles.sample, history: history.sample },
+      loadedAt: new Date(),
       error: errors.join(" · ")
     };
   }
 
-  return { STATUS, CATEGORIES, HISTORY_TYPES, norm, lower, esc, load };
+  return { STATUS, CATEGORIES, HISTORY_TYPES, COATS, AREAS, norm, lower, esc, load };
 })();

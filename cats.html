@@ -3,46 +3,66 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#080a0d">
+  <meta name="theme-color" content="#f6f1e7">
   <title>คลังความรู้แมวอักษร</title>
-  <meta name="description" content="คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub): ประวัติแมวในคณะอักษรศาสตร์ จุฬาฯ ความรู้การดูแลแมว และประสบการณ์จากผู้ดูแล">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307090c'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ef6d9f'/%3E%3Cpath d='M9 12 L11 5 L14 10 Z M23 12 L21 5 L18 10 Z' fill='%23ef6d9f'/%3E%3C/svg%3E">
+  <meta name="description" content="คลังความรู้แมวอักษร (Aksorn Cat Knowledge Hub): สมุดความรู้ของผู้ดูแลแมว คณะอักษรศาสตร์ จุฬาฯ หาแมวจากสีขนและที่ที่เจอ ความรู้การดูแล และเรื่องเล่าจากผู้ดูแล">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f6f1e7'/%3E%3Cg fill='none' stroke='%231f1d1a' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37'/%3E%3Ccircle cx='19' cy='31' r='5'/%3E%3Cpath d='M45 52C54 55 59 50 58 44'/%3E%3C/g%3E%3Cpath d='M25 15L26 4L33 11ZM38 10L44 3L46 14Z' fill='%231f1d1a'/%3E%3Ccircle cx='31' cy='24' r='2.2' fill='%23c2416f'/%3E%3Ccircle cx='41' cy='24' r='2.2' fill='%23c2416f'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Mali:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <a class="skip" href="#app">ข้ามไปเนื้อหา</a>
+  <!-- brand mark: the Thai letter อ (for อักษร) drawn as a sitting cat -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 64 64">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37"/>
+        <circle cx="19" cy="31" r="5"/>
+        <path d="M45 52C54 55 59 50 58 44"/>
+      </g>
+      <path d="M25 15L26 4L33 11ZM38 10L44 3L46 14Z" fill="currentColor"/>
+      <circle cx="31" cy="24" r="2.4" fill="var(--pink)"/><circle cx="41" cy="24" r="2.4" fill="var(--pink)"/>
+    </symbol>
+  </svg>
+
   <header class="top">
-    <div class="top-row">
-      <a class="brand" href="index.html" aria-label="คลังความรู้แมวอักษร หน้าแรก">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-txt"><b id="brandTitle">คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span>
+    <div class="top-row wrap">
+      <a class="brand" href="#/" aria-label="คลังความรู้แมวอักษร หน้าแรกของคลัง">
+        <svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>
+        <span class="brand-txt"><b>คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span>
       </a>
       <form class="search" id="searchForm" role="search">
         <label class="sr" for="searchInput">ค้นหาแมวหรือความรู้</label>
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="M13 13l4 4"/></svg>
-        <input id="searchInput" name="q" type="search" placeholder="ค้นหาแมว ความรู้ หรือคำสำคัญ…" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <input id="searchInput" name="q" type="search" placeholder="ค้นชื่อแมว ความรู้ หรือคำสำคัญ…" autocomplete="off" spellcheck="false" enterkeyhint="search">
       </form>
     </div>
-    <nav class="nav" id="nav" aria-label="เมนูหลัก">
-      <a href="#/" data-page="">แมวในคณะ</a>
+    <nav class="nav wrap" id="nav" aria-label="เมนูหลัก">
+      <a href="#/cats" data-page="cats">แมวในคณะ</a>
+      <a href="#/find" data-page="find">หาแมวตัวนี้</a>
+      <a href="#/start" data-page="start">มาใหม่ เริ่มที่นี่</a>
       <a href="#/knowledge" data-page="knowledge">คลังความรู้</a>
-      <a href="#/family" data-page="family">ผังครอบครัว</a>
       <a href="#/share" data-page="share">แบ่งปันความรู้</a>
       <a href="#/help" data-page="help" class="urgent">เจอแมวป่วย</a>
-      <a href="#/about" data-page="about">เกี่ยวกับโครงการ</a>
     </nav>
   </header>
 
-  <div id="banner" class="banner" hidden></div>
-  <main id="app" class="wrap" tabindex="-1"><p class="muted">กำลังโหลด…</p></main>
+  <div id="banner" class="banner wrap" role="status" hidden></div>
+  <main id="app" class="wrap" tabindex="-1"><p class="muted">กำลังเปิดสมุด…</p></main>
 
-  <footer class="foot wrap">
-    <div class="foot-brand"><b>คลังความรู้แมวอักษร</b><span>Aksorn Cat Knowledge Hub</span></div>
-    <p id="footCourse"></p>
-    <nav aria-label="ลิงก์ท้ายหน้า"><a href="index.html">หน้าแรก</a><a href="#/share">แบ่งปันความรู้</a><a href="#/about">เกี่ยวกับโครงการ</a></nav>
+  <footer class="foot">
+    <div class="wrap foot-grid">
+      <div class="foot-brand">
+        <svg class="brand-mark" aria-hidden="true"><use href="#mark"/></svg>
+        <div><b>คลังความรู้แมวอักษร</b><p>สมุดความรู้ที่ผู้ดูแลแมวในคณะอักษรศาสตร์ส่งต่อให้กัน ทุกเรื่องมีที่มาและผู้ตรวจ</p></div>
+      </div>
+      <nav aria-label="ลิงก์ท้ายหน้า">
+        <a href="index.html">หน้าเรื่องราวโครงการ</a><a href="#/family">ผังครอบครัวแมว</a><a href="#/about">เกี่ยวกับโครงการและทีม</a><a href="#/qr">พิมพ์ QR ประจำตัวแมว</a>
+      </nav>
+      <p class="foot-meta" id="footMeta"></p>
+    </div>
   </footer>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>

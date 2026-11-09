@@ -311,3 +311,4 @@ window.CAT_PHOTO_SETS = {
   }
  ]
 };
+window.CAT_PHOTO_SYNCED = "2026-11-09";

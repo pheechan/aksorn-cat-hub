@@ -6,13 +6,25 @@
   <meta name="theme-color" content="#07090c">
   <title>คลังความรู้แมวอักษร</title>
   <meta name="description" content="คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ: เรื่องเล่าของแมวที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%2307090c'/%3E%3Ccircle cx='16' cy='17' r='9' fill='%23ef6d9f'/%3E%3Cpath d='M9 12 L11 5 L14 10 Z M23 12 L21 5 L18 10 Z' fill='%23ef6d9f'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2307090c'/%3E%3Cg fill='none' stroke='%23e4ebe5' stroke-width='5' stroke-linecap='round'%3E%3Cpath d='M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37'/%3E%3Ccircle cx='19' cy='31' r='5'/%3E%3Cpath d='M45 52C54 55 59 50 58 44'/%3E%3C/g%3E%3Cpath d='M25 15L26 4L33 11ZM38 10L44 3L46 14Z' fill='%23e4ebe5'/%3E%3Ccircle cx='31' cy='24' r='2.4' fill='%23ef6d9f'/%3E%3Ccircle cx='41' cy='24' r='2.4' fill='%23ef6d9f'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="landing.css">
 </head>
 <body class="is-loading">
+  <!-- brand mark: the Thai letter อ (for อักษร) drawn as a sitting cat -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="mark" viewBox="0 0 64 64">
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 27C19 15 27 10 34 10C45 10 52 18 52 31C52 44 44 54 32 54C21 54 14 46 14 37"/>
+        <circle cx="19" cy="31" r="5"/>
+        <path d="M45 52C54 55 59 50 58 44"/>
+      </g>
+      <path d="M25 15L26 4L33 11ZM38 10L44 3L46 14Z" fill="currentColor"/>
+      <circle cx="31" cy="24" r="2.4" fill="#ef6d9f"/><circle cx="41" cy="24" r="2.4" fill="#ef6d9f"/>
+    </symbol>
+  </svg>
   <canvas id="gl" aria-hidden="true"></canvas>
   <div id="grain" aria-hidden="true"></div>
 
@@ -24,16 +36,16 @@
 
   <header class="nav" id="nav">
     <a class="logo" href="#top" aria-label="คลังความรู้แมวอักษร หน้าแรก">
-      <span class="logo-mark" aria-hidden="true"></span>
+      <svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg>
       <span class="logo-txt"><b>คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span>
     </a>
     <nav class="nav-links" aria-label="เมนูหลัก">
-      <a href="cats.html">แมวในคณะ</a>
-      <a href="cats.html#/knowledge">คลังความรู้</a>
-      <a href="cats.html#/share">แบ่งปันความรู้</a>
+      <a href="cats.html#/cats">แมวในคณะ</a>
+      <a href="cats.html#/find">หาแมวตัวนี้</a>
+      <a href="cats.html#/start">มาใหม่ เริ่มที่นี่</a>
       <a href="cats.html#/help" class="urgent">เจอแมวป่วย</a>
     </nav>
-    <a class="nav-cta" href="cats.html">เข้าคลังความรู้ <span aria-hidden="true">→</span></a>
+    <a class="nav-cta" href="cats.html">เปิดสมุดผู้ดูแล <span aria-hidden="true">→</span></a>
   </header>
 
   <nav class="rail" id="rail" aria-label="ความคืบหน้า">
@@ -58,9 +70,10 @@
           <button type="submit">ค้นหา</button>
         </form>
         <ul class="hero-links" data-rv>
-          <li><a href="cats.html">ดูแมวทั้งหมด<span id="heroCount"></span></a></li>
-          <li><a href="cats.html#/knowledge">คลังความรู้การดูแล</a></li>
-          <li><a href="cats.html#/help" class="urgent">เจอแมวป่วย ทำอย่างไร</a></li>
+          <li><a href="cats.html#/find">เจอแมวแต่ไม่รู้ชื่อ? หาจากสีขน</a></li>
+          <li><a href="cats.html#/start">มาใหม่ เริ่มที่นี่</a></li>
+          <li><a href="cats.html#/cats">ดูแมวทั้งหมด<span id="heroCount"></span></a></li>
+          <li><a href="cats.html#/help" class="urgent">เจอแมวป่วย</a></li>
         </ul>
       </div>
       <a class="scroll-cue" href="#keepers">อ่านเรื่องราวของโครงการ <i aria-hidden="true"></i></a>
@@ -73,7 +86,7 @@
         <h2 class="display h-sec" data-rv>ความรู้ไม่ได้อยู่ในแฟ้ม<br>มันอยู่ในคน</h2>
         <div class="prose" data-rv>
           <p>ลองถามพี่ ๆ ผู้ดูแลถึงกระทง พี่จะเล่าได้ทันทีว่าอยู่ที่คณะมาสิบกว่าปี ตาเริ่มมองไม่ค่อยเห็น ฟันแทบไม่เหลือ และชอบอยู่แถวสโตร์แม่บ้าน ทั้งหมดนี้ไม่เคยถูกเขียนไว้ที่ไหน</p>
-          <p>นี่คือ <b>ความรู้ฝังลึก (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน วันที่พี่เปลี่ยนกะหรือเกษียณ ความรู้นั้นก็หายไปด้วย โครงการนี้จึงเริ่มจากการฟัง</p>
+          <p>นี่คือ <b>ความรู้โดยนัย (tacit knowledge)</b> ที่อยู่ในประสบการณ์ของคนไม่กี่คน นิสิตที่ช่วยดูแลเปลี่ยนรุ่นทุกปีการศึกษา ความรู้จึงหายไปพร้อมคนที่จบไป คนมาใหม่ต้องเริ่มจากศูนย์ทุกครั้ง โครงการนี้จึงเริ่มจากการฟัง</p>
         </div>
         <a class="link-cta" href="#process" data-rv>ดูว่าเราทำอย่างไร</a>
         <dl class="stats" data-rv>
@@ -102,13 +115,13 @@
       <div class="sec-inner col-right">
         <p class="eyebrow" data-rv><span class="dot"></span>03 — Process <span class="th">กระบวนการ</span></p>
         <h2 class="display h-sec" data-rv>ห้าขั้น จากเรื่องเล่า<br>สู่คลังความรู้</h2>
-        <p class="sec-lede" data-rv>แต่ละขั้นเดินตามวงจรสร้างความรู้ SECI ของ Nonaka และ Takeuchi</p>
+        <p class="sec-lede" data-rv>กระบวนการจัดการความรู้ 5 ขั้น ตั้งแต่ระบุว่าความรู้ไหนสำคัญ จนถึงการนำไปใช้จริง แต่ละขั้นเปลี่ยนรูปความรู้ตามวงจร SECI</p>
         <ol class="steps">
-          <li data-rv><b>01</b><div><h3>ฟัง <span>Socialization</span></h3><p>เดินคุยกับพี่แม่บ้านและภารโรงรอบคณะ ชี้รูปแล้วฟังเรื่องเล่าของแมวแต่ละตัว</p></div><small>สัมภาษณ์</small></li>
-          <li data-rv><b>02</b><div><h3>จด <span>Externalization</span></h3><p>แปลงเรื่องเล่าเป็นประวัติแมวรายตัว และบันทึกที่มาของข้อมูลทุกชิ้น</p></div><small>บันทึก</small></li>
-          <li data-rv><b>03</b><div><h3>จัด <span>Combination</span></h3><p>ชื่อหลักหนึ่งชื่อ ชื่อเล่นหลายชื่อ (authority control) และผังครอบครัวที่โยงแม่กับลูก</p></div><small>จัดระเบียบ</small></li>
-          <li data-rv><b>04</b><div><h3>ส่ง <span>Access</span></h3><p>ค้นได้ด้วยชื่อไหนก็ได้ หรือสแกน QR ตรงจุดที่แมวอยู่</p></div><small>เข้าถึง</small></li>
-          <li data-rv><b>05</b><div><h3>ดูแลต่อ <span>Internalization</span></h3><p>ทุกคนแจ้งข่าวแมวได้ ทีมตรวจสอบก่อนแก้คลัง ความรู้จึงไม่หายไปเมื่อเราเรียนจบ</p></div><small>ใช้และต่อยอด</small></li>
+          <li data-rv><b>01</b><div><h3>ระบุ <span>Identify</span></h3><p>ผู้ดูแลใหม่ติดตรงไหน: ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องแจ้งใคร</p></div><small>ความรู้ที่สำคัญ</small></li>
+          <li data-rv><b>02</b><div><h3>ฟังและจด <span>Externalization</span></h3><p>สัมภาษณ์ผู้ดูแลเดิม แปลงเรื่องเล่าเป็นบันทึกและบทความ พร้อมระบุที่มา</p></div><small>สร้างและแสวงหา</small></li>
+          <li data-rv><b>03</b><div><h3>จัดเก็บ <span>Combination</span></h3><p>ชีตของทีมเป็นคลังกลาง ค้นได้ทั้งจากชื่อ สีขน ที่ที่เจอ และนิสัย ไม่รู้ชื่อก็หาเจอ</p></div><small>จัดเก็บ</small></li>
+          <li data-rv><b>04</b><div><h3>แบ่งปัน <span>Share</span></h3><p>ฟอร์มสั้น บอกเท่าที่รู้ เข้าชีตรอตรวจ แล้วเผยแพร่พร้อมเครดิตผู้ให้ความรู้</p></div><small>แบ่งปัน</small></li>
+          <li data-rv><b>05</b><div><h3>นำไปใช้ <span>Internalization · Socialization</span></h3><p>ผู้ดูแลใหม่ทำตาม 5 ขั้น จนไปดูแลจริงกับผู้ดูแลเดิม แล้วส่งสิ่งที่เรียนรู้กลับมาเป็นความรู้ใหม่</p></div><small>นำไปใช้</small></li>
         </ol>
       </div>
     </section>
@@ -120,9 +133,9 @@
         <h2 class="display h-fin" data-rv>คืนนี้ แมวยังรออยู่</h2>
         <p class="sec-lede" data-rv>เห็นแมวตัวไหน เจอตัวใหม่ หรือข้อมูลไม่ตรง บอกเราได้ คลังนี้โตได้เพราะทุกคนช่วยกันเติม</p>
         <div class="cta-row" data-rv>
-          <a class="btn" href="cats.html">ดูแมวทั้งหมด</a>
-          <a class="btn ghost" href="cats.html#/knowledge">อ่านคลังความรู้</a>
-          <a class="btn ghost" href="cats.html#/share">แบ่งปันความรู้</a>
+          <a class="btn" href="cats.html">เปิดสมุดผู้ดูแล</a>
+          <a class="btn ghost" href="cats.html#/find">หาแมวตัวนี้</a>
+          <a class="btn ghost" href="cats.html#/start">มาใหม่ เริ่มที่นี่</a>
           <a class="btn ghost warn" href="cats.html#/help">เจอแมวป่วย?</a>
         </div>
       </div>
@@ -131,11 +144,11 @@
     <footer class="foot">
       <div class="foot-grid">
         <div class="foot-about">
-          <div class="logo static"><span class="logo-mark" aria-hidden="true"></span><span class="logo-txt"><b>AKSORN CAT</b><small>Knowledge Hub</small></span></div>
-          <p>คลังความรู้แมวคณะอักษรศาสตร์ จุฬาฯ เรื่องเล่าที่เคยอยู่แค่ในความทรงจำของพี่ ๆ แม่บ้าน ถูกฟัง จด และส่งต่อให้ทุกคน</p>
+          <div class="logo static"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><span class="logo-txt"><b>คลังความรู้แมวอักษร</b><small translate="no">Aksorn Cat Knowledge Hub</small></span></div>
+          <p>สมุดความรู้ของผู้ดูแลแมว คณะอักษรศาสตร์ จุฬาฯ เรื่องที่เคยอยู่แค่ในความทรงจำของผู้ดูแลไม่กี่คน ถูกฟัง จด และส่งต่อให้คนรุ่นต่อไป</p>
         </div>
         <div><h4>Chapters</h4><a href="#keepers">Keepers</a><a href="#field">Field notes</a><a href="#process">Process</a><a href="#care">Care</a></div>
-        <div><h4>คลังความรู้</h4><a href="cats.html">แมวทั้งหมด</a><a href="cats.html#/family">ผังครอบครัว</a><a href="cats.html#/knowledge">คลังความรู้การดูแล</a><a href="cats.html#/share">แบ่งปันความรู้</a><a href="cats.html#/help">เจอแมวป่วย?</a></div>
+        <div><h4>สมุดผู้ดูแล</h4><a href="cats.html#/cats">แมวในคณะ</a><a href="cats.html#/find">หาแมวตัวนี้</a><a href="cats.html#/start">มาใหม่ เริ่มที่นี่</a><a href="cats.html#/knowledge">คลังความรู้</a><a href="cats.html#/share">แบ่งปันความรู้</a><a href="cats.html#/help">เจอแมวป่วย</a></div>
         <div><h4>โครงการ</h4><a href="cats.html#/about">เกี่ยวกับโครงการ</a><span id="footCourse"></span></div>
       </div>
       <div class="foot-base"><span>© 2569 คลังความรู้แมวอักษร · Aksorn Cat Knowledge Hub</span><span>ทุกเรื่องเล่ามีเจ้าของ ขอบคุณผู้ให้ความรู้ทุกท่าน</span><span>WebGL · Google Sans</span></div>

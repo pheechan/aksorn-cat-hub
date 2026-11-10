@@ -425,6 +425,11 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
 .sheet-prefs .icon-btn { width: 46px; height: 46px; }
 
 /* ---------- responsive ---------- */
+@media (max-width: 1180px) {
+  .top-row { gap: 16px; }
+  .nav a { padding: 8px 9px; }
+  .search { width: 200px; }
+}
 @media (max-width: 1080px) {
   .nav { display: none; }
   .search { width: 200px; }
@@ -496,3 +501,6 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
 .map-link { display: inline-flex; gap: 4px; margin-left: 10px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--pink-ink); white-space: nowrap; }
 .map-link::after { content: "→"; }
 .map-link:hover { color: var(--pink); }
+.hello-3d { margin: 18px 0 0; font-size: 15px; }
+.hello-3d a { color: var(--pink-ink); font-weight: 500; text-decoration: none; }
+.hello-3d a:hover { color: var(--pink); }

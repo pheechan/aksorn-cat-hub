@@ -274,6 +274,7 @@
         <p class="lede">${L("ชื่อ นิสัย ที่ประจำ และเรื่องสุขภาพ รวมไว้จากพี่ ๆ ผู้ดูแลที่อยู่กับแมวมาหลายปี ใครเพิ่งมาช่วยดูแลก็เริ่มได้เลย ไม่ต้องเริ่มจากศูนย์",
           "Names, habits, favourite spots and health notes, gathered from the keepers who have looked after these cats for years. New to helping out? Start here, not from zero.")}</p>
         <div class="hello-actions"><a class="btn" href="#/find">${L("หาแมวที่เพิ่งเจอ", "Find a cat you just met")}</a><a class="btn ghost" href="#/start">${L("มือใหม่เริ่มที่นี่", "New here? Start here")}</a></div>
+        <p class="hello-3d"><a href="index.html#map">${L("ดูว่าแมวอยู่ตรงไหนบนแผนที่ 3D ของคณะ →", "See where the cats live on the 3D campus map →")}</a></p>
         <dl class="stats" aria-label="${L("ตอนนี้", "Right now")}">
           <div><dt>${active}</dt><dd>${L("ตัวอยู่ในคณะ", "living here")}</dd></div>
           <div><dt>${commuters}</dt><dd>${L("ตัวแวะมาบ้าง", "drop by")}</dd></div>

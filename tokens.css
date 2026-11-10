@@ -23,7 +23,7 @@
   --violet: #5b4ab3;
   --shadow: 0 1px 2px rgba(22, 24, 29, .05), 0 10px 30px -18px rgba(22, 24, 29, .28);
   /* mascot: หนูดำ */
-  --cat: #16181d; --cat-eye: #ffffff; --sock: #ffffff; --tag: #3fbf7f;
+  --cat: #16181d; --cat-eye: #ffffff; --cat-pupil: #16181d;
   color-scheme: light;
 }
 [data-theme="dark"] {
@@ -48,7 +48,7 @@
   --violet: #a89bff;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 14px 34px -18px rgba(0, 0, 0, .7);
   /* mascot at night: ส้มส้ม, the orange cat, so she stands out on dark */
-  --cat: #e8923f; --cat-eye: #1b1206; --sock: #fff3e2; --tag: #3fbf7f;
+  --cat: #e8923f; --cat-eye: #ffffff; --cat-pupil: #16181d;
   color-scheme: dark;
 }
 :root {

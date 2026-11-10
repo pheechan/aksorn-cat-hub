@@ -60,6 +60,9 @@
   const articlesFor = (id) => D.articles.filter((a) => a.relatedCats.includes(id));
   const historyFor = (id) => D.history.filter((h) => h.cat === id);
   const coatLabel = (c) => (has(COATS, c.coat) ? lbl(COATS[c.coat]) : "");
+  // the buildings that have a pin on the landing page's 3D map (landing.js SPOT_XZ)
+  const MAP_PINNED = ["brk", "mcs", "tewalai"].concat(Object.keys((window.SITE_CONFIG || {}).MAP_SPOTS || {}).filter((k) => (window.SITE_CONFIG.MAP_SPOTS || {})[k]));
+  const mapSpot = (c) => c.areas.find((a) => MAP_PINNED.includes(a)) || "";
   const placeHtml = (c) => (c.locations[0] ? T(c.locations[0]) : c.areas[0] ? esc(lbl(AREAS[c.areas[0]])) : "");
   const byStatusThenName = (a, b) => (STATUS_ORDER[a.status] - STATUS_ORDER[b.status]) || nm(a).localeCompare(nm(b), I.locale());
   const store = {
@@ -379,7 +382,7 @@
       }).filter(Boolean).sort((a, b) => b.s - a.s || byStatusThenName(a.c, b.c));
       const sure = ranked.filter((r) => r.known), maybe = ranked.filter((r) => !r.known);
       const el = document.getElementById("matches");
-      if (!st.coat && !st.area) { el.innerHTML = `<div class="empty">${cat("peek")}<p>${L("เลือกสีขนหรือจุดที่เจออย่างน้อยหนึ่งอย่าง เดี๋ยวช่วยเรียงตัวที่น่าจะใช่ให้", "Pick a coat or a place and we'll list the likely cats.")}</p></div>`; return; }
+      if (!st.coat && !st.area) { el.innerHTML = `<div class="empty">${cat("stretch")}<p>${L("เลือกสีขนหรือจุดที่เจออย่างน้อยหนึ่งอย่าง เดี๋ยวช่วยเรียงตัวที่น่าจะใช่ให้", "Pick a coat or a place and we'll list the likely cats.")}</p></div>`; return; }
       const newCat = `<div class="callout"><h3>${L("ไม่ใช่ตัวไหนเลย?", "None of these?")}</h3><p>${L("อาจเป็นแมวที่ยังไม่มีข้อมูล ส่งรูปมาให้ทีมได้เลย จะได้เพิ่มเข้าไป", "It may be a cat that isn't listed yet. Send the team a photo so we can add it.")}</p><a class="btn" href="${shareHref("newcat", null, (st.coat ? "&coat=" + st.coat : "") + (st.area ? "&area=" + st.area : ""))}">${L("แจ้งแมวตัวใหม่", "Report a new cat")}</a></div>`;
       el.innerHTML = `
         <h2>${sure.length ? L(`น่าจะเป็น ${sure.length} ตัวนี้`, `Probably one of these ${sure.length}`) : L("ยังไม่เจอตัวที่ตรง", "No match yet")}</h2>
@@ -480,7 +483,7 @@
             <h2 id="normalH">${L(`ปกติ${c.name}เป็นยังไง`, `What's normal for ${nm(c)}`)}</h2>
             <p class="muted">${L("รู้ว่าปกติเป็นแบบไหน จะได้สังเกตออกเวลามีอะไรผิดไป", "Knowing what's normal is how you notice when something changes.")}</p>
             <dl class="normal-list">
-              <div><dt>${L("อยู่แถวไหน", "Usually at")}</dt><dd>${c.locations.length ? c.locations.map(T).join(", ") : c.areas.length ? esc(c.areas.map((a) => lbl(AREAS[a])).join(", ")) : `<span class="muted">${L("ยังไม่มีข้อมูล", "Not recorded yet")}</span>`}</dd></div>
+              <div><dt>${L("อยู่แถวไหน", "Usually at")}</dt><dd>${c.locations.length ? c.locations.map(T).join(", ") : c.areas.length ? esc(c.areas.map((a) => lbl(AREAS[a])).join(", ")) : `<span class="muted">${L("ยังไม่มีข้อมูล", "Not recorded yet")}</span>`}${mapSpot(c) ? ` <a class="map-link" href="index.html#map-${mapSpot(c)}">${L("ดูบนแผนที่", "See on the map")}</a>` : ""}</dd></div>
               <div><dt>${L("เข้าหายังไง", "How to approach")}</dt><dd>${approachFor(c)}</dd></div>
               ${c.health ? `<div><dt>${L("เรื่องสุขภาพ", "Health to watch")}</dt><dd>${T(c.health)}</dd></div>` : ""}
               ${c.marks ? `<div><dt>${L("ลักษณะและนิสัย", "Looks and habits")}</dt><dd>${T(c.marks)}</dd></div>` : ""}
@@ -539,7 +542,7 @@
       </nav>
       ${catKey ? `<p class="cat-desc">${esc(L(CATEGORIES[catKey].desc, CATEGORIES[catKey].descEn))}</p>` : ""}
       <h2 class="sr">${L("รายการความรู้", "Articles")}</h2>
-      ${list.length ? `<ul class="articles">${list.map((a) => articleRow(a)).join("")}</ul>` : `<div class="empty">${cat("sleep")}<p>${L("ยังไม่มีเรื่องในหมวดนี้", "Nothing here yet.")} <a href="${shareHref("story")}">${L("เล่าเป็นคนแรก", "Be the first to share")}</a></p></div>`}
+      ${list.length ? `<ul class="articles">${list.map((a) => articleRow(a)).join("")}</ul>` : `<div class="empty">${cat("loaf")}<p>${L("ยังไม่มีเรื่องในหมวดนี้", "Nothing here yet.")} <a href="${shareHref("story")}">${L("เล่าเป็นคนแรก", "Be the first to share")}</a></p></div>`}
       <aside class="callout"><h3>${L("มีเรื่องที่รุ่นต่อไปควรรู้ไหม?", "Know something the next keepers should know?")}</h3><p>${L("เคล็ดลับ บทเรียน หรือเรื่องที่เคยเกิดกับแมวในคณะ เล่ามาสั้น ๆ ก็พอ ทีมจะเรียบเรียง ตรวจทาน แล้วใส่ชื่อคุณเป็นเครดิต", "A tip, a lesson, or something that happened with the faculty's cats. A few lines is enough: the team writes it up, reviews it, and credits you.")}</p><a class="btn" href="${shareHref("story")}">${L("เล่าให้ทีมฟัง", "Tell the team")}</a></aside>`;
   }
 
@@ -670,7 +673,7 @@
         // Apps Script web apps do not send CORS headers: no-cors delivers the post; the sheet is the receipt
         await fetch(CFG.SUBMIT_URL, { method: "POST", mode: "no-cors", body: payload });
         form.reset();
-        show("ok", `${cat("sit", "ok-cat")}<div><b>${L("ได้รับแล้ว ขอบคุณมาก", "Got it, thank you")}</b>${L("สถานะ: รอทีมตรวจทาน", "Status: waiting for the team to review")}${data.get("type") === "sick" ? ` · ${L("ถ้าแมวอาการหนัก ทำตาม", "If the cat is badly unwell, follow the")}<a href="#/help">${L("ขั้นตอนเร่งด่วน", "urgent steps")}</a>${(isEN() ? "" : "ไปก่อนเลย")}` : ""}
+        show("ok", `${cat("play", "ok-cat")}<div><b>${L("ได้รับแล้ว ขอบคุณมาก", "Got it, thank you")}</b>${L("สถานะ: รอทีมตรวจทาน", "Status: waiting for the team to review")}${data.get("type") === "sick" ? ` · ${L("ถ้าแมวอาการหนัก ทำตาม", "If the cat is badly unwell, follow the")}<a href="#/help">${L("ขั้นตอนเร่งด่วน", "urgent steps")}</a>${(isEN() ? "" : "ไปก่อนเลย")}` : ""}
           <span class="next-steps">${sentCat ? `<a class="btn ghost" href="${catHref(sentCat)}">${L(`กลับไปหน้า${sentCat.name}`, `Back to ${nm(sentCat)}`)}</a>` : ""}<button type="button" class="btn ghost" id="again">${L("ส่งอีกเรื่อง", "Send another")}</button><a class="btn ghost" href="#/">${L("หน้าแรก", "Home")}</a></span></div>`);
         const again = document.getElementById("again");
         if (again) again.addEventListener("click", () => { status.className = ""; status.innerHTML = ""; msg.focus(); });

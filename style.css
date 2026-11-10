@@ -69,7 +69,7 @@ main:focus, main:focus-visible { outline: none; }
 main { padding-top: 48px; padding-bottom: 96px; min-height: 60vh; }
 main:has(> .loading) { min-height: 100vh; min-height: 100dvh; }
 .loading { display: grid; place-items: center; gap: 8px; padding: 80px 0; color: var(--muted); }
-.loading .nd { width: 140px; height: 90px; }
+.loading .nd { width: 150px; height: 94px; }
 
 /* ---------- shared pieces ---------- */
 .page-head { max-width: 760px; margin: 8px 0 44px; }
@@ -85,7 +85,7 @@ main:has(> .loading) { min-height: 100vh; min-height: 100dvh; }
 .more { margin: 18px 0 0; font-size: 15.5px; }
 .more a, .toolbar a { text-decoration: none; font-weight: 500; }
 .empty { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 56px 16px; color: var(--muted); }
-.empty .nd { width: 150px; height: 100px; }
+.empty .nd { width: 156px; height: 112px; }
 .empty h1 { font-size: clamp(26px, 3vw, 34px); color: var(--ink); }
 .empty p { margin: 0; }
 
@@ -157,7 +157,7 @@ h1 .th-name { font-size: .45em; margin-left: .3em; vertical-align: .2em; }
 
 /* ---------- home ---------- */
 .hello { display: grid; justify-items: center; text-align: center; padding: 24px 0 8px; }
-.hello-cat { width: 108px; height: 117px; margin-bottom: 18px; }
+.hello-cat { width: 104px; height: 132px; margin-bottom: 18px; }
 .hello h1 { font-size: clamp(38px, 6vw, 64px); }
 .hello .lede { color: var(--ink-2); font-size: 19px; max-width: 600px; margin: 20px 0 0; }
 .hello-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 30px; }
@@ -347,7 +347,7 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
 .form-status.info { background: var(--warn-soft); color: var(--warn); display: block; }
 .form-status b { display: block; margin-bottom: 2px; font-weight: 500; }
 .form-status.ok b { color: var(--ok); }
-.form-status .ok-cat { width: 52px; height: 56px; flex: none; }
+.form-status .ok-cat { width: 54px; height: 63px; flex: none; }
 .next-steps { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .next-steps .btn { font-size: 14.5px; padding: 8px 16px; background: var(--bg); }
 .flow { list-style: none; margin: 0 0 28px; padding: 0; counter-reset: f; display: grid; gap: 18px; }
@@ -448,7 +448,7 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
   main { padding-top: 32px; }
   .page-head { margin-bottom: 32px; }
   .page-head .lede, .hello .lede { font-size: 17px; }
-  .hello-cat { width: 84px; height: 91px; }
+  .hello-cat { width: 82px; height: 104px; }
   .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
   .stats dt { font-size: 30px; }
   .resume { border-radius: var(--r); grid-template-columns: auto minmax(0, 1fr); padding: 14px 16px; }
@@ -491,3 +491,8 @@ textarea[aria-invalid="true"] { border-color: var(--bad) !important; box-shadow:
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* link from a cat profile to its spot on the landing page's 3D map */
+.map-link { display: inline-flex; gap: 4px; margin-left: 10px; text-decoration: none; font-size: 14px; font-weight: 500; color: var(--pink-ink); white-space: nowrap; }
+.map-link::after { content: "→"; }
+.map-link:hover { color: var(--pink); }

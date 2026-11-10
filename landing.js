@@ -93,6 +93,7 @@
     plaza: { x0: -31, x1: 84, z0: 17.6, z1: 51.5 },
     garden: { x0: -14, x1: 79, z0: 58, z1: 90 },
     auditorium: [-68, 132], flagpole: [-133.8, 131.8],
+    tewalai: [31, 170], // Maha Chulalongkorn Building (เทวาลัย), OSM way 157591137: only a simple block, no model yet
     osmPlazaTrees: [[-8.5, 34.9], [-6.5, 39.8], [-46.6, 20.5], [-52, 41.1], [-95.6, 35.4]],
     osmGrove: [[-109.9, 113.9], [-108, 108.1], [-97.8, 110.2], [-100.1, 101.8], [-86.6, 102.2], [-54.7, 104.9], [-45.3, 104.1], [-30.5, 108.1],
       [-27.6, 98.8], [-45.3, 91.1], [-49, 84.5], [-61.5, 84.5], [-62, 91.8], [-75.3, 92], [-77.5, 83.2], [-92.1, 82.6], [-92, 90.9], [-109.3, 67.5],
@@ -123,7 +124,7 @@
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x07090c);
     scene.fog = new THREE.FogExp2(0x0b0e14, isMobile ? 0.0052 : 0.0046);
-    onDN((d) => { scene.background.setHex(d ? 0xcfe3ef : 0x07090c); scene.fog.color.setHex(d ? 0xdce8ef : 0x0b0e14); scene.fog.density = (isMobile ? 0.0052 : 0.0046) * (d ? 0.6 : 1); });
+    onDN((d) => { scene.background.setHex(d ? 0x7fb5de : 0x07090c); scene.fog.color.setHex(d ? 0xdce8ef : 0x0b0e14); scene.fog.density = (isMobile ? 0.0052 : 0.0046) * (d ? 0.6 : 1); });
     camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 1000);
     window.__aksornLanding = { renderer, scene, camera }; // handy for debugging/perf checks in devtools
     return true;
@@ -540,6 +541,25 @@
     instanced(new THREE.BoxGeometry(1, 1, 1), lambert(0x3d3b38), legs);
   }
 
+  /* ---------- เทวาลัย: a simple cream block with a tiled Thai roof, so the map has something to pin to ---------- */
+  function buildTewalai() {
+    const [x, z] = SITE.tewalai, L = 64, W = 18, H = 11;
+    const wall = lambert(0x2b2a31); dnColor(wall, 0xeee6d6);
+    const roof = lambert(0x3b2420); dnColor(roof, 0xc0683e);
+    const g = new THREE.Group();
+    g.add(box(L, H, W, wall, 0, H / 2, 0));
+    const tri = new THREE.Shape(); tri.moveTo(-W / 2 - 1.2, 0); tri.lineTo(W / 2 + 1.2, 0); tri.lineTo(0, 7.5); tri.closePath();
+    const rg = new THREE.ExtrudeGeometry(tri, { depth: L + 2, bevelEnabled: false });
+    rg.translate(0, 0, -(L + 2) / 2); rg.rotateY(Math.PI / 2);
+    const r = new THREE.Mesh(rg, roof); r.position.y = H; g.add(r);
+    // the taller central porch
+    g.add(box(14, H + 4, W + 4, wall, 0, (H + 4) / 2, 0));
+    const pg = new THREE.ExtrudeGeometry(tri, { depth: 16, bevelEnabled: false }); pg.translate(0, 0, -8); pg.scale(1.25, 1.3, 1);
+    const pr = new THREE.Mesh(pg, roof); pr.position.y = H + 4; g.add(pr);
+    g.position.set(x, 0, z); scene.add(g);
+    world.models.tewalaiBlock = g;
+  }
+
   /* ---------- cats: merged parts (body, head, eyes, tail) + one shared glow layer for every pair of eyes ---------- */
   function merge(parts) {
     const pos = [], nrm = [];
@@ -639,7 +659,7 @@
       })
     };
     world.TEX = TEX;
-    const hemi = new THREE.HemisphereLight(0x6070a0, 0x0b0907, 0.85); scene.add(hemi);
+    const hemi = new THREE.HemisphereLight(0x6070a0, 0x0b0907, 0.85); scene.add(hemi); world.hemi = hemi;
     const hemiGround = hemi.groundColor.getHex();
     onDN((d) => { hemi.color.setHex(d ? 0xf3f7ff : 0x6070a0); hemi.groundColor.setHex(d ? 0x8f8a78 : hemiGround); hemi.intensity = d ? 0.95 : 0.85; });
     const moonLight = new THREE.DirectionalLight(0xffd6e4, 0.5); moonLight.position.set(150, 212, -360); scene.add(moonLight);
@@ -651,6 +671,7 @@
     buildGround(TEX);
     buildTrees(TEX); setProgress(45);
     buildLamps(TEX); buildBenches();
+    buildTewalai(); buildSpotGlows(TEX);
     buildCats(TEX); setProgress(60);
     buildBlossoms(TEX);
   }
@@ -660,13 +681,16 @@
   let KEYS = [];
   function defineKeys() {
     KEYS = [
-      { pos: V(-6, 9, 128), look: V(18, 25, 0) },          // 00 hero: BRK's gable and tower, MCS to the right, the moon above
+      { pos: V(-6, 9, 128), look: V(-34, 25, 0) },         // 00 hero: BRK's gable and tower, MCS to the right, the moon above
       { pos: V(7.5, 1.7, 47), look: V(-5.5, 0.9, 33) },     // 01 keepers: the bench, the lamp and the cats around them
       { pos: V(3.2, 0.75, 42), look: V(1.4, 0.7, 24) },     // 02 field notes: cat eye level on the plaza walkway
-      { pos: V(-40, 120, 235), look: V(40, 0, 60) },        // 03 process: the whole precinct from above, auditorium and flag included
-      { pos: V(-20, 6, 192), look: V(-125, 22, 132) }      // 04 care: along the auditorium to the flagpole
+      { pos: V(-56, 345, 226), look: V(-56, 0, 112) },      // 03 cat map: BRK, MCS and เทวาลัย from above, room on the left for the list
+      { pos: V(-40, 120, 235), look: V(40, 0, 60) },        // 04 process: the whole precinct from above, auditorium and flag included
+      { pos: V(-20, 6, 192), look: V(-125, 22, 132) }      // 05 care: along the auditorium to the flagpole
     ];
-    if (isMobile) { KEYS[0].pos.set(-2, 10, 170); KEYS[0].look.set(14, 30, 0); KEYS[1].pos.set(9, 2.2, 52); KEYS[3].pos.set(-55, 160, 300); }
+    if (isMobile) { KEYS[0].pos.set(10, 4, 120); KEYS[0].look.set(4, 30, 0); KEYS[1].pos.set(9, 2.2, 52); KEYS[3].pos.set(30, 430, 205); KEYS[3].look.set(30, 0, 128); KEYS[4].pos.set(-55, 160, 300); }
+    MAP.base = { pos: KEYS[MAP.key].pos.clone(), look: KEYS[MAP.key].look.clone() };
+    if (MAP.sel) aimMap(MAP.sel);
   }
   const cam = { pos: null, look: null, tPos: null, tLook: null };
   const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
@@ -674,7 +698,7 @@
 
   function scrollState() {
     const mid = window.scrollY + innerHeight * 0.5;
-    const centers = sections.map((s, i) => (i === 0 ? innerHeight * 0.5 : s.offsetTop + s.offsetHeight * 0.5));
+    const centers = sections.map((s, i) => (i === 0 ? innerHeight * 0.5 : isMobile && s.dataset.camAnchor === "top" ? s.offsetTop + innerHeight * 0.35 : s.offsetTop + s.offsetHeight * 0.5));
     let i = 0; while (i < centers.length - 1 && mid > centers[i + 1]) i++;
     let t = 0;
     if (i < centers.length - 1) { t = (mid - centers[i]) / (centers[i + 1] - centers[i]); t = Math.min(1, Math.max(0, t)); t = t * t * (3 - 2 * t); }
@@ -784,10 +808,106 @@
     updateEyeGlow();
 
     renderer.render(scene, camera);
+    updatePins();
     if (window.__aksornLanding) window.__aksornLanding.models = Object.keys(world.models).join(","), window.__aksornLanding.heroCalls = renderer.info.render.calls, window.__aksornLanding.heroTris = renderer.info.render.triangles;
     renderViewports();
     if (firstFrame) { firstFrame(); firstFrame = null; }
     requestAnimationFrame(frame);
+  }
+
+  /* ============================================================ the cat map
+     Spots are the areas data.js reads from each cat's locations (brk, mcs, tewalai, store, cage, roam).
+     A spot with a position gets a pin on the 3D campus; the list in the panel always works, with or without 3D.
+     Positions are metres from BRK's centre (x east, z south), at each building's main entrance. Add one for the
+     store room or the cage in config.js (MAP_SPOTS) once the team knows where they are. */
+  const MAP = { key: 3, base: null, spots: [], sel: null, pins: [], fade: 0 };
+  const SPOT_XZ = Object.assign({ brk: [1, 19], mcs: [60, 14], tewalai: [SITE.tewalai[0], SITE.tewalai[1] - 11] }, CFG.MAP_SPOTS || {});
+  const SPOT_SHORT = { brk: ["BRK", "BRK"], mcs: ["MCS", "MCS"], tewalai: ["เทวาลัย", "Thewalai"], store: ["สโตร์แม่บ้าน", "Store room"], cage: ["กรง", "Cage"] };
+  const COAT_FILL = { orange: "#d9822b", black: "#232326", bicolor: "#232326", white: "#efe9dd", calico: "#e3c9a4", tabby: "#8b8478", cream: "#e2d3b8", unknown: "#b9b2a6" };
+  let _p = null;
+  const spotPos = (key) => { const xz = SPOT_XZ[key]; return xz ? new THREE.Vector3(xz[0], 4, xz[1]) : null; };
+  // a warm pool of light on the ground under each pin, so the spots read on the dark night map
+  function buildSpotGlows(TEX) {
+    const mat = new THREE.MeshBasicMaterial({ map: TEX.glow, color: 0xff8fb8, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+    Object.values(SPOT_XZ).forEach((xz) => { if (!xz) return; const m = flatPlane(34, 34, mat, xz[0], 0.08, xz[1]); scene.add(m); nightOnly(m); });
+  }
+  function updatePins() {
+    if (!MAP.pins.length) return;
+    const sec = $("#map"), layer = $("#pins"); if (!sec || !layer) return;
+    const r = sec.getBoundingClientRect();
+    const off = Math.abs(r.top + (isMobile ? innerHeight * 0.35 : r.height / 2) - innerHeight / 2) / (innerHeight * 0.55);
+    const fade = Math.max(0, Math.min(1, 1.4 - off * 1.4));
+    // from map height the fog would hide everything: thin it out while the map is on screen, and at night
+    // lift the moonlight a little so the buildings read from above
+    scene.fog.density = (isMobile ? 0.0052 : 0.0046) * (world.day ? 0.6 : 1) * (1 - 0.82 * fade);
+    if (!world.day && world.hemi) world.hemi.intensity = 0.85 + 0.9 * fade;
+    if (fade < 0.02) { if (MAP.fade) { layer.style.visibility = "hidden"; MAP.fade = 0; } return; }
+    if (!MAP.fade) layer.style.visibility = "visible";
+    MAP.fade = fade; layer.style.opacity = fade.toFixed(3);
+    _p = _p || new THREE.Vector3();
+    for (const p of MAP.pins) {
+      if (!p.pos) p.pos = spotPos(p.key);
+      _p.copy(p.pos).project(camera);
+      const hide = _p.z > 1 || Math.abs(_p.x) > 1.1 || Math.abs(_p.y) > 1.1;
+      p.el.style.display = hide ? "none" : "";
+      if (!hide) p.el.style.transform = `translate3d(${((_p.x + 1) / 2 * innerWidth).toFixed(1)}px, ${((1 - _p.y) / 2 * innerHeight).toFixed(1)}px, 0)`;
+    }
+  }
+  // fly the map camera part of the way towards the chosen spot
+  function aimMap(key) {
+    if (!MAP.base || !KEYS[MAP.key]) return;
+    const xz = key && SPOT_XZ[key], k = KEYS[MAP.key];
+    if (!xz) { k.pos.copy(MAP.base.pos); k.look.copy(MAP.base.look); return; }
+    const look = MAP.base.look.clone().lerp(new THREE.Vector3(xz[0], 0, xz[1]), 0.5);
+    k.look.copy(look);
+    k.pos.copy(look).add(MAP.base.pos.clone().sub(MAP.base.look).multiplyScalar(0.74));
+  }
+  function buildMap(cats, I, STATUS) {
+    const list = $("#spotList"), detail = $("#spotDetail"), layer = $("#pins");
+    if (!list || !detail) return;
+    const AREAS = window.CatData.AREAS;
+    const L = (th, en) => I.L(th, en);
+    const here = cats.filter((c) => !["passed", "adopted"].includes(c.status));
+    const order = ["brk", "mcs", "tewalai", "store", "cage", "roam"];
+    MAP.spots = order.map((key) => ({ key, cats: here.filter((c) => c.areas.includes(key)) })).filter((s) => s.cats.length);
+    const nm = (c) => (I.lang === "en" && I.nameEn(c.name)) || c.name;
+    const avatar = (c) => c.photoThumb
+      ? `<img src="${esc(c.photoThumb)}" alt="" loading="lazy" decoding="async" width="40" height="40">`
+      : `<svg aria-hidden="true" style="--cat:${COAT_FILL[c.coat] || COAT_FILL.unknown}"><use href="#nd-head"/></svg>`;
+    const short = (k) => (SPOT_SHORT[k] ? L(SPOT_SHORT[k][0], SPOT_SHORT[k][1]) : L(AREAS[k].label, AREAS[k].en));
+    const pinned = (k) => !!SPOT_XZ[k];
+    const draw = () => {
+      list.innerHTML = MAP.spots.map((s) => `<button type="button" class="spot${pinned(s.key) ? "" : " unpinned"}" data-spot="${s.key}" aria-pressed="${MAP.sel === s.key}">
+          <span class="avs">${s.cats.slice(0, 3).map(avatar).join("")}</span>
+          <span class="spot-t"><b>${esc(L(AREAS[s.key].label, AREAS[s.key].en))}</b><small>${L(`${s.cats.length} ตัว`, `${s.cats.length} cat${s.cats.length > 1 ? "s" : ""}`)}${pinned(s.key) ? "" : " · " + L("ไม่มีหมุด", "not on the map")}</small></span>
+        </button>`).join("");
+      const s = MAP.spots.find((x) => x.key === MAP.sel);
+      detail.innerHTML = s ? `<ul>${s.cats.map((c) => {
+        const st = STATUS[c.status] || {};
+        const where = c.locations.map((x) => I.tx(x)).join(", ");
+        const en = I.lang === "en" && I.nameEn(c.name);
+        return `<li><a href="cats.html#/cat/${encodeURIComponent(c.id)}"><span class="av">${avatar(c)}</span><span class="who"><b>${esc(en || c.name)}</b>${en ? ` <small lang="th">${esc(c.name)}</small>` : ""}<small>${esc(where || L(st.label || "", st.en || ""))}</small></span></a></li>`;
+      }).join("")}</ul>` : "";
+      if (layer) {
+        layer.innerHTML = MAP.spots.filter((x) => pinned(x.key)).map((x) => `<button type="button" class="pin${MAP.sel === x.key ? " on" : ""}" tabindex="-1" data-spot="${x.key}">
+            <span class="avs">${x.cats.slice(0, 3).map(avatar).join("")}</span><span class="pin-t">${esc(short(x.key))}</span><span class="pin-n">${x.cats.length}</span></button>`).join("");
+        MAP.pins = $$("#pins .pin").map((el) => ({ el, key: el.dataset.spot, pos: null }));
+        MAP.fade = 0; layer.style.visibility = "hidden";
+      }
+    };
+    const select = (key) => { MAP.sel = MAP.sel === key ? null : key; aimMap(MAP.sel); draw(); };
+    list.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-spot]"); if (!b) return;
+      const key = b.dataset.spot; select(key);
+      const again = list.querySelector(`[data-spot="${key}"]`); if (again) again.focus({ preventScroll: true });
+    });
+    if (layer) layer.addEventListener("click", (e) => { const b = e.target.closest("[data-spot]"); if (b) select(b.dataset.spot); });
+    // deep link from the hub: index.html#map-brk
+    const m = /^#map-(\w+)$/.exec(location.hash);
+    if (m && MAP.spots.some((x) => x.key === m[1])) { MAP.sel = m[1]; aimMap(m[1]); }
+    if (/^#map/.test(location.hash)) requestAnimationFrame(() => $("#map").scrollIntoView({ behavior: "instant", block: "center" }));
+    draw();
+    I.on(draw);
   }
 
   /* ============================================================ page wiring */
@@ -803,7 +923,7 @@
       if (st.nearest !== activeIdx || !onScroll.once) {
         activeIdx = st.nearest; onScroll.once = true;
         rail.forEach((a) => a.classList.toggle("active", +a.dataset.i === activeIdx));
-        navLinks.forEach((a, i) => a.classList.toggle("active", i + 1 === activeIdx));
+        navLinks.forEach((a) => a.classList.toggle("active", +a.dataset.i === activeIdx));
       }
       const y = window.scrollY;
       if (y < innerHeight * 1.2 && !reduce) {
@@ -844,10 +964,11 @@
       $(".stats").after(sampleNote);
     }
 
+    try { buildMap(cats, I, STATUS); } catch (e) { console.warn("cat map:", e); }
+
     /* every cat, as a slideshow: photo when there is one, otherwise the mascot drawn in the cat's coat colour */
     const track = $("#track"); if (!track) return;
     const ORDER = { active: 0, commuter: 1, missing: 2, unknown: 3, adopted: 4, passed: 5 };
-    const COAT_FILL = { orange: "#d9822b", black: "#232326", bicolor: "#232326", white: "#efe9dd", calico: "#e3c9a4", tabby: "#8b8478", cream: "#e2d3b8", unknown: "#b9b2a6" };
     const STATUS_DOT = { ok: "var(--ok)", warn: "var(--warn)", info: "var(--violet)" };
     const list = cats.slice().sort((a, b) => ORDER[a.status] - ORDER[b.status] || (b.photo ? 1 : 0) - (a.photo ? 1 : 0));
     const draw = () => {

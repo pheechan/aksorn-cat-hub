@@ -125,7 +125,8 @@
     scene.background = new THREE.Color(0x07090c);
     scene.fog = new THREE.FogExp2(0x0b0e14, isMobile ? 0.0052 : 0.0046);
     onDN((d) => { scene.background.setHex(d ? 0x7fb5de : 0x07090c); scene.fog.color.setHex(d ? 0xdce8ef : 0x0b0e14); scene.fog.density = (isMobile ? 0.0052 : 0.0046) * (d ? 0.6 : 1); });
-    camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 1000);
+    // near plane at 0.5 (not 0.1): five times finer depth from the high map view, and nothing comes closer than that
+    camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.5, 1000);
     window.__aksornLanding = { renderer, scene, camera }; // handy for debugging/perf checks in devtools
     return true;
   }
@@ -134,6 +135,11 @@
   const lambert = (color, o) => new THREE.MeshLambertMaterial(Object.assign({ color }, o || {}));
   function box(w, h, d, mat, x, y, z) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x || 0, y || 0, z || 0); return m; }
   function flatPlane(w, d, mat, x, y, z) { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat); m.rotation.x = -Math.PI / 2; m.position.set(x, y, z); return m; }
+  /* Ground layers (paving, roads, kerbs, lawns) lie a few centimetres apart over the grass. From the far map view the
+     depth buffer can't tell them apart and they flicker (z-fighting), so they skip the depth test and are painted in a
+     fixed order straight after the grass instead: grass, then layer 0, 1, 2… Buildings and trees are drawn later
+     and still hide them normally, because the grass under them has written its depth. */
+  function decal(m, layer) { m.renderOrder = -1.9 + layer * 0.05; m.material.depthTest = false; m.material.depthWrite = false; return m; }
 
   // instanced helper: list of {p:[x,y,z], s:[sx,sy,sz], r:[rx,ry,rz], c?:Color}
   function instanced(geo, mat, items) {
@@ -250,7 +256,7 @@
     });
     grassDay.wrapS = grassDay.wrapT = THREE.RepeatWrapping; grassDay.repeat.set(160, 160);
     const grassMat = lambert(0xffffff, { map: grassTex });
-    scene.add(flatPlane(1400, 1400, grassMat, 0, 0, 0));
+    const grass = flatPlane(1400, 1400, grassMat, 0, 0, 0); grass.renderOrder = -1.95; scene.add(grass);
     onDN((d) => { grassMat.map = d ? grassDay : grassTex; grassMat.needsUpdate = true; });
 
     // ลานอักษรสิทธิ์: square stone paving in front of BRK and MCS
@@ -267,25 +273,25 @@
     });
     paveDay.wrapS = paveDay.wrapT = THREE.RepeatWrapping; paveDay.repeat.set(pw / 4, pd / 4);
     const paveMat = lambert(0xffffff, { map: pave });
-    scene.add(flatPlane(pw, pd, paveMat, (P.x0 + P.x1) / 2, 0.02, (P.z0 + P.z1) / 2));
+    scene.add(decal(flatPlane(pw, pd, paveMat, (P.x0 + P.x1) / 2, 0.02, (P.z0 + P.z1) / 2), 1));
     onDN((d) => { paveMat.map = d ? paveDay : pave; paveMat.needsUpdate = true; });
     // apron under BRK/MCS so the buildings never float on grass
     const apron = lambert(0x24262a); dnColor(apron, 0xb3b1aa);
-    scene.add(flatPlane(170, 46, apron, 49, 0.015, -2));
+    scene.add(decal(flatPlane(170, 46, apron, 49, 0.015, -2), 0));
 
     // roads: along the south edge of the plaza, south to the auditorium, and the service lane behind BRK
     const asphalt = lambert(0x16181b); dnColor(asphalt, 0x707479);
-    scene.add(flatPlane(190, 7, asphalt, 35, 0.03, 55));
-    scene.add(flatPlane(7, 130, asphalt, -21, 0.03, 118));
-    scene.add(flatPlane(170, 6, asphalt, 50, 0.03, -23));
+    scene.add(decal(flatPlane(190, 7, asphalt, 35, 0.03, 55), 2));
+    scene.add(decal(flatPlane(7, 130, asphalt, -21, 0.03, 118), 2));
+    scene.add(decal(flatPlane(170, 6, asphalt, 50, 0.03, -23), 2));
     const kerb = lambert(0x3a3d42); dnColor(kerb, 0xc6c7c4);
-    scene.add(flatPlane(190, 0.25, kerb, 35, 0.035, 51.6)); scene.add(flatPlane(190, 0.25, kerb, 35, 0.035, 58.4));
+    scene.add(decal(flatPlane(190, 0.25, kerb, 35, 0.035, 51.6), 3)); scene.add(decal(flatPlane(190, 0.25, kerb, 35, 0.035, 58.4), 3));
 
     // garden south of the road (way 1119285458): lawn, low clipped hedges and a central path
     const G = SITE.garden;
     const lawn = lambert(0x0f1b13), gpath = lambert(0x2a2c2f); dnColor(lawn, 0x7ea866); dnColor(gpath, 0xcbc6ba);
-    scene.add(flatPlane(G.x1 - G.x0, G.z1 - G.z0, lawn, (G.x0 + G.x1) / 2, 0.025, (G.z0 + G.z1) / 2));
-    scene.add(flatPlane(4, G.z1 - G.z0, gpath, 32, 0.03, (G.z0 + G.z1) / 2));
+    scene.add(decal(flatPlane(G.x1 - G.x0, G.z1 - G.z0, lawn, (G.x0 + G.x1) / 2, 0.025, (G.z0 + G.z1) / 2), 1));
+    scene.add(decal(flatPlane(4, G.z1 - G.z0, gpath, 32, 0.03, (G.z0 + G.z1) / 2), 2));
     const hedges = [];
     for (let x = G.x0 + 4; x < G.x1 - 4; x += 9) for (const z of [G.z0 + 4, G.z1 - 4]) if (Math.abs(x - 32) > 5) hedges.push({ p: [x, 0.45, z], s: [7, 0.9, 1.2] });
     for (let z = G.z0 + 10; z < G.z1 - 8; z += 9) for (const x of [26, 38]) hedges.push({ p: [x, 0.45, z], s: [1.2, 0.9, 6.5] });
@@ -294,7 +300,7 @@
 
     // the Chula front lawn and the flagpole roundabout get a slightly different grass so the far view reads
     const frontLawn = lambert(0x0d1912); dnColor(frontLawn, 0x8bb072);
-    scene.add(flatPlane(110, 50, frontLawn, -77, 0.02, 85));
+    scene.add(decal(flatPlane(110, 50, frontLawn, -77, 0.02, 85), 1));
   }
 
   /* ---------- building materials: daytime photo textures re-lit for night, with lit windows ---------- */
@@ -524,7 +530,7 @@
     instanced(new THREE.BoxGeometry(0.62, 0.16, 0.62), metal, LAMPS.map(([x, z]) => ({ p: [x, 4.62, z] })));
     instanced(new THREE.CylinderGeometry(0.22, 0.16, 0.42, 8), new THREE.MeshBasicMaterial({ color: 0xffe3b5 }), LAMPS.map(([x, z]) => ({ p: [x, 4.33, z] })));
     const pools = instanced(new THREE.PlaneGeometry(9, 9), new THREE.MeshBasicMaterial({ map: TEX.pool, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }),
-      LAMPS.map(([x, z]) => ({ p: [x, 0.05, z], r: [-Math.PI / 2, 0, 0] })));
+      LAMPS.map(([x, z]) => ({ p: [x, 0.2, z], r: [-Math.PI / 2, 0, 0] })));
     pools.renderOrder = 1; nightOnly(pools);
     world.lampGlow = glowPoints(LAMPS.flatMap(([x, z]) => [x, 4.33, z]), 0xffb867, 3.4, 3, TEX.glow, 0.85); nightOnly(world.lampGlow);
     LIT_LAMPS.forEach(([x, z]) => { const l = new THREE.PointLight(0xffb15e, 1.3, 14, 2); l.position.set(x, 4.1, z); scene.add(l); dnLight(l, 0); });
@@ -825,11 +831,14 @@
   const SPOT_SHORT = { brk: ["BRK", "BRK"], mcs: ["MCS", "MCS"], tewalai: ["เทวาลัย", "Thewalai"], store: ["สโตร์แม่บ้าน", "Store room"], cage: ["กรง", "Cage"] };
   const COAT_FILL = { orange: "#d9822b", black: "#232326", bicolor: "#232326", white: "#efe9dd", calico: "#e3c9a4", tabby: "#8b8478", cream: "#e2d3b8", unknown: "#b9b2a6" };
   let _p = null;
-  const spotPos = (key) => { const xz = SPOT_XZ[key]; return xz ? new THREE.Vector3(xz[0], 4, xz[1]) : null; };
+  // a spot can share another spot's pin: MAP_SPOTS.cage = "brk" (the cage is inside BRK, 1st floor)
+  const pinOf = (key) => (typeof SPOT_XZ[key] === "string" ? SPOT_XZ[key] : key);
+  const xzOf = (key) => { const v = SPOT_XZ[pinOf(key)]; return Array.isArray(v) ? v : null; };
+  const spotPos = (key) => { const xz = xzOf(key); return xz ? new THREE.Vector3(xz[0], 4, xz[1]) : null; };
   // a warm pool of light on the ground under each pin, so the spots read on the dark night map
   function buildSpotGlows(TEX) {
     const mat = new THREE.MeshBasicMaterial({ map: TEX.glow, color: 0xff8fb8, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
-    Object.values(SPOT_XZ).forEach((xz) => { if (!xz) return; const m = flatPlane(34, 34, mat, xz[0], 0.08, xz[1]); scene.add(m); nightOnly(m); });
+    Object.values(SPOT_XZ).forEach((xz) => { if (!Array.isArray(xz)) return; const m = flatPlane(34, 34, mat, xz[0], 0.25, xz[1]); scene.add(m); nightOnly(m); });
   }
   function updatePins() {
     if (!MAP.pins.length) return;
@@ -856,7 +865,7 @@
   // fly the map camera part of the way towards the chosen spot
   function aimMap(key) {
     if (!MAP.base || !KEYS[MAP.key]) return;
-    const xz = key && SPOT_XZ[key], k = KEYS[MAP.key];
+    const xz = key && xzOf(key), k = KEYS[MAP.key];
     if (!xz) { k.pos.copy(MAP.base.pos); k.look.copy(MAP.base.look); return; }
     const look = MAP.base.look.clone().lerp(new THREE.Vector3(xz[0], 0, xz[1]), 0.5);
     k.look.copy(look);
@@ -869,13 +878,21 @@
     const L = (th, en) => I.L(th, en);
     const here = cats.filter((c) => !["passed", "adopted"].includes(c.status));
     const order = ["brk", "mcs", "tewalai", "store", "cage", "roam"];
-    MAP.spots = order.map((key) => ({ key, cats: here.filter((c) => c.areas.includes(key)) })).filter((s) => s.cats.length);
+    // spots that share a pin (the cage, inside BRK) are listed under that pin's spot
+    MAP.spots = [];
+    order.forEach((key) => {
+      const cs = here.filter((c) => c.areas.includes(key)), home = pinOf(key);
+      let s = MAP.spots.find((x) => x.key === home);
+      if (!s) { s = { key: home, cats: [] }; MAP.spots.push(s); }
+      cs.forEach((c) => { if (!s.cats.includes(c)) s.cats.push(c); });
+    });
+    MAP.spots = MAP.spots.filter((s) => s.cats.length);
     const nm = (c) => (I.lang === "en" && I.nameEn(c.name)) || c.name;
     const avatar = (c) => c.photoThumb
       ? `<img src="${esc(c.photoThumb)}" alt="" loading="lazy" decoding="async" width="40" height="40">`
       : `<svg aria-hidden="true" style="--cat:${COAT_FILL[c.coat] || COAT_FILL.unknown}"><use href="#nd-head"/></svg>`;
     const short = (k) => (SPOT_SHORT[k] ? L(SPOT_SHORT[k][0], SPOT_SHORT[k][1]) : L(AREAS[k].label, AREAS[k].en));
-    const pinned = (k) => !!SPOT_XZ[k];
+    const pinned = (k) => !!xzOf(k);
     const draw = () => {
       list.innerHTML = MAP.spots.map((s) => `<button type="button" class="spot${pinned(s.key) ? "" : " unpinned"}" data-spot="${s.key}" aria-pressed="${MAP.sel === s.key}">
           <span class="avs">${s.cats.slice(0, 3).map(avatar).join("")}</span>
@@ -884,7 +901,10 @@
       const s = MAP.spots.find((x) => x.key === MAP.sel);
       detail.innerHTML = s ? `<ul>${s.cats.map((c) => {
         const st = STATUS[c.status] || {};
-        const where = c.locations.map((x) => I.tx(x)).join(", ");
+        let where = c.locations.map((x) => I.tx(x)).join(", ");
+        // a spot folded into this pin says exactly where in the building it is
+        const sub = c.areas.find((a) => a !== s.key && pinOf(a) === s.key && AREAS[a] && AREAS[a].where);
+        if (sub) where = L(`${AREAS[sub].label} · ${AREAS[sub].where}`, `${AREAS[sub].en} · ${AREAS[sub].whereEn}`);
         const en = I.lang === "en" && I.nameEn(c.name);
         return `<li><a href="cats.html#/cat/${encodeURIComponent(c.id)}"><span class="av">${avatar(c)}</span><span class="who"><b>${esc(en || c.name)}</b>${en ? ` <small lang="th">${esc(c.name)}</small>` : ""}<small>${esc(where || L(st.label || "", st.en || ""))}</small></span></a></li>`;
       }).join("")}</ul>` : "";
@@ -904,7 +924,8 @@
     if (layer) layer.addEventListener("click", (e) => { const b = e.target.closest("[data-spot]"); if (b) select(b.dataset.spot); });
     // deep link from the hub: index.html#map-brk
     const m = /^#map-(\w+)$/.exec(location.hash);
-    if (m && MAP.spots.some((x) => x.key === m[1])) { MAP.sel = m[1]; aimMap(m[1]); }
+    const deep = m && pinOf(m[1]);
+    if (deep && MAP.spots.some((x) => x.key === deep)) { MAP.sel = deep; aimMap(deep); }
     if (/^#map/.test(location.hash)) requestAnimationFrame(() => $("#map").scrollIntoView({ behavior: "instant", block: "center" }));
     draw();
     I.on(draw);

@@ -53,7 +53,8 @@ window.CatData = (function () {
     mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", en: "Maha Chakri Sirindhorn Building (MCS)", re: /mcs|มหาจักรี/i },
     tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", en: "Thewalai (Maha Chulalongkorn Building)", re: /เทวาลัย|มหาจุฬา/i },
     store: { label: "สโตร์แม่บ้าน", en: "Housekeepers' store room", re: /สโตร์|แม่บ้าน/i },
-    cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", re: /กรง/i },
+    cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", re: /กรง/i,
+      where: "กรงอยู่ที่ BRK ชั้น 1 หลังเคาน์เตอร์ประชาสัมพันธ์ หรือตรงทางลงไปชั้น 1", whereEn: "the cage is on BRK's 1st floor, behind the reception desk or by the stairs down to level 1" },
     roam: { label: "ไม่มีที่ประจำ แวะมาบางวัน", en: "No fixed spot, drops by now and then", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
   };
 

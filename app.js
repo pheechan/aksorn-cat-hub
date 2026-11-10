@@ -281,6 +281,7 @@
   /* ---------------- newcomer path (shared by home and #/start) ---------------- */
   function startSteps() {
     const noTouch = D.cats.filter((c) => c.touch === "no" && SEEN_NOW(c)).map(nm);
+    const careful = D.cats.filter((c) => c.touch === "careful" && SEEN_NOW(c)).map(nm);
     const nNow = D.cats.filter(SEEN_NOW).length;
     return [
       { id: "know", seci: "Combination", title: L("จำแมวที่เจอบ่อยให้ได้", "Learn the cats you'll see most"),
@@ -288,10 +289,13 @@
           `There are ${nNow} cats at the faculty right now. Start with the ones in the building where you study and try to learn three. Tap “I know … now” on a cat's page to keep count.`),
         links: [[L("ดูแมวที่อยู่ในคณะ", "See the cats at the faculty"), "#/cats?status=active"], [L("ผู้ดูแลจำแมวได้ยังไง", "How keepers tell cats apart"), "#/article/a09"]] },
       { id: "touch", seci: "Internalization", title: L("รู้ว่าตัวไหนจับได้ ตัวไหนไม่ควรจับ", "Know which cats you can approach, and which not to touch"),
-        text: noTouch.length
-          ? L(`${noTouch.join(", ")}ไม่ชอบให้จับ ที่เหลือส่วนใหญ่เป็นมิตร แต่ดูท่าทางก่อนเข้าหาทุกครั้งดีที่สุด`, `${noTouch.join(", ")} ${noTouch.length > 1 ? "don't" : "doesn't"} like being touched. Most of the others are friendly, but always read a cat's body language first.`)
-          : L("ส่วนใหญ่เป็นมิตร แต่ดูท่าทางก่อนเข้าหาทุกครั้งดีที่สุด", "Most are friendly, but always read a cat's body language before approaching."),
-        links: [[L("แมวที่ไม่ชอบให้จับ", "Cats who don't like being touched"), "#/cats?touch=no"], [L("อ่านภาษากายแมว", "Reading cat body language"), "#/article/a04"]] },
+        text: [
+          noTouch.length ? L(`${noTouch.join(", ")}ไม่ชอบให้จับ`, `${noTouch.join(", ")} ${noTouch.length > 1 ? "don't" : "doesn't"} like being touched.`) : "",
+          careful.length ? L(`${careful.join(", ")}ต้องเข้าหาอย่างระวัง`, `Approach ${careful.join(", ")} with care.`) : "",
+          noTouch.length || careful.length ? L("ที่เหลือส่วนใหญ่เป็นมิตร แต่ดูท่าทางก่อนเข้าหาทุกครั้งดีที่สุด", "Most of the others are friendly, but always read a cat's body language first.")
+            : L("ส่วนใหญ่เป็นมิตร แต่ดูท่าทางก่อนเข้าหาทุกครั้งดีที่สุด", "Most are friendly, but always read a cat's body language before approaching.")
+        ].filter(Boolean).join(" "),
+        links: [careful.length ? [L("แมวที่ต้องเข้าหาอย่างระวัง", "Cats to approach with care"), "#/cats?touch=careful"] : [L("แมวที่ไม่ชอบให้จับ", "Cats who don't like being touched"), "#/cats?touch=no"], [L("อ่านภาษากายแมว", "Reading cat body language"), "#/article/a04"]] },
       { id: "feed", seci: "Internalization", title: L("ให้อาหารแบบที่ผู้ดูแลทำกัน", "Feed the way the keepers do"),
         text: L("ให้ตรงจุดที่ตกลงกันไว้ ถามก่อนว่าวันนี้มีใครให้ไปแล้วหรือยัง แล้วเก็บชามเมื่อแมวกินเสร็จ ไม่มีใครเขียนเป็นกฎ แต่ผู้ดูแลทุกคนก็ทำแบบนี้",
           "Feed at the agreed spots, ask whether someone has already fed them today, and clear the bowls once they've eaten. None of this was ever written down as a rule, but every keeper does it."),
@@ -412,7 +416,7 @@
     const statusChips = [chip("status", "", L("ทั้งหมด", "All"), D.cats.length)].concat(Object.keys(STATUS).filter((k) => n((c) => c.status === k)).map((k) => chip("status", k, lbl(STATUS[k]), n((c) => c.status === k))));
     const coatChips = [chip("coat", "", L("ทุกสี", "Any"))].concat(Object.keys(COATS).filter((k) => n((c) => c.coat === k)).map((k) => chip("coat", k, lbl(COATS[k]), n((c) => c.coat === k), COATS[k].swatch)), n((c) => c.coat === "unknown") ? [chip("coat", "unknown", L("ยังไม่ระบุ", "Not recorded"), n((c) => c.coat === "unknown"))] : []);
     const areaChips = [chip("area", "", L("ทุกที่", "Anywhere"))].concat(Object.keys(AREAS).filter((k) => n((c) => c.areas.includes(k))).map((k) => chip("area", k, lbl(AREAS[k]), n((c) => c.areas.includes(k)))));
-    const touchChips = [chip("touch", "", L("ทั้งหมด", "All")), chip("touch", "yes", L("เข้าหาได้", "Friendly"), n((c) => c.touch === "yes")), chip("touch", "no", L("ไม่ชอบให้จับ", "Doesn't like touch"), n((c) => c.touch === "no"))];
+    const touchChips = [chip("touch", "", L("ทั้งหมด", "All")), chip("touch", "yes", L("เข้าหาได้", "Friendly"), n((c) => c.touch === "yes")), chip("touch", "careful", L("เข้าหาอย่างระวัง", "Approach with care"), n((c) => c.touch === "careful")), chip("touch", "no", L("ไม่ชอบให้จับ", "Doesn't like touch"), n((c) => c.touch === "no"))];
     app.innerHTML = `
       ${pageHead(L(`แมวทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`), L("กรองตามสีขน จุดที่เจอบ่อย หรือดูว่าตัวไหนเข้าหาได้ ไม่ต้องรู้ชื่อก็หาเจอ", "Filter by coat, by where they usually are, or by whether you can approach them. No name needed."))}
       <div class="facets" role="group" aria-label="${L("ตัวกรอง", "Filters")}">
@@ -530,6 +534,7 @@
   function approachFor(c) {
     if (c.approach) return T(c.approach);
     if (c.touch === "no") return esc(L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ ไม่ต้องยื่นมือเข้าไปหรืออุ้ม", "Doesn't like being touched. Watch from a distance; don't reach out or pick it up."));
+    if (c.touch === "careful") return esc(L("เข้าหาอย่างระวัง นั่งลงห่าง ๆ ให้แมวเข้ามาหาเองก่อน ไม่ยื่นมือเข้าไปหรืออุ้ม", "Approach with care: sit a little way off and let the cat come to you. Don't reach out or pick it up."));
     if (c.touch === "yes") return esc(L("เป็นมิตร นั่งลงให้ตัวต่ำ ยื่นมือให้ดมก่อน ถ้าเดินเข้ามาเองค่อยลูบ", "Friendly. Crouch down and offer a hand to sniff first; stroke only if the cat comes to you."));
     return esc(L("ยังไม่มีข้อมูล เข้าหาช้า ๆ แล้วดูท่าทีก่อน", "No notes yet. Approach slowly and read its body language first."));
   }
@@ -649,8 +654,8 @@
     const keeper = sorted(D.articles.filter((a) => a.category === "experience"));
     const quotes = (CFG.KEEPER_QUOTES || []).slice(1, 3);
     // what is special about each cat: the knowledge that lives in the profiles
-    const watch = D.cats.filter((c) => SEEN_NOW(c) && (c.touch === "no" || c.health)).sort(byStatusThenName).slice(0, 6);
-    const watchNote = (c) => [c.touch === "no" ? L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ", "Doesn't like being touched") : "", c.health ? L("สุขภาพ: ", "Health: ") + T(c.health) : ""].filter(Boolean).join(" · ");
+    const watch = D.cats.filter((c) => SEEN_NOW(c) && (c.touch === "no" || c.touch === "careful" || c.health)).sort(byStatusThenName).slice(0, 6);
+    const watchNote = (c) => [c.touch === "no" ? L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ", "Doesn't like being touched") : c.touch === "careful" ? L("เข้าหาอย่างระวัง", "Approach with care") : "", c.health ? L("สุขภาพ: ", "Health: ") + T(c.health) : ""].filter(Boolean).join(" · ");
     document.title = `${L("คลังความรู้", "Knowledge library")} · ${TITLE()}`;
     app.innerHTML = `
       <header class="k-hero">

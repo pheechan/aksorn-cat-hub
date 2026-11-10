@@ -21,7 +21,7 @@ window.CatData = (function () {
     [/adopt|มีบ้าน|รับไปเลี้ยง/i, "adopted"],
     [/passed|died|dead|เสียชีวิต|จากไป/i, "passed"]
   ];
-  const PERSONALITY_WORDS = { "friendly": "เป็นมิตร เข้าหาได้", "don't touch": "ไม่ชอบให้จับ", "dont touch": "ไม่ชอบให้จับ", "shy": "ขี้อาย" };
+  const PERSONALITY_WORDS = { "friendly": "เป็นมิตร เข้าหาได้", "don't touch": "ไม่ชอบให้จับ", "dont touch": "ไม่ชอบให้จับ", "shy": "ขี้อาย", "approach with caution": "เข้าหาอย่างระวัง" };
 
   // Knowledge-base categories (scope: การให้อาหาร สุขภาพ พฤติกรรม สุขอนามัย + ประสบการณ์จากผู้ดูแล)
   const CATEGORIES = {
@@ -174,7 +174,10 @@ window.CatData = (function () {
     if (!c.normal && extra.normal) c.normal = extra.normal;
     Object.assign(c, coatOf(r, c, extra));
     c.areas = areasOf(c.locations);
-    c.touch = /ไม่ชอบให้จับ|don.?t touch|ห้ามจับ|อย่าจับ/i.test(c.personality) ? "no" : (/เป็นมิตร|friendly/i.test(c.personality) ? "yes" : "unknown");
+    // no = doesn't like being touched, careful = approach with caution (the sheet's dropdown), yes = friendly
+    c.touch = /ไม่ชอบให้จับ|don.?t touch|ห้ามจับ|อย่าจับ/i.test(c.personality) ? "no"
+      : /ระวัง|caution/i.test(c.personality) ? "careful"
+      : /เป็นมิตร|friendly/i.test(c.personality) ? "yes" : "unknown";
     const direct = photoUrl(r.photo) || photoUrl(photos[name]);
     c.photo = c.gallery.length ? c.gallery[0].s : direct;
     c.photoLarge = c.gallery.length ? c.gallery[0].l : direct;

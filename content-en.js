@@ -7,7 +7,7 @@
    Translated by the project team; keepers' words are translated as closely as possible and the Thai original stays available. */
 window.CONTENT_EN = {
   names: {
-    "กระทง": "Krathong", "กะตั้ว": "Katua", "ชาโคล": "Charcoal", "ชาด้า": "Chada", "ชาบู": "Shabu",
+    "กระทง": "Krathong", "กะตั้ว": "Katua", "กระตั้ว": "Katua", "มีตังค์": "Meetang", "ชาโคล": "Charcoal", "ชาด้า": "Chada", "ชาบู": "Shabu",
     "ชาลาเต้": "Cha Latte", "ซูชิ": "Sushi", "ใบบุญ": "Baibun", "มีตัง": "Meetang", "มีบุญ": "Meebun",
     "ส้มส้ม": "Som-Som", "หนูดำ": "Nu Dam", "อาหลง": "A-Long", "ตีตี้": "Titi", "ตาต้า": "Tata",
     "แพนด้า": "Panda", "ทาโร่": "Taro", "กระรอก": "Krarok"
@@ -18,7 +18,7 @@ window.CONTENT_EN = {
     "10 กว่า": "10+ years", "ปีกว่า": "a little over a year", "ปีนึง": "about a year",
     "4 ปี": "4 years", "6 เดือน": "6 months",
     // personality
-    "เป็นมิตร เข้าหาได้": "Friendly, fine to approach", "ไม่ชอบให้จับ": "Doesn't like being touched", "ขี้อาย": "Shy",
+    "เป็นมิตร เข้าหาได้": "Friendly, fine to approach", "ไม่ชอบให้จับ": "Doesn't like being touched", "ขี้อาย": "Shy", "เข้าหาอย่างระวัง": "Approach with care",
     // usual places
     "สโตร์แม่บ้าน": "Housekeepers' store room", "MCS": "MCS building", "มาบ้างไม่มาบ้าง": "Comes and goes",
     "รปภ. BRK ชั้น 1": "Security post, BRK 1st floor", "ขังกรง": "Kept in a cage", "ชั้น 3 BRK": "BRK 3rd floor",

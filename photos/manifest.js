@@ -42,41 +42,41 @@ window.CAT_PHOTO_SETS = {
    "l": "photos/cats/9194371f-8-l.jpg"
   }
  ],
- "กะตั้ว": [
+ "กระตั้ว": [
   {
-   "t": "photos/cats/39ad598f-1-t.jpg",
-   "s": "photos/cats/39ad598f-1-s.jpg",
-   "l": "photos/cats/39ad598f-1-l.jpg"
+   "t": "photos/cats/f0b73ba0-1-t.jpg",
+   "s": "photos/cats/f0b73ba0-1-s.jpg",
+   "l": "photos/cats/f0b73ba0-1-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-2-t.jpg",
-   "s": "photos/cats/39ad598f-2-s.jpg",
-   "l": "photos/cats/39ad598f-2-l.jpg"
+   "t": "photos/cats/f0b73ba0-2-t.jpg",
+   "s": "photos/cats/f0b73ba0-2-s.jpg",
+   "l": "photos/cats/f0b73ba0-2-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-3-t.jpg",
-   "s": "photos/cats/39ad598f-3-s.jpg",
-   "l": "photos/cats/39ad598f-3-l.jpg"
+   "t": "photos/cats/f0b73ba0-3-t.jpg",
+   "s": "photos/cats/f0b73ba0-3-s.jpg",
+   "l": "photos/cats/f0b73ba0-3-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-4-t.jpg",
-   "s": "photos/cats/39ad598f-4-s.jpg",
-   "l": "photos/cats/39ad598f-4-l.jpg"
+   "t": "photos/cats/f0b73ba0-4-t.jpg",
+   "s": "photos/cats/f0b73ba0-4-s.jpg",
+   "l": "photos/cats/f0b73ba0-4-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-6-t.jpg",
-   "s": "photos/cats/39ad598f-6-s.jpg",
-   "l": "photos/cats/39ad598f-6-l.jpg"
+   "t": "photos/cats/f0b73ba0-6-t.jpg",
+   "s": "photos/cats/f0b73ba0-6-s.jpg",
+   "l": "photos/cats/f0b73ba0-6-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-7-t.jpg",
-   "s": "photos/cats/39ad598f-7-s.jpg",
-   "l": "photos/cats/39ad598f-7-l.jpg"
+   "t": "photos/cats/f0b73ba0-7-t.jpg",
+   "s": "photos/cats/f0b73ba0-7-s.jpg",
+   "l": "photos/cats/f0b73ba0-7-l.jpg"
   },
   {
-   "t": "photos/cats/39ad598f-8-t.jpg",
-   "s": "photos/cats/39ad598f-8-s.jpg",
-   "l": "photos/cats/39ad598f-8-l.jpg"
+   "t": "photos/cats/f0b73ba0-8-t.jpg",
+   "s": "photos/cats/f0b73ba0-8-s.jpg",
+   "l": "photos/cats/f0b73ba0-8-l.jpg"
   }
  ],
  "ชาโคล": [
@@ -224,46 +224,46 @@ window.CAT_PHOTO_SETS = {
    "l": "photos/cats/bed26315-8-l.jpg"
   }
  ],
- "มีตัง": [
+ "มีตังค์": [
   {
-   "t": "photos/cats/725df88c-1-t.jpg",
-   "s": "photos/cats/725df88c-1-s.jpg",
-   "l": "photos/cats/725df88c-1-l.jpg"
+   "t": "photos/cats/29e031a3-1-t.jpg",
+   "s": "photos/cats/29e031a3-1-s.jpg",
+   "l": "photos/cats/29e031a3-1-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-2-t.jpg",
-   "s": "photos/cats/725df88c-2-s.jpg",
-   "l": "photos/cats/725df88c-2-l.jpg"
+   "t": "photos/cats/29e031a3-2-t.jpg",
+   "s": "photos/cats/29e031a3-2-s.jpg",
+   "l": "photos/cats/29e031a3-2-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-3-t.jpg",
-   "s": "photos/cats/725df88c-3-s.jpg",
-   "l": "photos/cats/725df88c-3-l.jpg"
+   "t": "photos/cats/29e031a3-3-t.jpg",
+   "s": "photos/cats/29e031a3-3-s.jpg",
+   "l": "photos/cats/29e031a3-3-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-4-t.jpg",
-   "s": "photos/cats/725df88c-4-s.jpg",
-   "l": "photos/cats/725df88c-4-l.jpg"
+   "t": "photos/cats/29e031a3-4-t.jpg",
+   "s": "photos/cats/29e031a3-4-s.jpg",
+   "l": "photos/cats/29e031a3-4-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-5-t.jpg",
-   "s": "photos/cats/725df88c-5-s.jpg",
-   "l": "photos/cats/725df88c-5-l.jpg"
+   "t": "photos/cats/29e031a3-5-t.jpg",
+   "s": "photos/cats/29e031a3-5-s.jpg",
+   "l": "photos/cats/29e031a3-5-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-6-t.jpg",
-   "s": "photos/cats/725df88c-6-s.jpg",
-   "l": "photos/cats/725df88c-6-l.jpg"
+   "t": "photos/cats/29e031a3-6-t.jpg",
+   "s": "photos/cats/29e031a3-6-s.jpg",
+   "l": "photos/cats/29e031a3-6-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-7-t.jpg",
-   "s": "photos/cats/725df88c-7-s.jpg",
-   "l": "photos/cats/725df88c-7-l.jpg"
+   "t": "photos/cats/29e031a3-7-t.jpg",
+   "s": "photos/cats/29e031a3-7-s.jpg",
+   "l": "photos/cats/29e031a3-7-l.jpg"
   },
   {
-   "t": "photos/cats/725df88c-8-t.jpg",
-   "s": "photos/cats/725df88c-8-s.jpg",
-   "l": "photos/cats/725df88c-8-l.jpg"
+   "t": "photos/cats/29e031a3-8-t.jpg",
+   "s": "photos/cats/29e031a3-8-s.jpg",
+   "l": "photos/cats/29e031a3-8-l.jpg"
   }
  ],
  "มีบุญ": [
@@ -383,4 +383,5 @@ window.CAT_PHOTO_SETS = {
   }
  ]
 };
-window.CAT_PHOTO_SYNCED = "2026-11-09";
+window.CAT_PHOTO_SYNCED = "2026-11-11";
+window.CAT_RESIDENTS = ["กระทง", "กระตั้ว", "ชาบู", "ใบบุญ", "มีตังค์", "มีบุญ", "หนูดำ"];

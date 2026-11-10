@@ -137,6 +137,19 @@ window.CatData = (function () {
   }
   const clean = (v) => (/^[-–—?]+$/.test(norm(v)) ? "" : norm(v)); // "-" or "???" in the sheet = no data
 
+  // The team spells some names more than one way (กะตั้ว/กระตั้ว, มีตัง/มีตังค์, ชาโคล/ชาร์โคล).
+  // fold() drops a silent letter with ์, the ็ mark, and the ร of a กระ- style cluster, so all of these match.
+  const fold = (s) => norm(s).replace(/.์/g, "").replace(/็/g, "").replace(/([ก-ฮ])ร(?=ะ)/g, "$1");
+  // look a cat up by name in a { name: value } map: exact spelling first, then the folded spelling
+  function byName(map, name) {
+    if (!map || !name) return undefined;
+    if (Object.prototype.hasOwnProperty.call(map, name)) return map[name];
+    const f = fold(name);
+    for (const k in map) if (fold(k) === f) return map[k];
+    return undefined;
+  }
+  const inList = (list, name) => Array.isArray(list) && list.some((n) => fold(n) === fold(name));
+
   function toCat(r, cfg) {
     const name = clean(r.name);
     const photos = (cfg && cfg.CAT_PHOTOS) || {};
@@ -145,7 +158,7 @@ window.CatData = (function () {
       name,
       nicknames: splitList(r.nicknames),
       // photos synced from the team's Drive folders (photos/manifest.js), then a direct image link, then config
-      gallery: ((window.CAT_PHOTO_SETS || {})[name] || []).filter((p) => p && p.s && p.l),
+      gallery: (byName(window.CAT_PHOTO_SETS, name) || []).filter((p) => p && p.s && p.l),
       photo: "",
       photoLarge: "",
       sex: sexOf(r.sex),
@@ -155,6 +168,12 @@ window.CatData = (function () {
       sterilised: yesNo(r.sterilised),
       vaccinated: yesNo(r.vaccinated),
       health: clean(r.health_notes),
+      // the sheet's "Personal Information": background and who this cat gets on with
+      about: clean(r.about),
+      // a faculty cat (lives here for good), as opposed to one that drops by or belongs to someone.
+      // The team marks these by highlighting the name yellow; tools/sync_photos.py reads the highlight into CAT_RESIDENTS.
+      // A column named "แมวประจำคณะ" / "Resident" in the sheet would override it.
+      resident: false,
       personality: PERSONALITY_WORDS[lower(r.personality)] || clean(r.personality),
       locations: splitList(clean(r.locations)),
       relationship: clean(r.relationship),
@@ -170,7 +189,9 @@ window.CatData = (function () {
       normal: clean(r.normal),
       approach: clean(r.approach)
     };
-    const extra = ((cfg && cfg.CAT_EXTRA) || {})[name] || {};
+    const extra = byName(cfg && cfg.CAT_EXTRA, name) || {};
+    const resCol = yesNo(r.resident);
+    c.resident = c.status === "active" && (resCol !== "unknown" ? resCol === "yes" : inList(window.CAT_RESIDENTS, name) || inList(cfg && cfg.RESIDENT_CATS, name));
     if (!c.normal && extra.normal) c.normal = extra.normal;
     Object.assign(c, coatOf(r, c, extra));
     c.areas = areasOf(c.locations);
@@ -178,7 +199,7 @@ window.CatData = (function () {
     c.touch = /ไม่ชอบให้จับ|don.?t touch|ห้ามจับ|อย่าจับ/i.test(c.personality) ? "no"
       : /ระวัง|caution/i.test(c.personality) ? "careful"
       : /เป็นมิตร|friendly/i.test(c.personality) ? "yes" : "unknown";
-    const direct = photoUrl(r.photo) || photoUrl(photos[name]);
+    const direct = photoUrl(r.photo) || photoUrl(byName(photos, name));
     c.photo = c.gallery.length ? c.gallery[0].s : direct;
     c.photoLarge = c.gallery.length ? c.gallery[0].l : direct;
     c.photoThumb = c.gallery.length ? c.gallery[0].t || "" : "";
@@ -219,6 +240,8 @@ window.CatData = (function () {
     marks: ["distinguishing marks", "marks", "ลักษณะเด่น", "ลักษณะ"], sex: ["sex", "เพศ"], age: ["age", "อายุ"],
     vaccinated: ["vaccination status", "vaccinated", "vaccine", "วัคซีน"], sterilised: ["ทำหมัน", "sterilised", "sterilized", "neutered"],
     health_notes: ["health notes", "health", "สุขภาพ"], status: ["status", "สถานะ"], personality: ["personality", "นิสัย"],
+    about: ["personal information", "personal info", "ข้อมูลส่วนตัว", "ประวัติ", "background"],
+    resident: ["resident", "แมวประจำคณะ", "แมวประจำ", "ประจำคณะ"],
     locations: ["usual locations", "locations", "location", "ที่อยู่", "จุดที่พบ"], relationship: ["relationship", "ความสัมพันธ์", "ครอบครัว"],
     caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"], notes: ["note", "notes", "หมายเหตุ"],
     coat: ["coat", "coat colour", "coat color", "colour", "color", "สีขน", "ลายขน"],
@@ -255,14 +278,17 @@ window.CatData = (function () {
   }
 
   // Link cats named in each other's Relationship text ("พี่น้องกับมีตัง") as siblings, both ways.
-  const fold = (s) => norm(s).replace(/[์็]/g, "").replace(/ร(?=โ|ค)/g, ""); // ignore ์ ็ and ชาร์โคล/ชาโคล-style spellings
+  // A name right after ลูก ("ลูกกะตั้ว", "ลูกของกระตั้ว") is the cat's mother instead.
   function linkSiblings(cats) {
     for (const c of cats) {
       if (!c.relationship) continue;
       const rel = fold(c.relationship);
       for (const o of cats) {
         if (o === c || !o.name || o.name.length < 2) continue;
-        if (rel.includes(fold(o.name))) {
+        const at = rel.indexOf(fold(o.name));
+        if (at < 0) continue;
+        if (/ลูก\s*(ของ\s*)?$/.test(rel.slice(0, at))) { if (!c.mother) c.mother = o.id; continue; }
+        {
           if (!c.siblings.includes(o.id)) c.siblings.push(o.id);
           if (!o.siblings.includes(c.id)) o.siblings.push(c.id);
         }

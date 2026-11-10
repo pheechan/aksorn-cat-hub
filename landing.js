@@ -974,7 +974,10 @@
     const active = cats.filter((c) => c.status === "active");
     const pct = (k) => (alive.length ? Math.round(100 * alive.filter((c) => c[k] === "yes").length / alive.length) + "%" : "—");
     const set = (sel, v) => { const el = $(sel); if (el) el.textContent = v; };
-    set("#stCats", cats.length); set("#stFamilies", active.length); set("#stSteril", pct("sterilised")); set("#stSources", pct("vaccinated"));
+    // the faculty's own cats (yellow in the sheet); before the team marked any, every cat seen at the faculty
+    const homes = cats.filter((c) => c.resident);
+    set("#stCats", cats.length); set("#stFamilies", (homes.length ? homes : active).length);
+    if (!homes.length) { const dd = $("#stFamilies") && $("#stFamilies").nextElementSibling; if (dd) { dd.setAttribute("data-en", "at the faculty now"); dd.__th = "อยู่ในคณะ"; dd.textContent = (window.I18N && I18N.lang === "en") ? "at the faculty now" : "อยู่ในคณะ"; } } set("#stSteril", pct("sterilised")); set("#stSources", pct("vaccinated"));
     const I = window.I18N || { L: (th) => th, lang: "th", nameEn: () => "", tx: (x) => x, on() {} };
     const L = (th, en) => I.L(th, en);
     const nm = (c) => (I.lang === "en" && I.nameEn(c.name)) || c.name;

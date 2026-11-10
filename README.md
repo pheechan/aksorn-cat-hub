@@ -60,7 +60,10 @@
 เว็บอ่านแท็บ `Cat_profile` ใน Google Sheet ของทีมแบบสด (ตั้งไว้ใน `config.js` ช่อง `SHEET_CSV_URL`) แก้ข้อมูลในชีตแล้วเว็บจะอัปเดตเองภายในไม่กี่นาที ชีตต้องแชร์แบบ "ทุกคนที่มีลิงก์ดูได้"
 
 - ระบบหาแถวหัวตารางเอง (แถวที่มีคำว่า Name) แถวหัวข้อกลุ่มด้านบนไม่เป็นปัญหา
-- อ่านคอลัมน์จากชื่อหัว ไม่ใช่ตำแหน่ง: Name, Photo, Distinguishing marks, Sex, Age, Vaccination Status, ทำหมัน, Health notes, Status, Personality, Usual locations, Relationship, Primary caretaker(s), Last seen, Note
+- อ่านคอลัมน์จากชื่อหัว ไม่ใช่ตำแหน่ง: Name, Photo, Distinguishing marks, Sex, Age, Vaccination Status, ทำหมัน, Health notes, Status, Personal Information, Personality, Usual locations, Relationship, Primary caretaker(s), Last seen, Note (ย้ายลำดับหรือแทรกคอลัมน์ใหม่ได้)
+- Personal Information (ที่มา นิสัย ไม่ถูกกับตัวไหน) แสดงเป็นแถว "ควรรู้ไว้" ในหน้าแมว
+- **แมวประจำคณะ** คือชื่อที่ไฮไลต์สีเหลืองในช่อง Name ไฟล์ CSV ไม่มีสี เว็บจึงอ่านเองไม่ได้ เพิ่มหรือลบไฮไลต์แล้วให้รัน `python -I tools/sync_photos.py --residents-only` แล้ว push เว็บจะขึ้นป้าย "แมวประจำคณะ" มีตัวกรองในหน้าแมวทั้งหมด และนับในหน้าแรก
+- ชื่อสะกดต่างกันเล็กน้อย (กะตั้ว/กระตั้ว, มีตัง/มีตังค์, ชาโคล/ชาร์โคล) เว็บถือเป็นตัวเดียวกัน ส่วน Relationship ที่เขียนว่า "ลูกกะตั้ว" จะเชื่อมเป็นแม่ลูกในผังครอบครัว
 - Status ที่เข้าใจ: active / back home (ไปกลับ) / missing / adopted / passed away ช่องว่าง = ยังไม่ระบุ
 - Relationship เช่น “พี่น้องกับมีตัง” จะเชื่อมแมวสองตัวเป็นพี่น้องในผังครอบครัวให้อัตโนมัติ
 - คอลัมน์ที่ไม่มีหัว (บันทึกสัมภาษณ์) จะแสดงในหน้าแมวตัวนั้นเป็น “บันทึกจากการสัมภาษณ์ผู้ดูแล”

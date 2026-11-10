@@ -17,8 +17,13 @@ window.SITE_CONFIG = {
 
   // ---- ช่องทางรับเรื่องจากผู้ใช้ (พื้นที่แบ่งปันความรู้) ----
   // ลิงก์ Web app ของ Google Apps Script ที่บันทึกลงชีตรับเรื่องแยกส่วนตัว (ดู README / tools/submissions.gs)
-  // ตั้งแล้ว ฟอร์มในหน้า "แบ่งปันความรู้" จะส่งเรื่องเข้าชีตทันที สถานะ "รอตรวจ"
+  // ตั้งแล้ว ฟอร์มในหน้า "เล่าให้ทีมฟัง" จะส่งเรื่องเข้าชีตทันที สถานะ "รอตรวจ"
   SUBMIT_URL: "https://script.google.com/macros/s/AKfycbxb93rl03hfs-TmaK5kwvDq4O8nCbUBmHYlxfN-HxLPMCu3uVx3n0YFfhu1gJAgvaMEVA/exec",
+  // อัปโหลดรูปจากเครื่องในฟอร์ม (รูปถูกย่อในเครื่องก่อนส่ง แล้วเก็บในโฟลเดอร์ Drive ของเจ้าของสคริปต์)
+  // เปิดได้หลังอัปเดตสคริปต์ tools/submissions.gs และกดอนุญาตสิทธิ์ Drive แล้ว (ดู README) · false = ใช้ช่องวางลิงก์รูปแบบเดิม
+  PHOTO_UPLOAD: false,
+  // แสดงชื่อผู้ดูแลแมวจากชีตบนเว็บ (หน้าเกี่ยวกับฯ และ "ถามใครดี") · ขออนุญาตเจ้าของชื่อก่อนเปลี่ยนเป็น true
+  SHOW_KEEPER_NAMES: false,
 
   // ---- แผนที่แมวบนหน้าแรก (3D) ----
   // BRK, MCS และเทวาลัยมีหมุดอยู่แล้ว ถ้ารู้ว่าสโตร์แม่บ้านอยู่ตรงไหน ใส่ [x, z] เป็นเมตรจากกลางตึก BRK
@@ -72,6 +77,7 @@ window.SITE_CONFIG = {
   // ใส่เฉพาะข้อมูลที่ตรวจสอบแล้ว รายการที่ value ว่างจะไม่แสดง
   EMERGENCY_CONTACTS: [
     { label: "โรงพยาบาลสัตว์เล็กเพื่อการเรียนการสอน คณะสัตวแพทยศาสตร์ จุฬาฯ", value: "ในจุฬาฯ ถนนอังรีดูนังต์ · โทรสอบถามเวลาทำการก่อนพาไป", href: "https://www.chula.ac.th/services/small-animal-teaching-hospital/",
+      map: "https://www.google.com/maps/search/?api=1&query=%E0%B9%82%E0%B8%A3%E0%B8%87%E0%B8%9E%E0%B8%A2%E0%B8%B2%E0%B8%9A%E0%B8%B2%E0%B8%A5%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%8C%E0%B9%80%E0%B8%A5%E0%B9%87%E0%B8%81+%E0%B8%84%E0%B8%93%E0%B8%B0%E0%B8%AA%E0%B8%B1%E0%B8%95%E0%B8%A7%E0%B9%81%E0%B8%9E%E0%B8%97%E0%B8%A2%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B9%8C+%E0%B8%88%E0%B8%B8%E0%B8%AC%E0%B8%B2%E0%B8%A5%E0%B8%87%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B9%8C",
       en: { label: "Small Animal Teaching Hospital, Faculty of Veterinary Science, Chula", value: "On campus, Henri Dunant Road · call to check opening hours before you go" } },
     { label: "ผู้ดูแลแมวในคณะ", value: "", en: { label: "The faculty's cat keepers" } },
     { label: "LINE OpenChat ผู้ดูแลแมวอักษร", value: "", en: { label: "Aksorn cat keepers' LINE OpenChat" } }

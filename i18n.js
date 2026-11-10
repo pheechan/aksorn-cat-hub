@@ -104,4 +104,9 @@
   };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => { apply(document); paintTheme(); });
   else { apply(document); paintTheme(); }
+
+  // offline copy of the site (sw.js); https only, so local file:// and test servers stay uncached
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  }
 })();

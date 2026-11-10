@@ -3,22 +3,25 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <title data-en="Aksorn Cats">คลังความรู้แมวอักษร</title>
   <meta name="description" content="แมวทุกตัวในคณะอักษรศาสตร์ จุฬาฯ มีเรื่องเล่า เราไปฟังพี่ ๆ ผู้ดูแลมา แล้วจดไว้ให้ทุกคนค้นได้" data-en-content="Every cat at the Faculty of Arts, Chulalongkorn University has a story. We listened to the keepers and wrote it all down for anyone to look up.">
   <link rel="alternate" hreflang="th" href="https://pheechan.github.io/aksorn-cat-hub/?lang=th">
   <link rel="alternate" hreflang="en" href="https://pheechan.github.io/aksorn-cat-hub/?lang=en">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M14 30 11 8.5 27 19.5Z M50 30 53 8.5 37 19.5Z' fill='%2316181d' stroke='%2316181d' stroke-width='4' stroke-linejoin='round'/%3E%3Cellipse cx='32' cy='35' rx='23' ry='20.5' fill='%2316181d'/%3E%3Cellipse cx='23.5' cy='34' rx='3.6' ry='4.2' fill='%23fff'/%3E%3Cellipse cx='40.5' cy='34' rx='3.6' ry='4.2' fill='%23fff'/%3E%3Cpath d='M29.6 41.5h4.8L32 44.3Z' fill='%23e2447a'/%3E%3Cpath d='M17 52.5Q32 60.5 47 52.5' fill='none' stroke='%23e2447a' stroke-width='4' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='58.6' r='3.3' fill='%233fbf7f'/%3E%3C/svg%3E">
-  <script>try{var t=localStorage.getItem("akc-theme");document.documentElement.setAttribute("data-theme",t==="dark"||t==="light"?t:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))}catch(e){}</script>
+  <script>try{var t=localStorage.getItem("akc-theme");document.documentElement.setAttribute("data-theme",t==="dark"||t==="light"?t:(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"))}catch(e){}try{var l=document.createElement("link");l.rel="preload";l.as="image";l.href="img/campus-"+(document.documentElement.getAttribute("data-theme")==="dark"?"night":"day")+".webp";document.head.appendChild(l)}catch(e){}</script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="img/icons/apple-touch-icon.png">
+  <meta name="theme-color" content="#0f1115" media="(prefers-color-scheme: dark)">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap"></noscript>
-  <link rel="stylesheet" href="tokens.css?v=20261112b">
-  <link rel="stylesheet" href="landing.css?v=20261112b">
-  <link rel="stylesheet" href="menu.css?v=20261112b">
+  <link rel="stylesheet" href="tokens.css?v=20261112c">
+  <link rel="stylesheet" href="landing.css?v=20261112c">
+  <link rel="stylesheet" href="menu.css?v=20261112c">
 </head>
 <body class="is-loading">
   <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -66,9 +69,9 @@
       <div class="m-group" data-key="hub" style="--i:1"><a class="m-parent" href="cats.html#/" data-en="Overview">ภาพรวม</a>
         <div class="m-subs"><a href="cats.html#/start" data-en="New here? Start here">มือใหม่เริ่มที่นี่</a></div></div>
       <div class="m-group" data-key="knowledge" style="--i:2"><a class="m-parent" href="cats.html#/knowledge" data-en="Knowledge library">คลังความรู้</a>
-        <div class="m-subs"><a href="cats.html#/knowledge/experience" data-en="From the keepers">เรื่องเล่าจากผู้ดูแล</a><a href="cats.html#/knowledge/health" data-en="Health">สุขภาพแมว</a><a href="cats.html#/knowledge/feeding" data-en="Feeding">อาหาร</a></div></div>
+        <div class="m-subs"><a href="cats.html#/knowledge/experience" data-en="From the keepers">เรื่องเล่าจากผู้ดูแล</a><a href="cats.html#/knowledge/health" data-en="Health">สุขภาพแมว</a><a href="cats.html#/knowledge/feeding" data-en="Feeding">อาหาร</a><a href="cats.html#/ask" data-en="Who to ask">ถามใครดี</a></div></div>
       <div class="m-group" data-key="cats" style="--i:3"><a class="m-parent" href="cats.html#/cats" data-en="All cats">แมวทั้งหมด</a>
-        <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a><a href="cats.html#/family" data-en="Family tree">ผังครอบครัวแมว</a></div></div>
+        <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a></div></div>
       <div class="m-group" data-key="share" style="--i:4"><a class="m-parent" href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a></div>
       <div class="m-group" data-key="help" style="--i:5"><a class="m-parent urgent" href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a></div>
       <div class="m-group" data-key="about" style="--i:6"><a class="m-parent" href="cats.html#/about" data-en="About">เกี่ยวกับเว็บนี้</a>
@@ -202,7 +205,7 @@
           <li data-rv><b>02</b><div><h3><span data-en="Listen and record">ฟังและจด</span> <span>Externalization</span></h3><p data-en="Interview the experienced keepers and write their stories up as notes and articles, with sources.">สัมภาษณ์ผู้ดูแลรุ่นก่อน แล้วเรียบเรียงเรื่องเล่าเป็นบันทึกกับบทความ พร้อมบอกที่มา</p></div></li>
           <li data-rv><b>03</b><div><h3><span data-en="Store">จัดเก็บ</span> <span>Combination</span></h3><p data-en="The team&#x27;s sheet is the shared store, searchable by name, coat, place and personality, so you can find a cat without knowing its name.">ชีตของทีมเป็นคลังกลาง ค้นได้ทั้งจากชื่อ สีขน จุดที่เจอ และนิสัย ไม่รู้ชื่อก็หาเจอ</p></div></li>
           <li data-rv><b>04</b><div><h3><span data-en="Share">แบ่งปัน</span> <span>Share</span></h3><p data-en="A short form: say what you know, the team checks it, then it goes up with credit to whoever shared it.">ฟอร์มสั้น ๆ บอกเท่าที่รู้ ทีมตรวจก่อน แล้วขึ้นเว็บพร้อมเครดิตคนที่เล่า</p></div></li>
-          <li data-rv><b>05</b><div><h3><span data-en="Use">นำไปใช้</span> <span>Internalization · Socialization</span></h3><p data-en="Newcomers follow five steps until they&#x27;re caring for the cats alongside experienced keepers, then feed what they learn back in.">มือใหม่ทำตาม 5 ขั้น จนได้ไปดูแลจริงกับผู้ดูแลรุ่นก่อน แล้วเอาสิ่งที่ได้เรียนรู้กลับมาเติม</p></div></li>
+          <li data-rv><b>05</b><div><h3><span data-en="Use">นำไปใช้</span> <span>Internalization · Socialization</span></h3><p data-en="Newcomers read the five things to know before they start, go on a round with experienced keepers, then feed what they learn back in.">มือใหม่อ่าน 5 เรื่องก่อนไปดูแลแมว แล้วไปดูแลจริงกับผู้ดูแลรุ่นก่อน จากนั้นเอาสิ่งที่ได้เรียนรู้กลับมาเติม</p></div></li>
         </ol>
       </div>
     </section>
@@ -233,16 +236,16 @@
     </footer>
   </main>
 
-  <script src="content-en.js?v=20261112b"></script>
-  <script src="i18n.js?v=20261112b"></script>
-  <script defer src="menu.js?v=20261112b"></script>
+  <script src="content-en.js?v=20261112c"></script>
+  <script src="i18n.js?v=20261112c"></script>
+  <script defer src="menu.js?v=20261112c"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script defer src="config.js?v=20261112b"></script>
-  <script defer src="data-sample.js?v=20261112b"></script>
-  <script defer src="photos/manifest.js?v=20261112b"></script>
-  <script defer src="data.js?v=20261112b"></script>
-  <script defer src="landing.js?v=20261112b"></script>
-  <script defer src="glass.js?v=20261112b"></script>
+  <script defer src="config.js?v=20261112c"></script>
+  <script defer src="data-sample.js?v=20261112c"></script>
+  <script defer src="photos/manifest.js?v=20261112c"></script>
+  <script defer src="data.js?v=20261112c"></script>
+  <script defer src="landing.js?v=20261112c"></script>
+  <script defer src="glass.js?v=20261112c"></script>
 </body>
 </html>

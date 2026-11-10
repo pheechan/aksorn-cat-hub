@@ -20,7 +20,10 @@ p { text-wrap: pretty; }
 
 /* ---------- layers ---------- */
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; z-index: 0; background: var(--bg); transition: opacity 1.2s ease; }
-body.is-loading #gl { opacity: .35; }
+/* while three.js and the models load, show a still of the same campus view (no blank screen, no half-drawn scene) */
+body.is-loading #gl { opacity: 0; }
+body.is-loading { background: var(--bg) url("img/campus-day.webp") center / cover no-repeat fixed; }
+[data-theme="dark"] body.is-loading { background-image: url("img/campus-night.webp"); }
 body.no-gl #gl { display: none; }
 /* no WebGL (or 3D switched off in the browser): a still of the same campus view instead of an empty page */
 body.no-gl { background: var(--bg) url("img/campus-day.webp") center / cover no-repeat fixed; }

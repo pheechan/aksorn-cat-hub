@@ -1,0 +1,21 @@
+{
+  "name": "คลังความรู้แมวอักษร",
+  "short_name": "แมวอักษร",
+  "description": "รู้จักแมวในคณะอักษรศาสตร์ จุฬาฯ และความรู้ที่ผู้ดูแลส่งต่อกันมา",
+  "lang": "th",
+  "start_url": "cats.html?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "img/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "img/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "img/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "หาแมวที่เพิ่งเจอ", "url": "cats.html#/find" },
+    { "name": "แมวป่วยหรือบาดเจ็บ", "url": "cats.html#/help" },
+    { "name": "5 เรื่องก่อนไปดูแลแมว", "url": "cats.html#/start" }
+  ]
+}

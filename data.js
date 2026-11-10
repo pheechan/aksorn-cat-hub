@@ -49,13 +49,13 @@ window.CatData = (function () {
   ];
   // Where in the faculty a cat is usually found, grouped from the free-text locations
   const AREAS = {
-    brk: { label: "อาคารบรมราชกุมารี (BRK)", en: "Boromarajakumari Building (BRK)", re: /brk|บรม/i },
-    mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", en: "Maha Chakri Sirindhorn Building (MCS)", re: /mcs|มหาจักรี/i },
-    tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", en: "Thewalai (Maha Chulalongkorn Building)", re: /เทวาลัย|มหาจุฬา/i },
-    store: { label: "สโตร์แม่บ้าน", en: "Housekeepers' store room", re: /สโตร์|แม่บ้าน/i },
-    cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", re: /กรง/i,
+    brk: { label: "อาคารบรมราชกุมารี (BRK)", en: "Boromarajakumari Building (BRK)", short: "BRK", shortEn: "BRK", re: /brk|บรม/i },
+    mcs: { label: "อาคารมหาจักรีสิรินธร (MCS)", en: "Maha Chakri Sirindhorn Building (MCS)", short: "MCS", shortEn: "MCS", re: /mcs|มหาจักรี/i },
+    tewalai: { label: "เทวาลัย (อาคารมหาจุฬาลงกรณ์)", en: "Thewalai (Maha Chulalongkorn Building)", short: "เทวาลัย", shortEn: "Thewalai", re: /เทวาลัย|มหาจุฬา/i },
+    store: { label: "สโตร์แม่บ้าน", en: "Housekeepers' store room", short: "สโตร์แม่บ้าน", shortEn: "Store room", re: /สโตร์|แม่บ้าน/i },
+    cage: { label: "พักอยู่ในกรง", en: "Staying in a cage", short: "พักในกรง", shortEn: "In a cage", re: /กรง/i,
       where: "กรงอยู่ที่ BRK ชั้น 1 หลังเคาน์เตอร์ประชาสัมพันธ์ หรือตรงทางลงไปชั้น 1", whereEn: "the cage is on BRK's 1st floor, behind the reception desk or by the stairs down to level 1" },
-    roam: { label: "ไม่มีที่ประจำ แวะมาบางวัน", en: "No fixed spot, drops by now and then", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
+    roam: { label: "ไม่มีที่ประจำ แวะมาบางวัน", en: "No fixed spot, drops by now and then", short: "แวะมาบางวัน", shortEn: "Drops by", re: /มาบ้าง|ไปกลับ|ไม่ประจำ/i }
   };
 
   const HISTORY_TYPES = {
@@ -232,11 +232,16 @@ window.CatData = (function () {
     return h; // already a field name (our CSV templates)
   }
   // Parses a sheet even when it has a title/group row above the real header row.
-  async function fetchCsv(url) {
+  async function fetchText(url) {
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) throw new Error("HTTP " + res.status);
-    return parseCsv(await res.text());
+    return res.text();
   }
+  // The last copy of each sheet tab is kept on the device: the next visit opens instantly from it,
+  // and a weak signal inside a building still shows the cats. The fresh copy is fetched behind it.
+  const CACHE = "akc-sheet-v1:";
+  function cacheGet(url) { try { const o = JSON.parse(localStorage.getItem(CACHE + url) || "null"); return o && o.text ? o : null; } catch (e) { return null; } }
+  function cachePut(url, text) { try { localStorage.setItem(CACHE + url, JSON.stringify({ text, at: Date.now() })); } catch (e) { /* storage full or blocked */ } }
   function parseCsv(text) {
     const rows = Papa.parse(text, { header: false, skipEmptyLines: true }).data;
     let hi = rows.findIndex((r) => r.some((v) => /^(name|id|title|date)$/i.test(norm(v).replace(/^﻿/, ""))));
@@ -265,17 +270,22 @@ window.CatData = (function () {
     }
   }
 
-  // Load one sheet tab; falls back to the sample rows when the URL is empty or the fetch fails.
-  async function loadTab(url, sample, map, keep, label, errors) {
+  // Load one sheet tab: the device's copy first (when preferCache), else the live sheet, else the bundled sample.
+  async function loadTab(url, sample, map, keep, label, errors, preferCache) {
     url = norm(url);
+    const rowsOf = (text) => parseCsv(text).map((r) => map(r, cfgRef)).filter(keep);
     if (url) {
       if (!window.Papa) errors.push("โหลดตัวอ่าน CSV ไม่ได้ (ตรวจการเชื่อมต่ออินเทอร์เน็ต)");
       else {
+        const cached = preferCache ? cacheGet(url) : null;
         try {
-          const rows = (await fetchCsv(url)).map((r) => map(r, cfgRef)).filter(keep);
-          if (rows.length) return { rows, sample: false };
+          const text = cached ? cached.text : await fetchText(url);
+          const rows = rowsOf(text);
+          if (rows.length) { if (!cached) cachePut(url, text); return { rows, sample: false, cached: !!cached, at: cached ? cached.at : Date.now(), text }; }
           errors.push(`ชีต${label}ไม่มีข้อมูล (ตรวจชื่อหัวคอลัมน์)`);
         } catch (e) {
+          const old = cacheGet(url);
+          if (old) { const rows = rowsOf(old.text); if (rows.length) return { rows, sample: false, cached: true, at: old.at, text: old.text }; }
           console.warn(label, "load failed:", e);
           errors.push(`โหลดชีต${label}ไม่สำเร็จ`);
         }
@@ -287,15 +297,14 @@ window.CatData = (function () {
   }
 
   let cfgRef = {};
-  async function load(cfg) {
-    cfg = cfg || {};
-    cfgRef = cfg;
+  async function build(cfg, preferCache) {
     const errors = [];
     const [cats, articles, history] = await Promise.all([
-      loadTab(cfg.SHEET_CSV_URL, window.SAMPLE_CATS_CSV || window.SAMPLE_CATS, toCat, (c) => c.id && c.name, "แมว", errors),
-      loadTab(cfg.ARTICLES_CSV_URL, window.SAMPLE_ARTICLES, toArticle, (a) => a.id && a.title && a.published, "บทความ", errors),
-      loadTab(cfg.HISTORY_CSV_URL, window.SAMPLE_HISTORY, toHistory, (h) => h.cat && h.published, "ประวัติการดูแล", errors)
+      loadTab(cfg.SHEET_CSV_URL, window.SAMPLE_CATS_CSV || window.SAMPLE_CATS, toCat, (c) => c.id && c.name, "แมว", errors, preferCache),
+      loadTab(cfg.ARTICLES_CSV_URL, window.SAMPLE_ARTICLES, toArticle, (a) => a.id && a.title && a.published, "บทความ", errors, preferCache),
+      loadTab(cfg.HISTORY_CSV_URL, window.SAMPLE_HISTORY, toHistory, (h) => h.cat && h.published, "ประวัติการดูแล", errors, preferCache)
     ]);
+    const tabs = [cats, articles, history];
     linkSiblings(cats.rows);
     const byId = {};
     cats.rows.forEach((c) => { byId[c.id] = c; });
@@ -308,9 +317,22 @@ window.CatData = (function () {
       history: history.rows,
       usingSample: cats.sample, // kept for the landing page
       samples: { cats: cats.sample, articles: articles.sample, history: history.sample },
-      loadedAt: new Date(),
+      loadedAt: new Date(Math.min.apply(null, tabs.map((t) => t.at || Date.now()))),
+      fromCache: tabs.some((t) => t.cached),
+      sig: tabs.map((t) => t.text || "").join("\u0000"),
       error: errors.join(" · ")
     };
+  }
+  // onFresh(data) is called once more if the live sheet turns out newer than the copy shown first
+  async function load(cfg, onFresh) {
+    cfg = cfg || {};
+    cfgRef = cfg;
+    const d = await build(cfg, true);
+    // always refresh the device's copy behind the scenes, so the next visit is current
+    if (d.fromCache) {
+      build(cfg, false).then((f) => { if (typeof onFresh === "function" && !f.fromCache && f.sig !== d.sig) onFresh(f); }).catch(() => { /* keep the copy */ });
+    }
+    return d;
   }
 
   return { STATUS, CATEGORIES, HISTORY_TYPES, HISTORY_EN, COATS, AREAS, norm, lower, esc, load };

@@ -15,7 +15,7 @@
     if (!/cats\.html$/.test(location.pathname)) return "home";
     const seg = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
     if (["cats", "find", "family", "cat", "search"].includes(seg)) return "cats";
-    if (["knowledge", "article"].includes(seg)) return "knowledge";
+    if (["knowledge", "article", "ask"].includes(seg)) return "knowledge";
     if (["share", "help", "about"].includes(seg)) return seg;
     if (seg === "qr") return "about";
     return "hub"; // the overview ("") and the newcomer steps

@@ -14,11 +14,10 @@
   function currentKey() {
     if (!/cats\.html$/.test(location.pathname)) return "home";
     const seg = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
-    if (["cats", "find", "family", "cat", "search"].includes(seg)) return "cats";
-    if (["knowledge", "article", "ask"].includes(seg)) return "knowledge";
-    if (["share", "help", "about"].includes(seg)) return seg;
-    if (seg === "qr") return "about";
-    return "hub"; // the overview ("") and the newcomer steps
+    const STEP = { cats: "know", cat: "know", find: "know", quiz: "know", graph: "know", family: "know", search: "know", knowledge: "learn", article: "learn",
+      start: "care", ask: "care", live: "share", share: "share", report: "share", handover: "share", help: "help", about: "about", qr: "about" };
+    if (STEP[seg]) return STEP[seg];
+    return "hub"; // the home page: the four steps
   }
   function here(a) {
     const u = new URL(a.getAttribute("href"), location.href);

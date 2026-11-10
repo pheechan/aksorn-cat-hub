@@ -2,7 +2,7 @@
    Built around the newcomer's tasks from Chapter 2: find a cat you saw (2.5.1), learn what is normal for it (2.1.1),
    start caring step by step (SECI internalization/socialization), and share what you know with review (2.4.1).
    Thai and English: every UI string goes through L("ไทย", "English"); sheet text goes through T() (see i18n.js).
-   Routes: #/  #/cats?coat=&area=&status=&touch=  #/find?coat=&area=  #/start  #/cat/:id  #/family[/:id]
+   Routes: #/  #/cats?coat=&area=&status=&touch=  #/find?coat=&area=  #/start  #/cat/:id  #/graph[/:id] (#/family = old name)  #/live
            #/knowledge[/:category]  #/article/:id  #/search/:q  #/share?type=&cat=&ctx=  #/help  #/ask  #/quiz  #/handover  #/about  #/qr */
 (function () {
   "use strict";
@@ -79,7 +79,7 @@
   const healthText = (h) => (!isEN() && h && h.length <= 8 && !/\s/.test(h) ? esc(`เรื่อง${h} (ตามข้อมูลในชีต)`) : T(h));
   const looksLikeDate = (v) => /^\d{4}-\d{2}-\d{2}/.test(v) || /^\d{1,2}\s*[/.-]\s*\d{1,2}([/.-]\d{2,4})?$/.test(v);
   const daysAgo = (iso) => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 864e5));
-  const lastSighting = (c) => { const h = D.history.find((x) => x.cat === c.id && x.type === "sighting"); return h ? h.date : ""; };
+  const lastSighting = (c) => { const h = D.history.find((x) => x.cat === c.id && x.type === "sighting"); const a = h ? h.date : "", b = feedSeen(c); return b > a ? b : a; };
 
   // freshness: when the data was last checked, and whether that was too long ago (REVIEW_EVERY_DAYS in config.js).
   // A site nobody looks after should say so, not quietly show old facts as current.
@@ -186,6 +186,8 @@
     const meta = [statusDot(c)];
     const place = placeHtml(c);
     if (place) meta.push(`<span>${terms && terms.length ? highlight(Tp(c.locations[0] || ""), terms) || place : place}</span>`);
+    const fs = feedSeen(c);
+    if (fs && daysAgo(fs) <= 3) meta.push(`<span class="seen-chip">${L("เห็น ", "Seen ")}${relTime(fs)}</span>`);
     return `<a class="cat${c.status === "passed" ? " past" : ""}" href="${catHref(c)}">
       ${portrait(c, true)}${metBadge(c, met || {})}
       <div class="cat-name">${nmHtml(c, terms)}</div>
@@ -371,84 +373,6 @@
   const cat = (pose, cls) => `<svg class="nd ${cls || ""}" aria-hidden="true" focusable="false"><use href="#nd-${pose}"/></svg>`;
   const pageHead = (title, lede, extra) => `<header class="page-head"><h1>${title}</h1>${lede ? `<p class="lede">${lede}</p>` : ""}${extra || ""}</header>`;
 
-  /* ---------------- home ---------------- */
-  function renderHome() {
-    const met = metMap();
-    const now = D.cats.filter(SEEN_NOW).sort((a, b) => (b.photo ? 1 : 0) - (a.photo ? 1 : 0) || byStatusThenName(a, b));
-    const active = D.cats.filter((c) => c.status === "active").length;
-    const commuters = D.cats.filter((c) => c.status === "commuter").length;
-    const recent = D.history.slice(0, 4);
-    const steps = startSteps(), done = store.get(START_KEY, {}), nDone = steps.filter((s) => done[s.id]).length;
-    const next = steps.find((s) => !done[s.id]);
-    const nMet = D.cats.filter((c) => met[c.id]).length;
-    const resume = nDone > 0 && next ? `<a class="resume" href="#/start">
-        <span class="resume-ring" style="--p:${nDone / steps.length}" aria-hidden="true"><b>${nDone}/${steps.length}</b></span>
-        <span><b>${L("ทำต่อได้เลย", "Pick up where you left off")}</b><span>${L("เรื่องถัดไป: ", "Next: ")}${esc(next.title)}${nMet ? L(` · จำแมวได้แล้ว ${nMet} ตัว`, ` · you know ${nMet} cat${nMet > 1 ? "s" : ""}`) : ""}</span></span><span class="go" aria-hidden="true">→</span></a>` : "";
-    const hasA = (id) => !!D.articleById[id];
-    const PATHS = [
-      { ico: ICON.find, t: L("เพิ่งเจอแมวในคณะ", "I just met a cat here"), d: L("อยากรู้ว่าตัวไหน และเข้าใกล้ได้ไหม", "Who is it, and can I go near?"), links: [
-        ["#/find", L("หาแมวจากสีขนและจุดที่เจอ", "Find it by coat and place")],
-        hasA("a04") && ["#/article/a04", L("อ่านภาษากายแมวก่อนเข้าหา", "Read its body language first")],
-        ["#/help", L("แมวดูไม่สบาย ทำยังไงดี", "It looks unwell: what now?")]] },
-      { ico: ICON.start, t: L("อยากช่วยดูแลแมว", "I want to help look after them"), d: L("ผู้ดูแลมือใหม่ และนิสิตที่จะมาช่วยรุ่นต่อไป", "New keepers and next year's student helpers"), links: [
-        ["#/start", nDone ? L(`5 เรื่องก่อนไปดูแลแมว (ทำไปแล้ว ${nDone}/5)`, `Five things before you start (${nDone}/5 done)`) : L("5 เรื่องก่อนไปดูแลแมว", "Five things before you start")],
-        ["#/quiz", L("ทายแมวจากรูป จำได้กี่ตัวแล้ว", "Cat quiz: how many do you know?")],
-        hasA("a01") && ["#/article/a01", L("ให้อาหารยังไงให้พอดี", "Feeding without overfeeding")],
-        hasA("a09") && ["#/article/a09", L("ผู้ดูแลจำแมวแต่ละตัวยังไง", "How keepers tell them apart")]] },
-      { ico: ICON.cats, t: L("อยากรู้จักแมวในคณะ", "I'm curious about the cats"), d: L("ใครก็ได้ที่อยากรู้ว่ามีแมวตัวไหนบ้าง", "For anyone who wants to meet them"), links: [
-        ["#/cats", L(`แมวทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`)],
-        ["index.html#map", L("แผนที่แมว 3D", "3D cat map")],
-        ["#/ask", L("อยากรู้เรื่องไหน ถามใครดี", "Who to ask about what")]] }
-    ];
-    app.innerHTML = `
-      <section class="hello">
-        ${cat("sit", "hello-cat")}
-        <h1>${L("คลังความรู้<br>แมวอักษร", "A knowledge hub<br>for every cat at Arts")}</h1>
-        <p class="lede">${L("รวมสิ่งที่ผู้ดูแลแมวในคณะรู้ ตั้งแต่ชื่อและนิสัยของแต่ละตัว ไปจนถึงวิธีดูแลและรับมือเวลาแมวป่วย ใครก็เปิดอ่านได้ ไม่ต้องรู้เรื่องแมวมาก่อน",
-          "Everything the faculty's cat keepers know, from each cat's name and habits to everyday care and what to do when one is sick. Open to anyone; no cat experience needed.")}</p>
-        <form class="k-search hero-search" id="homeAsk" role="search" aria-label="${L("ถามคลังความรู้", "Ask the hub")}">
-          <label class="sr" for="homeQ">${L("ค้นแมวหรือความรู้", "Search cats or know-how")}</label>${SEARCH_SVG}
-          <input id="homeQ" type="search" placeholder="${L("อยากรู้อะไรเรื่องแมวในคณะ ลองพิมพ์ดู", "What would you like to know? Try typing")}" autocomplete="off" enterkeyhint="search">
-          <button class="btn" type="submit">${L("ค้นหา", "Search")}</button>
-        </form>
-        <p class="asks-label">${L("คนมักถามว่า", "People often ask")}</p>
-        ${asksHtml()}
-        <dl class="stats" aria-label="${L("ตอนนี้", "Right now")}">
-          <div><dt>${active}</dt><dd>${L("ตัวอยู่ในคณะ", "living here")}</dd></div>
-          <div><dt>${commuters}</dt><dd>${L("ตัวแวะมาบ้าง", "drop by")}</dd></div>
-          <div><dt>${D.articles.length}</dt><dd>${L("เรื่องในคลังความรู้", "articles to read")}</dd></div>
-        </dl>
-      </section>
-      ${resume}
-      <a class="urgent-bar" href="#/help"><span class="task-ico">${ICON.help}</span><span><b>${L("แมวป่วยหรือบาดเจ็บอยู่ตอนนี้?", "Is a cat sick or hurt right now?")}</b> ${L("ดูว่าต้องทำอะไรก่อน และติดต่อใคร", "See what to do first and who to call")}</span><span aria-hidden="true">→</span></a>
-
-      <section class="sec">
-        <div class="sec-head"><h2>${L("เริ่มจากตรงไหนดี", "Where to start")}</h2><p>${L("เลือกข้อที่ตรงกับคุณที่สุด", "Pick the one that sounds most like you")}</p></div>
-        <div class="routes">${PATHS.map((p) => `<div class="route"><span class="task-ico">${p.ico}</span><h3>${p.t}</h3><p>${p.d}</p>
-          <ul>${p.links.filter(Boolean).map(([h, x]) => `<li><a href="${h}"><span>${x}</span><span aria-hidden="true">→</span></a></li>`).join("")}</ul></div>`).join("")}</div>
-      </section>
-
-      <section class="sec">
-        <div class="toolbar"><h2>${L("ในคลังความรู้มีอะไร", "Inside the knowledge library")}</h2><a href="#/knowledge">${L("เปิดคลังความรู้", "Open the library")} →</a></div>
-        ${topicCards()}
-      </section>
-
-      <section class="sec">
-        <div class="toolbar"><h2>${L("ตอนนี้อยู่ในคณะ", "At the faculty now")}</h2><a href="#/cats">${L(`ดูทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`)} →</a></div>
-        <div class="strip">${now.map((c) => catCard(c, null, "", met)).join("")}</div>
-      </section>
-
-      <section class="sec">
-        <div>
-          <div class="sec-head"><h2>${L("บันทึกล่าสุด", "Latest notes")}</h2><p>${L("ข่าวและการดูแลที่ทีมจดไว้", "News and care the team has noted")}</p></div>
-          ${recent.length ? `<ol class="timeline">${recent.map((h) => { const c = D.byId[h.cat]; return `<li><time datetime="${esc(h.date)}">${fmtDate(h.date)}</time><div>${c ? `<a href="${catHref(c)}"><b>${nmHtml(c)}</b></a> · ` : ""}<span class="t-type">${L(HISTORY_TYPES[h.type], HISTORY_EN[h.type])}</span>${T(h.note)}</div></li>`; }).join("")}</ol>` : `<p class="muted">${L("ยังไม่มีบันทึก", "Nothing yet")}</p>`}
-          <p class="more"><a href="${shareHref("sighting")}">${L("เห็นแมววันนี้? บอกทีมได้เลย", "Saw a cat today? Tell the team")} →</a> · <a href="#/about">${L("ความรู้ในนี้มาจากไหน", "Where this knowledge comes from")} →</a></p>
-        </div>
-      </section>`;
-    const ask = document.getElementById("homeAsk");
-    ask.addEventListener("submit", (e) => { e.preventDefault(); const q = norm(document.getElementById("homeQ").value); if (q) location.hash = "#/search/" + enc(q); });
-  }
-
   /* ---------------- all cats with facets ---------------- */
   function renderCats(q) {
     const met = metMap();
@@ -623,7 +547,7 @@
     // Teams sometimes type a story into that column instead of a date; that becomes a keeper's note.
     const seenISO = lastSighting(c);
     const sheetDate = c.lastSeen && looksLikeDate(c.lastSeen) ? c.lastSeen : "";
-    const lastSeen = seenISO ? L(`มีคนเห็นล่าสุด ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " วันก่อน" : "วันนี้"})`, `Last seen ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " days ago" : "today"})`)
+    const lastSeen = seenISO && seenISO.length > 10 && daysAgo(seenISO) < 7 ? L("มีคนเห็นล่าสุด ", "Last seen ") + relTime(seenISO) : seenISO ? L(`มีคนเห็นล่าสุด ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " วันก่อน" : "วันนี้"})`, `Last seen ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " days ago" : "today"})`)
       : sheetDate ? L("เห็นล่าสุด ", "Last seen ") + (/^\d{4}-/.test(sheetDate) ? fmtDate(sheetDate) : esc(sheetDate)) : "";
     if (c.lastSeen && !sheetDate) notes.unshift(c.lastSeen);
     const chk = checkedOn(c), seenAny = seenISO || isoDate(sheetDate);
@@ -668,6 +592,7 @@
           ${notes.length ? `<section class="sec"><h2 class="label">${L("ผู้ดูแลเล่าว่า", "The keepers say")}</h2><p class="muted small">${L("คัดจากบันทึกสัมภาษณ์ ตามคำพูดจริง", "From the interview notes. Translated; the Thai original is under each note.")}</p><ul class="keeper-notes">${notes.map((t) => `<li>${T(t)}${isEN() && !I.untranslated(t) && Tp(t) !== t ? `<span class="orig" lang="th">${esc(t)}</span>` : ""}</li>`).join("")}</ul></section>` : ""}
 
           ${family ? `<section class="sec"><h2 class="label">${L("ครอบครัว", "Family")}</h2><div class="family">${family}</div></section>` : ""}
+          <p class="more"><a href="#/graph/${enc(c.id)}">${L(`ดูว่า${esc(c.name)}เชื่อมกับใครและอะไรบ้างในผังความรู้`, `See how ${name} connects to others in the knowledge map`)} →</a></p>
 
           <section class="sec"><h2 class="label">${L("ประวัติการดูแล", "Care history")}</h2>
             ${hist.length ? `<ol class="timeline">${hist.map((h) => `<li><time datetime="${esc(h.date)}">${fmtDate(h.date)}</time><div><span class="t-type">${L(HISTORY_TYPES[h.type], HISTORY_EN[h.type])}</span>${T(h.note)}${h.by ? `<span class="t-by">${esc(h.by)}</span>` : ""}</div></li>`).join("")}</ol>`
@@ -692,7 +617,7 @@
       qs.disabled = true;
       const ok = await postQuick({ type: TYPES.sighting.label, cat: c.name, message: `เห็น${c.name}วันนี้ (กดจากหน้าแมว)` });
       qs.disabled = false;
-      if (ok) { store.set(key, true); toast(L(`ส่งแล้ว ทีมรู้แล้วว่าวันนี้มีคนเห็น${esc(c.name)} · `, `Sent: the team knows ${esc(nm(c))} was seen today · `) + more); }
+      if (ok) { store.set(key, true); gave(); noteSeen(c); toast(L(`ส่งแล้ว ทีมรู้แล้วว่าวันนี้มีคนเห็น${esc(c.name)} · `, `Sent: the team knows ${esc(nm(c))} was seen today · `) + more); }
       else toast(L("ส่งไม่สำเร็จ ลองใหม่อีกที หรือ ", "Couldn't send. Try again, or ") + more);
     });
     const mb = document.getElementById("metBtn");
@@ -821,6 +746,7 @@
     if (!raw) { app.innerHTML = `<div class="empty">${cat("peek")}<h1>${L("ไม่เจอเรื่องนี้", "Article not found")}</h1><p><a href="#/knowledge">${L("กลับไปคลังความรู้", "Back to the knowledge library")}</a></p></div>`; return; }
     const a = art(raw);
     document.title = `${a.title} · ${TITLE()}`;
+    const read = store.get(READ_KEY, {}); read[raw.id] = 1; store.set(READ_KEY, read);
     const cats = a.relatedCats.map((k) => D.byId[k]).filter(Boolean);
     const more = D.articles.filter((x) => x.category === a.category && x.id !== a.id).slice(0, 3);
     const catLbl = lbl(CATEGORIES[a.category]);
@@ -849,7 +775,7 @@
     hp.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-vote]"); if (!b) return;
       const yes = b.dataset.vote === "yes";
-      store.set("akc-vote-" + a.id, b.dataset.vote);
+      store.set("akc-vote-" + a.id, b.dataset.vote); gave();
       hp.querySelectorAll("[data-vote]").forEach((x) => { x.disabled = true; });
       await postQuick({ type: "ความเห็นต่อบทความ", message: `${raw.id} · ${raw.title}: ${yes ? "ช่วยได้" : "ยังไม่ช่วย"}`, page: location.href });
       hp.querySelector("span").outerHTML = `<p>${yes ? L("ดีใจที่ช่วยได้ ขอบคุณที่บอก", "Glad it helped, thanks for telling us.") : L("ขอบคุณที่บอก ถ้ารู้ว่าขาดอะไร", "Thanks for telling us. If you know what's missing,")} ${yes ? "" : `<a href="${shareHref("story", null, "&ctx=" + enc(a.id))}">${L("เล่าเพิ่มได้เลย", "add it here")}</a>`}</p>`;
@@ -983,7 +909,7 @@
       try {
         // Apps Script web apps do not send CORS headers: no-cors delivers the post; the sheet is the receipt
         await fetch(CFG.SUBMIT_URL, { method: "POST", mode: "no-cors", body: payload });
-        form.reset(); photoData = ""; const pv = document.getElementById("fPreview"); if (pv) pv.hidden = true;
+        form.reset(); photoData = ""; gave(); const pv = document.getElementById("fPreview"); if (pv) pv.hidden = true;
         show("ok", `${cat("play", "ok-cat")}<div><b>${L("ได้รับแล้ว ขอบคุณมาก", "Got it, thank you")}</b>${L("สถานะ: รอทีมตรวจทาน", "Status: waiting for the team to review")}${data.get("type") === "sick" ? ` · ${L("ถ้าแมวอาการหนัก ทำตาม", "If the cat is badly unwell, follow the")}<a href="#/help">${L("ขั้นตอนเร่งด่วน", "urgent steps")}</a>${(isEN() ? "" : "ไปก่อนเลย")}` : ""}
           <span class="next-steps">${sentCat ? `<a class="btn ghost" href="${catHref(sentCat)}">${L(`กลับไปหน้า${sentCat.name}`, `Back to ${nm(sentCat)}`)}</a>` : ""}<button type="button" class="btn ghost" id="again">${L("ส่งอีกเรื่อง", "Send another")}</button><a class="btn ghost" href="#/">${L("หน้าแรก", "Home")}</a></span></div>`);
         const again = document.getElementById("again");
@@ -1062,7 +988,7 @@
       [L("1. ระบุความรู้ที่สำคัญ", "1. Identify key knowledge"), L("มือใหม่ติดตรงไหน: ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องบอกใคร", "Where newcomers get stuck: not knowing the cats' names, which are spayed, or who to tell when one is sick."), [[L("หาแมว", "Find this cat"), "#/find"], [L("แมวป่วย", "Sick cat"), "#/help"]]],
       [L("2. สร้างและแสวงหาความรู้", "2. Create and acquire"), L("สัมภาษณ์ผู้ดูแลรุ่นก่อน รวบรวมรูปกับข้อมูลในชีต แล้วเรียบเรียงเป็นบทความ", "Interview experienced keepers, gather photos and the team's sheet, and write it up as articles."), [[L("เรื่องเล่าจากผู้ดูแล", "Keepers' stories"), "#/knowledge/experience"]]],
       [L("3. จัดเก็บ", "3. Store"), L("แมวแต่ละตัวมีหน้าของตัวเอง ความรู้แบ่งหมวดและติดแท็ก มีที่มา วันที่ และสถานะตรวจทาน ค้นได้จากสีขน จุดที่เจอ และนิสัย", "A page per cat; articles by category and tag, with source, date and review status; searchable by coat, place and personality."), [[L("แมวทั้งหมด", "All cats"), "#/cats"], [L("ความรู้", "Know-how"), "#/knowledge"]]],
-      [L("4. แบ่งปัน", "4. Share"), L("ฟอร์มสั้น ๆ บอกเท่าที่รู้ ทีมตรวจก่อน แล้วขึ้นเว็บพร้อมเครดิต", "A short form: say what you know, the team checks it, then it goes up with credit."), [[L("เล่าให้ทีมฟัง", "Tell the team"), "#/share"]]],
+      [L("4. แบ่งปัน", "4. Share"), L("ฟอร์มสั้น ๆ บอกเท่าที่รู้ ทีมตรวจก่อน แล้วขึ้นเว็บพร้อมเครดิต", "A short form: say what you know, the team checks it, then it goes up with credit."), [[L("เล่าต่อ", "Pass it on"), "#/live"], [L("เล่าให้ทีมฟัง", "Tell the team"), "#/share"]]],
       [L("5. นำไปใช้", "5. Use"), L("มือใหม่อ่าน 5 เรื่องก่อนไปดูแลแมว จนได้ไปดูแลจริงกับผู้ดูแลรุ่นก่อน แล้วเอาสิ่งที่ได้เรียนรู้กลับมาเติม", "Newcomers read the five things to know, go on a round with experienced keepers, then feed what they learn back in."), [[L("5 เรื่องก่อนไปดูแลแมว", "Five things before you start"), "#/start"], [L("ถามใครดี", "Who to ask"), "#/ask"]]]
     ];
     const list = (thKey, enKey) => esc(((isEN() && CFG[enKey]) || CFG[thKey] || []).join(", "));
@@ -1270,7 +1196,7 @@
         <div class="hand-cols">
           ${col(L("ทุกสัปดาห์", "Every week"), [
             L("เปิดชีตรับเรื่อง ดูแถวที่สถานะ “รอตรวจ”", "Open the submissions sheet and look at rows marked “รอตรวจ” (waiting)."),
-            L("เรื่องที่ถูกต้องและไม่มีข้อมูลส่วนตัว คัดลงชีตของทีมหรือเขียนเป็นบทความ แล้วเปลี่ยนสถานะเป็น “ลงแล้ว”", "Copy anything accurate and free of personal details into the team's sheet or an article, then mark it “ลงแล้ว” (done)."),
+            L("เรื่องที่ถูกต้องและไม่มีข้อมูลส่วนตัว คัดลงชีตของทีมหรือเขียนเป็นบทความ แล้วเปลี่ยนสถานะเป็น “เผยแพร่แล้ว” เรื่องนั้นจะขึ้นในหน้าเล่าต่อเอง ส่วนเรื่องที่ไม่ใช้ เปลี่ยนเป็น “ไม่เผยแพร่”", "Copy anything accurate and free of personal details into the team's sheet or an article, then set its status to “เผยแพร่แล้ว” (published): it then appears on the Pass it on page. Set anything you won't use to “ไม่เผยแพร่”."),
             L("คำถามที่ส่งมาจากหน้า “ถามใครดี” เอาไปถามผู้ดูแล แล้วเติมคำตอบไว้ในเว็บ", "Take questions sent from “Who to ask” to the keepers, and add the answers to the site."),
             L("แมวที่ไม่มีใครกด “เห็นวันนี้” นานเกินสัปดาห์ ถามผู้ดูแล และแก้สถานะในชีตถ้าหายไปจริง", "If nobody has tapped “Saw … today” for a cat in over a week, ask the keepers and update its status if it's really gone.")
           ])}
@@ -1299,54 +1225,382 @@
         </ul></section>`;
   }
 
-  /* ---------------- family graph ---------------- */
+  /* ---------------- the journey: the four steps of the keepers' knowledge loop ----------------
+     Every page belongs to one step. The nav lists the steps in order, the home page shows the visitor's progress
+     through them, and step pages end with the next step, so a visitor always knows where they are and what's next. */
+  const READ_KEY = "akc-read-v1", GAVE_KEY = "akc-gave-v1";
+  const STAGES = [
+    { key: "know", href: "#/cats", t: "รู้จักแมว", en: "Meet the cats", d: "แมวแต่ละตัวชื่ออะไร อยู่ตรงไหน เข้าหาได้ไหม", dEn: "Each cat's name, where it lives, and whether you can go near" },
+    { key: "learn", href: "#/knowledge", t: "เรียนรู้", en: "Learn", d: "สิ่งที่ผู้ดูแลรู้จากการอยู่กับแมวทุกวัน", dEn: "What the keepers know from being with the cats every day" },
+    { key: "care", href: "#/start", t: "ลงมือดูแล", en: "Help out", d: "เตรียมตัวให้พร้อม แล้วไปดูแลจริงกับผู้ดูแลรุ่นก่อน", dEn: "Get ready, then go on a round with an experienced keeper" },
+    { key: "share", href: "#/live", t: "เล่าต่อ", en: "Pass it on", d: "บอกว่าเห็นอะไร รู้อะไร ให้รุ่นถัดไปได้ใช้ต่อ", dEn: "Say what you saw and learned, so the next keepers can use it" }
+  ];
+  const STAGE_OF = { cats: "know", cat: "know", find: "know", quiz: "know", graph: "know", family: "know", knowledge: "learn", article: "learn", start: "care", ask: "care", help: "care", live: "share", share: "share", report: "share", handover: "share" };
+  // stage pages that end with the "next step" card (a cat's page has its own pager; forms and the sick-cat page stay focused)
+  const NEXT_ON = ["cats", "find", "graph", "family", "knowledge", "article", "start", "ask", "live"];
+  const stageTitle = (s) => L(s.t, s.en);
+  function stageProgress(key) {
+    if (key === "know") {
+      const met = metMap(), now = D.cats.filter(SEEN_NOW), v = now.filter((c) => met[c.id]).length;
+      return { v, of: now.length, text: L(`จำได้แล้ว ${v} จาก ${now.length} ตัว`, `You know ${v} of ${now.length}`) };
+    }
+    if (key === "learn") {
+      const r = store.get(READ_KEY, {}), v = D.articles.filter((a) => r[a.id]).length;
+      return { v, of: D.articles.length, text: L(`อ่านแล้ว ${v} จาก ${D.articles.length} เรื่อง`, `Read ${v} of ${D.articles.length}`) };
+    }
+    if (key === "care") {
+      const steps = startSteps(), d = store.get(START_KEY, {}), v = steps.filter((s) => d[s.id]).length;
+      return { v, of: steps.length, text: L(`เตรียมตัวแล้ว ${v} จาก ${steps.length} ข้อ`, `${v} of ${steps.length} steps done`) };
+    }
+    const v = store.get(GAVE_KEY, 0);
+    return { v, of: 3, text: v ? L(`เล่าให้ทีมแล้ว ${v} ครั้ง`, `Shared with the team ${v} time${v > 1 ? "s" : ""}`) : L("ยังไม่เคยเล่า", "Nothing shared yet") };
+  }
+  const gave = () => store.set(GAVE_KEY, store.get(GAVE_KEY, 0) + 1);
+  // the step to suggest: the first one not started yet, else the least finished
+  function nextStage() {
+    const p = STAGES.map((s) => ({ s, p: stageProgress(s.key) }));
+    const fresh = p.find((x) => !x.p.v);
+    return (fresh || p.slice().sort((a, b) => a.p.v / (a.p.of || 1) - b.p.v / (b.p.of || 1))[0]).s;
+  }
+  function nextCard(key) {
+    const i = STAGES.findIndex((s) => s.key === key), nx = STAGES[(i + 1) % STAGES.length], last = i === STAGES.length - 1;
+    return `<nav class="next-stage" aria-label="${L("ขั้นต่อไป", "Next step")}">
+      <ol class="stage-dots">${STAGES.map((s, k) => `<li class="${k === i ? "on" : ""}"${k === i ? ' aria-current="step"' : ""}><a href="${s.href}"><span>${k + 1}</span>${esc(stageTitle(s))}</a></li>`).join("")}</ol>
+      <a class="next-go" href="${nx.href}"><span><small>${last ? L("เริ่มรอบใหม่", "Round again") : L("ขั้นต่อไป", "Next step")}</small><b>${(i + 1) % STAGES.length + 1}. ${esc(stageTitle(nx))}</b><span>${esc(last ? L("สิ่งที่คุณเล่าไว้ จะเป็นจุดเริ่มของมือใหม่รุ่นถัดไป", "What you passed on is where the next newcomer starts.") : L(nx.d, nx.dEn))}</span></span><span class="go" aria-hidden="true">→</span></a>
+    </nav>`;
+  }
+
+  /* ---------------- live feed: what people tell the team, shown back to everyone ----------------
+     The submissions script publishes only cat + time for "seen today" taps, counts per type, and the stories
+     the content steward has marked "เผยแพร่แล้ว" (tools/submissions.gs, ?feed=1). Without it, pages work as before. */
+  let FEED = null;
+  const FEED_KEY = "akc-feed-v1";
+  const fold = window.CatData.fold;
+  const sameCat = (name, c) => !!name && (name === c.name || fold(name) === fold(c.name));
+  const catNamed = (name) => D.cats.find((c) => sameCat(name, c));
+  const feedSeen = (c) => { const s = FEED && FEED.seen && FEED.seen.find((x) => sameCat(x.cat, c)); return s ? s.t : ""; };
+  function relTime(iso) {
+    const ms = Date.now() - new Date(iso).getTime();
+    if (!(ms >= 0) || norm(iso).length <= 10) return fmtDate(iso);
+    const m = Math.round(ms / 6e4), h = Math.round(ms / 36e5), d = Math.floor(ms / 864e5);
+    if (m < 2) return L("เมื่อสักครู่", "just now");
+    if (m < 60) return L(`${m} นาทีก่อน`, `${m} min ago`);
+    if (h < 24) return L(`${h} ชม. ก่อน`, `${h} h ago`);
+    if (d < 7) return d === 1 ? L("เมื่อวาน", "yesterday") : L(`${d} วันก่อน`, `${d} days ago`);
+    return fmtDate(iso);
+  }
+  async function loadFeed() {
+    const url = norm(CFG.SUBMIT_URL);
+    if (!url) return;
+    const kept = session.get(FEED_KEY);
+    if (kept && kept.data && Date.now() - kept.at < 120000) { FEED = kept.data; return; }
+    try {
+      const r = await fetch(url + (url.includes("?") ? "&" : "?") + "feed=1", { cache: "no-store" });
+      const j = await r.json();
+      if (!j || !Array.isArray(j.seen)) return; // the script has no feed yet
+      FEED = j;
+      session.set(FEED_KEY, { at: Date.now(), data: j });
+      const page = location.hash.replace(/^#\/?/, "").split(/[/?]/)[0];
+      const busy = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+      if (["", "live", "cats", "cat"].includes(page) && !busy) { const y = window.scrollY; route({ keepScroll: true }); window.scrollTo(0, y); }
+    } catch (e) { /* offline or not deployed: no feed */ }
+  }
+  // a tap from this device shows at once, before the feed catches up
+  function noteSeen(c) {
+    FEED = FEED || { seen: [], posts: [], counts: {} };
+    FEED.seen.unshift({ t: new Date().toISOString(), cat: c.name });
+    FEED.counts[TYPES.sighting.label] = (FEED.counts[TYPES.sighting.label] || 0) + 1;
+    session.set(FEED_KEY, { at: 0, data: FEED });
+  }
+  const typeLbl = (label) => { const k = Object.keys(TYPES).find((x) => TYPES[x].label === label); return k ? L(TYPES[k].label, TYPES[k].en) : esc(label); };
+  function activity(limit) {
+    const items = [], day = new Set();
+    ((FEED && FEED.seen) || []).forEach((s) => {
+      const c = catNamed(s.cat);
+      if (!c) return;
+      const k = c.id + s.t.slice(0, 10);
+      if (day.has(k)) return; // one line per cat per day
+      day.add(k);
+      items.push({ t: s.t, kind: "seen", html: L(`มีคนเห็น <a href="${catHref(c)}"><b>${esc(c.name)}</b></a>${c.locations[0] ? ` <span class="muted">· ปกติอยู่แถว ${T(c.locations[0])}</span>` : ""}`, `Someone saw <a href="${catHref(c)}"><b>${esc(nm(c))}</b></a>`) });
+    });
+    ((FEED && FEED.posts) || []).forEach((p) => {
+      const c = catNamed(p.cat);
+      items.push({ t: p.t, kind: "post", html: `${c ? `<a href="${catHref(c)}"><b>${nmHtml(c)}</b></a> · ` : ""}<span class="t-type">${typeLbl(p.type)}</span>${esc(p.text)}${p.by ? `<span class="t-by">${L("เล่าโดย ", "From ")}${esc(p.by)}</span>` : ""}` });
+    });
+    D.history.forEach((h) => {
+      const c = D.byId[h.cat];
+      items.push({ t: h.date, kind: "note", html: `${c ? `<a href="${catHref(c)}"><b>${nmHtml(c)}</b></a> · ` : ""}<span class="t-type">${L(HISTORY_TYPES[h.type], HISTORY_EN[h.type])}</span>${T(h.note)}` });
+    });
+    return items.sort((a, b) => (a.t < b.t ? 1 : a.t > b.t ? -1 : 0)).slice(0, limit);
+  }
+  const activityHtml = (list) => (list.length
+    ? `<ol class="timeline feed">${list.map((x) => `<li class="f-${x.kind}"><time datetime="${esc(x.t)}">${relTime(x.t)}</time><div>${x.html}</div></li>`).join("")}</ol>`
+    : `<p class="muted">${L("ยังไม่มีความเคลื่อนไหว", "Nothing yet")}</p>`);
+  function countsHtml() {
+    const c = (FEED && FEED.counts) || null;
+    if (!c) return "";
+    const rows = [
+      [c[TYPES.sighting.label] || 0, L("ครั้งที่มีคนบอกว่าเห็นแมว", "sightings")],
+      [Object.keys(TYPES).filter((k) => k !== "sighting").reduce((n, k) => n + (c[TYPES[k].label] || 0), 0), L("เรื่อง รูป และคำถามที่ส่งมา", "stories, photos and questions")],
+      [c["ผลทายแมว"] || 0, L("รอบที่มีคนทายแมว", "quiz rounds played")],
+      [c["ความเห็นต่อบทความ"] || 0, L("คนบอกว่าบทความช่วยได้ไหม", "article votes")]
+    ];
+    return `<h2 class="label">${L(`${FEED.days || 30} วันที่ผ่านมา ช่วยกันเติม`, `In the last ${FEED.days || 30} days`)}</h2><dl class="stats live-stats">${rows.map(([n, t]) => `<div><dt>${n}</dt><dd>${t}</dd></div>`).join("")}</dl>`;
+  }
+
+  /* ---------------- home: what this is, and the four steps with the visitor's progress ---------------- */
+  function renderHome() {
+    const met = metMap(), nx = nextStage();
+    const here = D.cats.filter(SEEN_NOW).sort((a, b) => (b.resident ? 1 : 0) - (a.resident ? 1 : 0) || (b.photo ? 1 : 0) - (a.photo ? 1 : 0) || byStatusThenName(a, b));
+    const G = buildGraph(), nCat = G.nodes.filter((n) => n.kind === "cat").length;
+    const loop = STAGES.map((s, i) => {
+      const p = stageProgress(s.key), pct = p.of ? Math.min(1, p.v / p.of) : 0, isNext = s === nx;
+      return `<li class="stage${isNext ? " is-next" : ""}"><a href="${s.href}">
+        <span class="stage-n" aria-hidden="true">${i + 1}</span>
+        <h3><span class="sr">${L(`ขั้นที่ ${i + 1}`, `Step ${i + 1}`)}: </span>${esc(stageTitle(s))}</h3>
+        <p>${esc(L(s.d, s.dEn))}</p>
+        <span class="stage-p"><span class="meter" aria-hidden="true"><i style="width:${pct * 100}%"></i></span>${esc(p.text)}</span>
+        ${isNext ? `<span class="stage-go">${p.v ? L("ทำต่อ", "Continue") : L("เริ่มตรงนี้", "Start here")} →</span>` : ""}
+      </a></li>`;
+    }).join("");
+    app.innerHTML = `
+      <section class="hello">
+        ${cat("sit", "hello-cat")}
+        <h1>${L("ความรู้เรื่องแมวในคณะ<br>ส่งต่อจากรุ่นสู่รุ่น", "Cat know-how at Arts,<br>passed on year to year")}</h1>
+        <p class="lede">${L("นิสิตที่ช่วยดูแลแมวในคณะเปลี่ยนรุ่นทุกปี เว็บนี้คือสมุดที่ผู้ดูแลแต่ละรุ่นช่วยกันเขียนต่อ ไล่ไปทีละขั้น จากรู้จักแมว จนถึงเล่าต่อให้รุ่นถัดไป",
+          "The students who help with the faculty's cats change every year. This site is the notebook each year's keepers add to. Go one step at a time, from meeting the cats to passing on what you learned.")}</p>
+        <form class="k-search hero-search" id="homeAsk" role="search" aria-label="${L("ค้นในคลัง", "Search the hub")}">
+          <label class="sr" for="homeQ">${L("ค้นแมวหรือความรู้", "Search cats or know-how")}</label>${SEARCH_SVG}
+          <input id="homeQ" type="search" placeholder="${L("ชื่อแมว จุดที่เจอ หรือเรื่องที่อยากรู้", "A cat's name, a place, or a question")}" autocomplete="off" enterkeyhint="search">
+          <button class="btn" type="submit">${L("ค้นหา", "Search")}</button>
+        </form>
+      </section>
+      <a class="urgent-bar" href="#/help"><span class="task-ico">${ICON.help}</span><span><b>${L("แมวป่วยหรือบาดเจ็บอยู่ตอนนี้?", "Is a cat sick or hurt right now?")}</b> ${L("ดูว่าต้องทำอะไรก่อน และติดต่อใคร", "See what to do first and who to call")}</span><span aria-hidden="true">→</span></a>
+
+      <section class="sec" aria-labelledby="loopH">
+        <div class="sec-head"><h2 id="loopH">${L("4 ขั้น จากมือใหม่เป็นผู้ดูแล", "Four steps from newcomer to keeper")}</h2><p>${L("เมนูด้านบนเรียงตาม 4 ขั้นนี้ ความคืบหน้าบันทึกไว้ในเครื่องนี้", "The menu follows these four steps. Your progress is saved on this device.")}</p></div>
+        <ol class="loop">${loop}</ol>
+        <p class="loop-back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg>${L("ขั้นที่ 4 ของคุณ คือขั้นที่ 1 ของมือใหม่รุ่นถัดไป", "Your step 4 is the next newcomer's step 1")}</p>
+      </section>
+
+      <section class="sec home-split">
+        <div>
+          <div class="toolbar"><h2>${L("ล่าสุดในคณะ", "Latest at the faculty")}</h2><a href="#/live">${L("ดูทั้งหมด", "See all")} →</a></div>
+          ${activityHtml(activity(5))}
+          <p class="more"><a href="#/live">${L("เห็นแมววันนี้? แตะบอกได้เลย", "Saw a cat today? Tap to tell us")} →</a></p>
+        </div>
+        <a class="graph-card" href="#/graph">
+          <svg class="graph-art" viewBox="0 0 200 120" aria-hidden="true"><g class="ga-l"><path d="M40 60 100 30 160 58 112 92 40 60 M100 30 112 92 M160 58 176 100 M40 60 22 98 M100 30 92 8"/></g><g class="ga-n"><circle cx="40" cy="60" r="11"/><circle cx="100" cy="30" r="13"/><circle cx="160" cy="58" r="11"/><circle cx="112" cy="92" r="9"/></g><g class="ga-s"><rect x="164" y="94" width="24" height="12" rx="4"/><rect x="10" y="92" width="24" height="12" rx="4"/><rect x="80" y="2" width="24" height="12" rx="4"/></g></svg>
+          <h3>${L("ผังความรู้", "Knowledge map")}</h3>
+          <p>${L(`แมว ${nCat} ตัว เชื่อมกับครอบครัว เพื่อน ที่อยู่ ผู้ดูแล และบทความ รวม ${G.edges.length} เส้น ดูว่าใครเป็นแม่ลูก ใครไม่ถูกกัน และเรื่องไหนพูดถึงตัวไหน`, `${nCat} cats linked to family, friends, places, keepers and articles: ${G.edges.length} links. See who is whose kitten, who doesn't get on, and which story is about whom.`)}</p>
+          <span class="stage-go">${L("เปิดผัง", "Open the map")} →</span>
+        </a>
+      </section>
+
+      <section class="sec">
+        <div class="toolbar"><h2>${L("ตอนนี้อยู่ในคณะ", "At the faculty now")}</h2><a href="#/cats">${L(`ดูทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`)} →</a></div>
+        <div class="strip">${here.map((c) => catCard(c, null, "", met)).join("")}</div>
+      </section>`;
+    document.getElementById("homeAsk").addEventListener("submit", (e) => { e.preventDefault(); const q = norm(document.getElementById("homeQ").value); if (q) location.hash = "#/search/" + enc(q); });
+  }
+
+  /* ---------------- step 4, pass it on: one-tap sightings, ways to share, and what others shared ---------------- */
+  function renderLive() {
+    const sends = !!norm(CFG.SUBMIT_URL);
+    const today = new Date().toISOString().slice(0, 10);
+    const here = D.cats.filter(SEEN_NOW).sort(byStatusThenName);
+    const tapKey = (c) => "akc-seen-" + c.id + "-" + today;
+    const tapNote = (c) => (store.get(tapKey(c), false) ? L("บอกแล้ววันนี้", "Sent today") : feedSeen(c) ? L("เห็นล่าสุด ", "Last seen ") + relTime(feedSeen(c)) : L("แตะเพื่อบอก", "Tap to tell"));
+    const WAYS = [
+      ["story", ICON.experience, L("เคล็ดลับหรือเรื่องที่เจอ", "A tip or a story"), L("ปกติแมวตัวนี้ทำอะไร เคยแก้ปัญหาอะไรได้", "What a cat usually does, or a problem you solved")],
+      ["photo", ICON.cats, L("ส่งรูปแมว", "Send a photo"), L("ตัวที่ยังไม่มีรูป หรือรูปที่ชัดกว่าเดิม", "For a cat with no photo, or a clearer one")],
+      ["question", ICON.book, L("ถามผู้ดูแล", "Ask the keepers"), L("ทีมจะไปถาม แล้วเติมคำตอบไว้ในเว็บ", "The team asks, then adds the answer here")],
+      ["newcat", ICON.find, L("เจอแมวที่ยังไม่มีในเว็บ", "A cat that isn't listed"), L("สีขน หน้าตา เจอที่ไหน", "Coat, looks, where you saw it")],
+      ["fix", ICON.start, L("ข้อมูลผิด", "Something's wrong"), L("ตรงไหนผิด แล้วที่ถูกคืออะไร", "What's wrong, and what's right")],
+      ["join", ICON.family, L("อยากไปช่วยดูแล", "I'd like to help"), L("ขอไปให้อาหารกับผู้ดูแลสักรอบ", "Join a keeper on a feeding round")]
+    ];
+    app.innerHTML = `
+      ${pageHead(L("เล่าต่อ", "Pass it on"), L("ความรู้ในเว็บนี้โตได้เพราะคนที่เจอแมวทุกวันช่วยกันเล่า แตะว่าเห็นแมวตัวไหน ขึ้นฟีดด้านล่างได้เลย ส่วนเรื่องเล่า รูป และคำถาม ผู้ดูแลเนื้อหาจะตรวจก่อนขึ้นเว็บ",
+        "This site grows because the people who see the cats every day tell us what they see. Tap a cat you saw and it shows in the feed below. Stories, photos and questions are checked by the content steward first."))}
+      ${sends ? `<section class="sec"><h2 class="label">${L("วันนี้เห็นตัวไหนบ้าง", "Who did you see today?")}</h2>
+        <div class="seen-grid">${here.map((c) => `<button type="button" class="seen-tap" data-id="${esc(c.id)}" aria-pressed="${!!store.get(tapKey(c), false)}">${portrait(c)}<span class="st-name">${nmHtml(c)}</span><small>${tapNote(c)}</small></button>`).join("")}</div></section>` : ""}
+      <section class="sec"><h2 class="label">${L("อยากเล่ามากกว่านั้น", "Want to tell us more?")}</h2>
+        <div class="ways">${WAYS.map(([k, ico, t, d]) => `<a class="way" href="${shareHref(k)}"><span class="task-ico">${ico}</span><b>${t}</b><span>${d}</span></a>`).join("")}</div></section>
+      <section class="sec live-split">
+        <div><h2 class="label">${L("ล่าสุดในคณะ", "Latest at the faculty")}</h2><div id="liveFeed">${activityHtml(activity(20))}</div></div>
+        <aside>${countsHtml()}
+          <p class="muted small">${L("เรื่องที่ส่งมาเข้าชีตส่วนตัวของทีมก่อน ชื่อและช่องทางติดต่อของคุณไม่ขึ้นเว็บ ยกเว้นคุณอนุญาตให้ใส่ชื่อเป็นเครดิต", "Everything goes to the team's private sheet first. Your name and contact never appear unless you allow a credit.")}</p>
+          <p class="more"><a href="#/handover">${L("ใครตรวจเรื่องที่ส่งมา", "Who reviews what's sent")} →</a></p></aside>
+      </section>`;
+    app.querySelectorAll(".seen-tap").forEach((b) => b.addEventListener("click", async () => {
+      const c = D.byId[b.dataset.id];
+      if (store.get(tapKey(c), false)) { toast(L(`วันนี้บอกทีมแล้วว่าเห็น${esc(c.name)} ขอบคุณนะ`, `Already sent today, thank you`)); return; }
+      b.disabled = true;
+      const ok = await postQuick({ type: TYPES.sighting.label, cat: c.name, message: `เห็น${c.name}วันนี้ (กดจากหน้าเล่าต่อ)` });
+      b.disabled = false;
+      if (!ok) { toast(L("ส่งไม่สำเร็จ ลองใหม่อีกที", "Couldn't send. Try again.")); return; }
+      store.set(tapKey(c), true); gave(); noteSeen(c);
+      b.setAttribute("aria-pressed", "true"); b.querySelector("small").textContent = tapNote(c);
+      const f = document.getElementById("liveFeed"); if (f) f.innerHTML = activityHtml(activity(20));
+      toast(L(`ส่งแล้ว ขอบคุณที่บอกว่าเห็น${esc(c.name)}`, `Sent. Thanks for telling us about ${esc(nm(c))}`));
+    }));
+  }
+
+  /* ---------------- knowledge map: cats, places, keepers and know-how, and how they connect ----------------
+     Built from the sheet (family, Personal Information, locations, keepers) and the library (articles, topics). */
+  const EDGE_KINDS = () => ({
+    mother: { t: L("แม่ลูก", "Mother and kitten"), g: "family" },
+    sibling: { t: L("พี่น้อง", "Siblings"), g: "family" },
+    friend: { t: L("เพื่อนสนิท", "Close friends"), g: "social" },
+    rival: { t: L("ไม่ค่อยถูกกัน", "Don't get on"), g: "social" },
+    place: { t: L("อยู่ที่", "Lives at"), g: "place" },
+    keeper: { t: L("ผู้ดูแลหลัก", "Main keeper"), g: "keeper" },
+    about: { t: L("บทความที่พูดถึง", "Written about in"), g: "know" },
+    topic: { t: L("หมวดของบทความ", "Article topic"), g: "know" }
+  });
+  const KG_GROUPS = () => [["family", L("ครอบครัว", "Family")], ["social", L("เพื่อน / ไม่ถูกกัน", "Friends and rivals")], ["place", L("ที่อยู่", "Places")], ["keeper", L("ผู้ดูแล", "Keepers")], ["know", L("ความรู้", "Know-how")]];
+  const NODE_GROUP = { place: "place", keeper: "keeper", article: "know", topic: "know" };
   let network = null;
   const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-  function renderFamily(focusId) {
-    const tok = renderToken;
-    app.innerHTML = `
-      ${pageHead(L("ใครเป็นพี่น้องกับใคร", "Who's related to whom"), L("เส้นประคือพี่น้อง ลูกศรชี้จากแม่ไปหาลูก แตะที่แมวเพื่อดูหน้าของตัวนั้น", "Dashed lines join siblings; arrows point from mother to kitten. Tap a cat to open its page."))}
-      <div id="graph" role="img" aria-label="${L("ผังความสัมพันธ์ของแมว", "Diagram of how the cats are related")}"><p class="empty">${L("กำลังวาดผัง…", "Drawing the tree…")}</p></div>
-      <section class="sec"><h2 class="label">${L("ยังไม่มีข้อมูลครอบครัว", "No family recorded yet")}</h2><div class="mini-cats" id="noFamily"></div>
-        <p class="muted small">${L("รู้ว่าตัวไหนเป็นพี่น้องหรือแม่ลูกกัน?", "Know which cats are siblings, or mother and kitten?")} <a href="${shareHref("story")}">${L("บอกทีมได้", "Tell the team")}</a></p></section>`;
-    const related = new Set();
+  function buildGraph() {
+    const nodes = [], edges = [], ids = new Set(), keys = new Set();
+    const add = (n) => { if (!ids.has(n.id)) { ids.add(n.id); nodes.push(n); } };
+    const link = (from, to, kind, both) => {
+      const k = (both ? [from, to].sort().join("|") : from + ">" + to) + kind;
+      if (!keys.has(k)) { keys.add(k); edges.push({ id: "e" + edges.length, from, to, kind }); }
+    };
+    D.cats.forEach((c) => add({ id: "c:" + c.id, kind: "cat", cat: c, label: nm(c) }));
     D.cats.forEach((c) => {
-      if (c.mother && D.byId[c.mother]) { related.add(c.id); related.add(c.mother); }
-      (c.siblings || []).forEach((o) => { if (D.byId[o]) { related.add(c.id); related.add(o); } });
+      if (c.mother && D.byId[c.mother]) link("c:" + c.mother, "c:" + c.id, "mother");
+      (c.siblings || []).forEach((o) => { if (D.byId[o]) link("c:" + c.id, "c:" + o, "sibling", true); });
+      // friends and rivals, from what the team wrote: "ไม่ค่อยถูกกับชาบูและมีบุญ", "เป็นเพื่อนสนิทกับกระทง"
+      [c.about, c.relationship, c.personality, c.notes].concat(c.interview || []).join(" ").split(/\s+/).forEach((tok) => {
+        const f = fold(tok), rival = /ไม่(ค่อย)?ถูกกับ/.test(f), friend = /เพื่อนสนิท|สนิทกับ/.test(f);
+        if (!rival && !friend) return;
+        D.cats.forEach((o) => { if (o !== c && o.name.length > 1 && f.includes(fold(o.name))) link("c:" + c.id, "c:" + o.id, rival ? "rival" : "friend", true); });
+      });
+      c.areas.forEach((a) => { add({ id: "p:" + a, kind: "place", area: a, label: shortArea(a) }); link("c:" + c.id, "p:" + a, "place"); });
+      if (c.caretakers) {
+        const r = keeperRole(c.caretakers), id = "k:" + oneSpace(c.caretakers);
+        const role = r ? en(r, "role").split(/,| กับ/)[0] : "";
+        add({ id, kind: "keeper", text: c.caretakers, label: CFG.SHOW_KEEPER_NAMES ? Tp(c.caretakers) : role || L("ผู้ดูแลหลัก", "Main keeper") });
+        link(id, "c:" + c.id, "keeper");
+      }
     });
-    document.getElementById("noFamily").innerHTML = D.cats.filter((c) => !related.has(c.id)).sort(byStatusThenName).map(miniCat).join("");
-    const graph = document.getElementById("graph");
-    if (!related.size) { graph.innerHTML = `<p class="empty">${L("ยังไม่มีข้อมูลความสัมพันธ์", "No relationships recorded yet")}</p>`; return; }
+    D.articles.forEach((raw) => {
+      const a = art(raw);
+      add({ id: "a:" + a.id, kind: "article", article: a, label: a.title });
+      add({ id: "t:" + a.category, kind: "topic", topic: a.category, label: lbl(CATEGORIES[a.category]) });
+      link("a:" + a.id, "t:" + a.category, "topic");
+      a.relatedCats.forEach((k) => { if (D.byId[k]) link("a:" + a.id, "c:" + k, "about"); });
+    });
+    return { nodes, edges };
+  }
+  const nodeHref = (n) => ({ cat: () => catHref(n.cat), place: () => `#/cats?area=${n.area}`, keeper: () => "#/ask", article: () => `#/article/${enc(n.article.id)}`, topic: () => `#/knowledge/${n.topic}` }[n.kind]());
+  const nodeKind = (n) => ({ cat: L("แมว", "Cat"), place: L("ที่อยู่", "Place"), keeper: L("ผู้ดูแล", "Keeper"), article: L("บทความ", "Article"), topic: L("หมวดความรู้", "Topic") }[n.kind]);
+  const nodeOpen = (n) => ({ cat: L("เปิดหน้าแมว", "Open the cat's page"), place: L("ดูแมวที่อยู่ที่นี่", "See the cats here"), keeper: L("ถามใครดี", "Who to ask"), article: L("อ่านบทความ", "Read the article"), topic: L("เปิดหมวดนี้", "Open this topic") }[n.kind]);
+  // one connection, read from one end: "แม่ของตีตี้", "ไม่ค่อยถูกกับชาบู", "อยู่ที่ BRK"
+  function edgeText(e, fromSelf) {
+    const K = EDGE_KINDS();
+    if (e.kind === "mother") return fromSelf ? L("แม่ของ", "Mother of") : L("ลูกของ", "Kitten of");
+    if (e.kind === "about") return fromSelf ? L("พูดถึง", "About") : L("มีในบทความ", "In the article");
+    if (e.kind === "topic") return fromSelf ? L("อยู่ในหมวด", "In the topic") : L("มีบทความ", "Has the article");
+    if (e.kind === "keeper") return fromSelf ? L("ดูแล", "Looks after") : L("ดูแลโดย", "Looked after by");
+    if (e.kind === "place") return fromSelf ? L("อยู่ที่", "Lives at") : L("มีแมว", "Home to");
+    return K[e.kind].t;
+  }
+
+  function renderGraph(focusId) {
+    const tok = renderToken;
+    const G = buildGraph(), K = EDGE_KINDS(), byId = {};
+    G.nodes.forEach((n) => { byId[n.id] = n; });
+    const on = new Set(store.get("akc-kg-groups", KG_GROUPS().map(([g]) => g)));
+    const count = (k) => G.nodes.filter((n) => n.kind === k).length;
+    const neighbours = (id) => G.edges.filter((e) => e.from === id || e.to === id).map((e) => ({ e, other: byId[e.from === id ? e.to : e.from], self: e.from === id }));
+    const hint = `<p class="muted">${L("แตะแมว ที่อยู่ ผู้ดูแล หรือบทความในผัง เพื่อดูว่าเชื่อมกับอะไรบ้าง", "Tap a cat, place, keeper or article in the map to see what it connects to.")}</p>
+      <ul class="kg-legend">${Object.keys(K).map((k) => `<li><i class="kg-line kg-${k}"></i>${K[k].t}</li>`).join("")}</ul>
+      <p class="muted small">${L("วงชมพูหนา = แมวประจำคณะ · สีจาง = จากไปแล้ว", "Thick pink ring = faculty cat · faded = passed away")}</p>`;
+    function panel(id) {
+      const n = byId[id];
+      if (!n) return hint;
+      const rows = {};
+      neighbours(id).forEach(({ e, other, self }) => { const t = edgeText(e, self); (rows[t] = rows[t] || []).push(other); });
+      const c = n.cat;
+      return `<div class="kg-head">${c ? `<a class="kg-pic" href="${catHref(c)}">${portrait(c)}</a>` : ""}<div><small>${nodeKind(n)}</small><h2>${c ? nmHtml(c) : esc(n.label)}</h2>${c ? `<div class="cat-meta">${statusDot(c)}</div>` : ""}</div></div>
+        ${n.kind === "article" && n.article.summary ? `<p>${esc(n.article.summary)}</p>` : ""}
+        ${Object.keys(rows).length ? `<dl class="kg-rels">${Object.keys(rows).map((t) => `<div><dt>${t}</dt><dd>${rows[t].map((o) => `<button type="button" class="linkbtn" data-node="${esc(o.id)}">${esc(o.label)}</button>`).join(", ")}</dd></div>`).join("")}</dl>` : `<p class="muted">${L("ยังไม่มีความสัมพันธ์ที่บันทึกไว้", "No connections recorded yet")}</p>`}
+        <p><a class="btn small" href="${nodeHref(n)}">${nodeOpen(n)} →</a></p>
+        ${c ? `<p class="muted small">${L(`รู้ว่า${esc(c.name)}สนิทหรือไม่ถูกกับตัวไหน?`, `Know who ${esc(nm(c))} gets on with?`)} <a href="${shareHref("story", c)}">${L("บอกทีม", "Tell the team")}</a></p>` : ""}`;
+    }
+    const list = Object.keys(K).map((k) => {
+      const es = G.edges.filter((e) => e.kind === k);
+      return es.length ? `<div><h3>${K[k].t} <span class="muted">(${es.length})</span></h3><ul>${es.map((e) => `<li><a href="${nodeHref(byId[e.from])}">${esc(byId[e.from].label)}</a> ${e.kind === "mother" || e.kind === "keeper" || e.kind === "place" || e.kind === "about" || e.kind === "topic" ? "→" : "↔"} <a href="${nodeHref(byId[e.to])}">${esc(byId[e.to].label)}</a></li>`).join("")}</ul></div>` : "";
+    }).join("");
+    app.innerHTML = `
+      ${pageHead(L("ผังความรู้", "Knowledge map"), L("แมวทุกตัวในคณะ เชื่อมกับครอบครัว เพื่อน ที่อยู่ ผู้ดูแล และบทความที่พูดถึง ทุกเส้นดึงมาจากชีตของทีมและคลังความรู้ แตะจุดไหนก็ได้เพื่อดูรายละเอียด",
+        "Every cat at the faculty, linked to family, friends, places, keepers and the articles about them. Every link comes from the team's sheet and the library. Tap anything to see more."))}
+      <p class="kg-stats">${[[count("cat"), L("แมว", "cats")], [count("place"), L("ที่อยู่", "places")], [count("keeper"), L("ผู้ดูแล", "keepers")], [count("article"), L("บทความ", "articles")], [G.edges.length, L("ความสัมพันธ์", "links")]].map(([v, t]) => `<span><b>${v}</b> ${t}</span>`).join("")}</p>
+      <div class="chips kg-filters" role="group" aria-label="${L("แสดงความสัมพันธ์", "Show links")}">${KG_GROUPS().map(([g, t]) => `<button type="button" data-g="${g}" aria-pressed="${on.has(g)}"><i class="kg-sw kg-g-${g}" aria-hidden="true"></i>${t}</button>`).join("")}</div>
+      <div class="kg-wrap">
+        <div id="kg" class="kg" role="img" aria-label="${L("ผังความรู้ รายการแบบข้อความอยู่ใต้ผัง", "Knowledge map; a text list is below it")}"><p class="empty">${L("กำลังวาดผัง…", "Drawing the map…")}</p></div>
+        <aside class="kg-panel" id="kgPanel" aria-live="polite">${hint}</aside>
+      </div>
+      <details class="kg-list"><summary>${L("ดูทุกความสัมพันธ์เป็นรายการ", "See every link as a list")}</summary><div class="kg-cols">${list}</div></details>`;
+    const pnl = document.getElementById("kgPanel"), box = document.getElementById("kg");
+    let sel = focusId && byId["c:" + lower(focusId)] ? "c:" + lower(focusId) : "";
+    if (sel) pnl.innerHTML = panel(sel);
     loadScript(VIS_JS).then(() => {
-      if (tok !== renderToken || !document.getElementById("graph")) return; // the visitor has moved on
-      graph.innerHTML = "";
-      const ink = cssVar("--ink") || "#16181d", pink = cssVar("--pink") || "#e2447a", muted = cssVar("--muted") || "#6b7079";
-      const nodes = D.cats.filter((c) => related.has(c.id)).map((c) => {
-        const fill = (DRAW[c.coat] || DRAW.unknown)[0];
-        const base = { id: c.id, label: nm(c), font: { color: ink, face: "Google Sans, sans-serif", size: 16 }, borderWidth: 3, color: { border: ink, background: fill, highlight: { border: pink, background: fill } } };
-        return c.photo ? Object.assign(base, { shape: "circularImage", image: c.photoThumb || c.photo, size: 30 }) : Object.assign(base, { shape: "dot", size: 20 });
-      });
-      const edges = D.cats.filter((c) => c.mother && D.byId[c.mother]).map((c) => ({ from: c.mother, to: c.id, arrows: "to" }));
-      const seen = new Set();
-      D.cats.forEach((c) => (c.siblings || []).forEach((o) => {
-        const k = [c.id, o].sort().join("|");
-        if (D.byId[o] && !seen.has(k)) { seen.add(k); edges.push({ from: c.id, to: o, dashes: true, color: pink }); }
-      }));
+      if (tok !== renderToken || !document.getElementById("kg")) return;
+      box.innerHTML = "";
+      const v = (n, d) => cssVar(n) || d;
+      const ink = v("--ink", "#16181d"), ink2 = v("--ink-2", "#3d4048"), muted = v("--muted", "#6a6e76"), line = v("--line-strong", "#c9ccd2"), surf = v("--bg", "#fff"),
+        pink = v("--pink", "#e2447a"), ok = v("--ok", "#2f9e6a"), bad = v("--bad", "#d64545"), violet = v("--violet", "#7a6ae0"), soft = v("--pink-soft", "#fde8ef");
+      const font = (size, color) => ({ face: "Google Sans, Noto Sans Thai, sans-serif", size, color, strokeWidth: 3, strokeColor: surf });
+      const nodeStyle = (n) => {
+        if (n.kind === "cat") {
+          const c = n.cat, fill = (DRAW[c.coat] || DRAW.unknown)[0], img = c.photoThumb || c.photo;
+          return Object.assign({ size: c.resident ? 30 : 23, borderWidth: c.resident ? 5 : 2, opacity: c.status === "passed" ? 0.4 : 1, font: font(15, ink),
+            color: { border: c.resident ? pink : ink, background: fill, highlight: { border: pink, background: fill } } }, img ? { shape: "circularImage", image: img } : { shape: "dot" });
+        }
+        if (n.kind === "place") return { shape: "box", margin: 10, shapeProperties: { borderRadius: 10 }, color: { background: surf, border: line, highlight: { background: surf, border: pink } }, font: font(14, ink) };
+        if (n.kind === "keeper") return { shape: "diamond", size: 14, color: { background: violet, border: violet, highlight: { background: violet, border: pink } }, font: font(13, ink2) };
+        if (n.kind === "topic") return { shape: "ellipse", margin: 8, color: { background: soft, border: pink, highlight: { background: soft, border: ink } }, font: font(13, ink) };
+        return { shape: "box", margin: 7, widthConstraint: { maximum: 150 }, shapeProperties: { borderRadius: 6 }, color: { background: surf, border: line, highlight: { background: surf, border: pink } }, font: font(11.5, ink2) };
+      };
+      const edgeStyle = (k) => ({
+        mother: { arrows: { to: { enabled: true, scaleFactor: 0.6 } }, color: ink, width: 2.5 }, sibling: { dashes: [7, 5], color: pink, width: 2.5 },
+        friend: { color: ok, width: 3.5 }, rival: { dashes: [4, 5], color: bad, width: 2.5 }, place: { color: line, width: 1 },
+        keeper: { color: violet, width: 1.5 }, about: { color: muted, width: 1, dashes: [2, 4] }, topic: { color: line, width: 1 }
+      }[k]);
+      const hiddenNode = (n) => !!NODE_GROUP[n.kind] && !on.has(NODE_GROUP[n.kind]);
+      const nodes = new vis.DataSet(G.nodes.map((n) => Object.assign({ id: n.id, label: n.label, hidden: hiddenNode(n) }, nodeStyle(n))));
+      const edges = new vis.DataSet(G.edges.map((e) => Object.assign({ id: e.id, from: e.from, to: e.to, hidden: !on.has(K[e.kind].g), smooth: false }, edgeStyle(e.kind))));
       if (network) { network.destroy(); network = null; }
-      const hasTree = edges.some((e) => e.arrows);
-      network = new vis.Network(graph, { nodes: new vis.DataSet(nodes), edges: new vis.DataSet(edges) }, hasTree ? {
-        layout: { hierarchical: { enabled: true, direction: "UD", sortMethod: "directed", levelSeparation: 110, nodeSpacing: 120 } },
-        physics: false, edges: { color: muted, smooth: { type: "cubicBezier", forceDirection: "vertical" } }, interaction: { hover: true }
-      } : {
-        layout: { randomSeed: 7 },
-        physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -180, springLength: 110, avoidOverlap: 1 }, stabilization: { iterations: 400 } },
-        edges: { width: 2, smooth: false }, interaction: { hover: true }
+      network = new vis.Network(box, { nodes, edges }, {
+        layout: { randomSeed: 11, improvedLayout: true },
+        physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, centralGravity: 0.035, springLength: 95, springConstant: 0.08, avoidOverlap: 0.7 }, stabilization: { iterations: 600 } },
+        interaction: { hover: true, tooltipDelay: 200, navigationButtons: false, keyboard: false }
       });
-      network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); });
-      network.on("click", (p) => { if (p.nodes && p.nodes.length) location.hash = `#/cat/${enc(p.nodes[0])}`; });
-      const f = lower(focusId);
-      if (f && D.byId[f]) network.once("afterDrawing", () => { network.selectNodes([f]); network.focus(f, { scale: 1.3, animation: { duration: 400 } }); });
-    }).catch(() => { if (tok === renderToken) graph.innerHTML = `<p class="empty">${L("โหลดผังไม่ได้ (ต้องต่ออินเทอร์เน็ต)", "Couldn't load the diagram (needs an internet connection)")}</p>`; });
+      const pick = (id, zoom) => {
+        sel = id; pnl.innerHTML = panel(id);
+        if (!id) { network.unselectAll(); return; }
+        network.selectNodes([id]);
+        if (zoom) network.focus(id, { scale: 1.15, animation: { duration: 350 } });
+      };
+      // fit everything, but never so small that the names can't be read (the list under the map has every link)
+      network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); const min = innerWidth < 700 ? 0.6 : 0.72; if (network.getScale() < min) network.moveTo({ scale: min }); if (sel) pick(sel, true); });
+      network.on("click", (p) => pick(p.nodes && p.nodes[0] ? p.nodes[0] : "", false));
+      network.on("doubleClick", (p) => { if (p.nodes && p.nodes[0]) location.hash = nodeHref(byId[p.nodes[0]]); });
+      pnl.addEventListener("click", (e) => { const b = e.target.closest("[data-node]"); if (b) { const n = byId[b.dataset.node]; if (n && NODE_GROUP[n.kind] && !on.has(NODE_GROUP[n.kind])) return; pick(b.dataset.node, true); } });
+      app.querySelectorAll(".kg-filters button").forEach((b) => b.addEventListener("click", () => {
+        const g = b.dataset.g, show = !on.has(g);
+        if (show) on.add(g); else on.delete(g);
+        store.set("akc-kg-groups", [...on]);
+        b.setAttribute("aria-pressed", String(show));
+        nodes.update(G.nodes.filter((n) => NODE_GROUP[n.kind] === g).map((n) => ({ id: n.id, hidden: !show })));
+        edges.update(G.edges.filter((e) => K[e.kind].g === g).map((e) => ({ id: e.id, hidden: !show })));
+      }));
+    }).catch(() => { if (tok === renderToken) box.innerHTML = `<p class="empty">${L("โหลดผังไม่ได้ (ต้องต่ออินเทอร์เน็ต) ดูรายการด้านล่างแทนได้", "Couldn't load the map (needs an internet connection). The list below has the same links.")}</p>`; });
   }
 
   /* ---------------- QR sheet ---------------- */
@@ -1369,7 +1623,8 @@
   }
 
   /* ---------------- router ---------------- */
-  const NAV_OF = { "": "home", cats: "cats", cat: "cats", family: "cats", find: "find", start: "start", knowledge: "knowledge", article: "knowledge", ask: "knowledge", quiz: "start", handover: "about", share: "share", report: "share", help: "help", about: "about", qr: "about" };
+  // the nav is the four steps of the journey (STAGE_OF); the sick-cat pill is its own item
+  const NAV_OF = Object.assign({ "": "home", about: "about", qr: "about" }, STAGE_OF, { help: "help" });
   function route(evt) {
     const keep = evt && evt.keepScroll;
     renderToken++;
@@ -1388,7 +1643,7 @@
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
-    if (page !== "family" && network) { network.destroy(); network = null; }
+    if (page !== "graph" && page !== "family" && network) { network.destroy(); network = null; }
     if (page !== "search" && document.activeElement !== searchInput) searchInput.value = "";
     switch (page) {
       case "": renderHome(); break;
@@ -1396,7 +1651,8 @@
       case "find": renderFind(q); break;
       case "start": renderStart(); break;
       case "cat": renderCat(arg); break;
-      case "family": renderFamily(arg); break;
+      case "graph": case "family": renderGraph(arg); break;
+      case "live": renderLive(); break;
       case "knowledge": renderKnowledge(arg); break;
       case "article": renderArticle(arg); break;
       case "search": renderSearch(arg); break;
@@ -1410,6 +1666,7 @@
       case "qr": renderQR(); break;
       default: app.innerHTML = `<div class="empty">${cat("peek")}<h1>${L("ไม่เจอหน้านี้", "Page not found")}</h1><p><a href="#/">${L("กลับหน้าแรก", "Back to home")}</a></p></div>`;
     }
+    if (NEXT_ON.includes(page) && STAGE_OF[page]) app.insertAdjacentHTML("beforeend", nextCard(STAGE_OF[page]));
     if (keep) return;
     if (page !== "search") { window.scrollTo(0, 0); if (route.navigated) app.focus({ preventScroll: true }); }
     route.navigated = true;
@@ -1483,6 +1740,7 @@
       if (!/^#\/share/.test(location.hash) && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA") { const y = window.scrollY; route({ keepScroll: true }); window.scrollTo(0, y); }
     });
     chrome();
+    loadFeed();
     window.addEventListener("hashchange", route);
     I.on(() => { chrome(); const y = window.scrollY; route({ keepScroll: true }); window.scrollTo(0, y); });
     route();

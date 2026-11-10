@@ -18,9 +18,9 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&family=Mali:wght@400;500&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&family=Mali:wght@400;500&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&family=Mali:wght@400;500&display=swap"></noscript>
-  <link rel="stylesheet" href="tokens.css?v=20261112e">
-  <link rel="stylesheet" href="style.css?v=20261112e">
-  <link rel="stylesheet" href="menu.css?v=20261112e">
+  <link rel="stylesheet" href="tokens.css?v=20261112f">
+  <link rel="stylesheet" href="style.css?v=20261112f">
+  <link rel="stylesheet" href="menu.css?v=20261112f">
 </head>
 <body>
   <a class="skip" href="#app" data-en="Skip to content">ข้ามไปเนื้อหา</a>
@@ -64,16 +64,15 @@
 
   <header class="top">
     <div class="top-row wrap">
-      <a class="brand" href="index.html">
+      <a class="brand" href="#/">
         <svg class="brand-mark" aria-hidden="true"><use href="#nd-head"/></svg>
         <span class="brand-txt" data-en="Aksorn Cats">แมวอักษร</span>
       </a>
-      <nav class="nav" id="nav" aria-label="เมนูหลัก" data-en-aria-label="Main menu">
-        <a href="#/cats" data-page="cats" data-en="Cats">แมวทั้งหมด</a>
-        <a href="#/find" data-page="find" data-en="Find a cat">หาแมว</a>
-        <a href="#/start" data-page="start" data-en="Start here">มือใหม่เริ่มที่นี่</a>
-        <a href="#/knowledge" data-page="knowledge" data-en="Knowledge">คลังความรู้</a>
-        <a href="#/share" data-page="share" data-en="Tell the team">เล่าให้ทีมฟัง</a>
+      <nav class="nav" id="nav" aria-label="เมนูหลัก: 4 ขั้น" data-en-aria-label="Main menu: four steps">
+        <a href="#/cats" data-page="know"><span class="nav-n" aria-hidden="true">1</span><span data-en="Meet the cats">รู้จักแมว</span></a>
+        <a href="#/knowledge" data-page="learn"><span class="nav-n" aria-hidden="true">2</span><span data-en="Learn">เรียนรู้</span></a>
+        <a href="#/start" data-page="care"><span class="nav-n" aria-hidden="true">3</span><span data-en="Help out">ลงมือดูแล</span></a>
+        <a href="#/live" data-page="share"><span class="nav-n" aria-hidden="true">4</span><span data-en="Pass it on">เล่าต่อ</span></a>
       </nav>
       <div class="top-tools">
         <form class="search" id="searchForm" role="search">
@@ -102,32 +101,33 @@
         <div><b data-en="Aksorn Cats">คลังความรู้แมวอักษร</b><p data-en="Everything about the cats of the Faculty of Arts, Chula, from the people who know them best.">เรื่องแมวในคณะอักษรศาสตร์ จุฬาฯ จากคนที่รู้จักแมวดีที่สุด</p></div>
       </div>
       <nav aria-label="ลิงก์ท้ายหน้า" data-en-aria-label="Footer links">
-        <a href="index.html" data-en="The faculty in 3D">ดูคณะแบบ 3D</a><a href="index.html#map" data-en="Cat map">แผนที่แมว</a><a href="#/ask" data-en="Who to ask">ถามใครดี</a><a href="#/about" data-en="About">เกี่ยวกับเว็บนี้</a><a href="#/handover" data-en="Handover guide">ส่งต่องาน</a><a href="#/qr" data-en="Print QR codes">พิมพ์ QR ประจำตัวแมว</a>
+        <a href="index.html" data-en="The faculty in 3D">ดูคณะแบบ 3D</a><a href="index.html#map" data-en="Cat map">แผนที่แมว</a><a href="#/graph" data-en="Knowledge map">ผังความรู้</a><a href="#/ask" data-en="Who to ask">ถามใครดี</a><a href="#/about" data-en="About">เกี่ยวกับเว็บนี้</a><a href="#/handover" data-en="Handover guide">ส่งต่องาน</a><a href="#/qr" data-en="Print QR codes">พิมพ์ QR ประจำตัวแมว</a>
       </nav>
       <p class="foot-meta" id="footMeta"></p>
     </div>
   </footer>
 
   <!-- phones: the main tasks within thumb reach, the rest in a menu sheet -->
-  <nav class="tabbar" aria-label="เมนูลัด" data-en-aria-label="Quick menu">
-    <a href="#/cats" data-page="cats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20c0-4 2.5-7 7-7s7 3 7 7"/><path d="M7.5 9.5 8 4l3 3h2l3-3 .5 5.5"/><circle cx="12" cy="10" r="4.2"/></svg><span data-en="Cats">แมว</span></a>
-    <a href="#/find" data-page="find"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></svg><span data-en="Find">หาแมว</span></a>
-    <a href="#/start" data-page="start"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span data-en="Start">เริ่มที่นี่</span></a>
+  <nav class="tabbar" aria-label="4 ขั้น" data-en-aria-label="Four steps">
+    <a href="#/cats" data-page="know"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20c0-4 2.5-7 7-7s7 3 7 7"/><path d="M7.5 9.5 8 4l3 3h2l3-3 .5 5.5"/><circle cx="12" cy="10" r="4.2"/></svg><span data-en="1 Meet">1 รู้จัก</span></a>
+    <a href="#/knowledge" data-page="learn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg><span data-en="2 Learn">2 เรียนรู้</span></a>
+    <a href="#/start" data-page="care"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg><span data-en="3 Help">3 ลงมือ</span></a>
+    <a href="#/live" data-page="share"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg><span data-en="4 Share">4 เล่าต่อ</span></a>
     <a href="#/help" data-page="help" class="urgent"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M12 9v5M9.5 11.5h5"/></svg><span data-en="Sick cat">แมวป่วย</span></a>
-    <a href="#/knowledge" data-page="knowledge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg><span data-en="Know-how">ความรู้</span></a>
   </nav>
   <!-- full-screen menu for tablets and phones (menu.css + menu.js), the same on every page -->
   <div class="site-menu" id="siteMenu" aria-hidden="true">
     <nav class="m-list" aria-label="ทุกหน้า" data-en-aria-label="All pages">
-      <div class="m-group" data-key="home" style="--i:0"><a class="m-parent" href="index.html" data-en="Home">หน้าแรก</a>
-        <div class="m-subs"><a href="index.html#map" data-en="Cat map (3D)">แผนที่แมว</a><a href="index.html#process" data-en="How we built it">5 ขั้นของโครงการ</a></div></div>
-      <div class="m-group" data-key="hub" style="--i:1"><a class="m-parent" href="cats.html#/" data-en="Overview">ภาพรวม</a>
-        <div class="m-subs"><a href="cats.html#/start" data-en="New here? Start here">มือใหม่เริ่มที่นี่</a></div></div>
-      <div class="m-group" data-key="knowledge" style="--i:2"><a class="m-parent" href="cats.html#/knowledge" data-en="Knowledge library">คลังความรู้</a>
-        <div class="m-subs"><a href="cats.html#/knowledge/experience" data-en="From the keepers">เรื่องเล่าจากผู้ดูแล</a><a href="cats.html#/knowledge/health" data-en="Health">สุขภาพแมว</a><a href="cats.html#/knowledge/feeding" data-en="Feeding">อาหาร</a><a href="cats.html#/ask" data-en="Who to ask">ถามใครดี</a></div></div>
-      <div class="m-group" data-key="cats" style="--i:3"><a class="m-parent" href="cats.html#/cats" data-en="All cats">แมวทั้งหมด</a>
-        <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a></div></div>
-      <div class="m-group" data-key="share" style="--i:4"><a class="m-parent" href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a></div>
+      <div class="m-group" data-key="hub" style="--i:0"><a class="m-parent" href="cats.html#/" data-en="Home: the four steps">หน้าแรก: 4 ขั้นของมือใหม่</a>
+        <div class="m-subs"><a href="index.html" data-en="The faculty in 3D">ดูคณะแบบ 3D</a><a href="index.html#map" data-en="Cat map">แผนที่แมว</a></div></div>
+      <div class="m-group" data-key="know" style="--i:1"><a class="m-parent" href="cats.html#/cats" data-en="1 · Meet the cats">1 · รู้จักแมว</a>
+        <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a><a href="cats.html#/quiz" data-en="Cat quiz">ทายแมว</a><a href="cats.html#/graph" data-en="Knowledge map">ผังความรู้</a></div></div>
+      <div class="m-group" data-key="learn" style="--i:2"><a class="m-parent" href="cats.html#/knowledge" data-en="2 · Learn">2 · เรียนรู้</a>
+        <div class="m-subs"><a href="cats.html#/knowledge/experience" data-en="From the keepers">เรื่องเล่าจากผู้ดูแล</a><a href="cats.html#/knowledge/health" data-en="Health">สุขภาพแมว</a><a href="cats.html#/knowledge/feeding" data-en="Feeding">อาหาร</a></div></div>
+      <div class="m-group" data-key="care" style="--i:3"><a class="m-parent" href="cats.html#/start" data-en="3 · Help out">3 · ลงมือดูแล</a>
+        <div class="m-subs"><a href="cats.html#/ask" data-en="Who to ask">ถามใครดี</a><a href="cats.html#/help" data-en="If a cat is sick">ถ้าแมวป่วย</a></div></div>
+      <div class="m-group" data-key="share" style="--i:4"><a class="m-parent" href="cats.html#/live" data-en="4 · Pass it on">4 · เล่าต่อ</a>
+        <div class="m-subs"><a href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a><a href="cats.html#/handover" data-en="Handover guide">ส่งต่องาน</a></div></div>
       <div class="m-group" data-key="help" style="--i:5"><a class="m-parent urgent" href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a></div>
       <div class="m-group" data-key="about" style="--i:6"><a class="m-parent" href="cats.html#/about" data-en="About">เกี่ยวกับเว็บนี้</a>
         <div class="m-subs"><a href="cats.html#/qr" data-en="Print cat QR codes">พิมพ์ QR ประจำตัวแมว</a></div></div>
@@ -141,14 +141,14 @@
     </div>
   </div>
 
-  <script src="content-en.js?v=20261112e"></script>
-  <script src="i18n.js?v=20261112e"></script>
-  <script defer src="menu.js?v=20261112e"></script>
+  <script src="content-en.js?v=20261112f"></script>
+  <script src="i18n.js?v=20261112f"></script>
+  <script defer src="menu.js?v=20261112f"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script defer src="config.js?v=20261112e"></script>
-  <script defer src="data-sample.js?v=20261112e"></script>
-  <script defer src="photos/manifest.js?v=20261112e"></script>
-  <script defer src="data.js?v=20261112e"></script>
-  <script defer src="app.js?v=20261112e"></script>
+  <script defer src="config.js?v=20261112f"></script>
+  <script defer src="data-sample.js?v=20261112f"></script>
+  <script defer src="photos/manifest.js?v=20261112f"></script>
+  <script defer src="data.js?v=20261112f"></script>
+  <script defer src="app.js?v=20261112f"></script>
 </body>
 </html>

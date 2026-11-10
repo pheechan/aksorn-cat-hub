@@ -23,6 +23,12 @@
  *
  * ทุกเรื่องเข้าแท็บ "Submissions" สถานะเริ่มต้น "รอตรวจ"
  * ผู้ดูแลเนื้อหาตรวจแล้วค่อยคัดลอกไปใส่ชีตข้อมูลจริง และเปลี่ยนสถานะเป็น "เผยแพร่แล้ว" หรือ "ไม่เผยแพร่"
+ *
+ * ฟีด "ล่าสุดในคณะ" บนเว็บ (URL เดิม + ?feed=1) อ่านจากชีตนี้ แต่เปิดเผยแค่:
+ *  - การกด "เห็นแมววันนี้": ชื่อแมวกับเวลาเท่านั้น (ไม่มีข้อความ ชื่อผู้ส่ง หรือช่องทางติดต่อ)
+ *  - จำนวนเรื่องแต่ละประเภทใน 30 วัน
+ *  - เรื่องที่ผู้ดูแลเนื้อหาเปลี่ยนสถานะเป็น "เผยแพร่แล้ว": ข้อความ และชื่อผู้ส่งเฉพาะคนที่อนุญาตให้เผยแพร่
+ *  แถวที่สถานะ "ไม่เผยแพร่" จะไม่ขึ้นฟีดเลย
  */
 const TAB = "Submissions";
 const TITLE = "คลังความรู้แมวอักษร · เรื่องที่ส่งเข้ามา (รอตรวจ)";
@@ -55,12 +61,41 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+  CacheService.getScriptCache().remove("feed-v1"); // the next feed read includes this row
   return reply({ ok: true });
 }
 
-// เปิด URL ในเบราว์เซอร์เพื่อทดสอบว่าทำงาน
-function doGet() {
+// เปิด URL ในเบราว์เซอร์เพื่อทดสอบว่าทำงาน · ?feed=1 = ฟีดล่าสุดในคณะสำหรับหน้าเว็บ
+function doGet(e) {
+  if (e && e.parameter && e.parameter.feed) return reply(feed());
   return reply({ ok: true, service: "aksorn-cat-hub submissions" });
+}
+
+const FEED_DAYS = 30;
+function feed() {
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get("feed-v1");
+  if (hit) return JSON.parse(hit);
+  const sheet = getSheet();
+  const last = sheet.getLastRow();
+  const first = Math.max(2, last - 799);
+  const rows = last >= 2 ? sheet.getRange(first, 1, last - first + 1, HEADERS.length).getValues() : [];
+  const since = Date.now() - FEED_DAYS * 864e5;
+  const out = { ok: true, at: new Date().toISOString(), days: FEED_DAYS, seen: [], posts: [], counts: {} };
+  rows.forEach((r) => {
+    const t = r[0] instanceof Date ? r[0] : new Date(r[0]);
+    if (isNaN(t.getTime())) return;
+    const type = String(r[1] || "").slice(0, 40), cat = String(r[2] || "").slice(0, 40), status = String(r[10] || "");
+    if (/^ไม่เผยแพร่|สแปม/.test(status)) return;
+    const recent = t.getTime() >= since;
+    if (recent) out.counts[type] = (out.counts[type] || 0) + 1;
+    if (recent && cat && /เห็นแมว/.test(type)) out.seen.push({ t: t.toISOString(), cat: cat });
+    if (/^เผยแพร่/.test(status)) out.posts.push({ t: t.toISOString(), type: type, cat: cat, text: String(r[3] || "").slice(0, 500), by: r[8] === "อนุญาต" ? String(r[6] || "").slice(0, 60) : "" });
+  });
+  out.seen = out.seen.slice(-80).reverse();
+  out.posts = out.posts.slice(-20).reverse();
+  cache.put("feed-v1", JSON.stringify(out), 90);
+  return out;
 }
 
 // เรียกครั้งแรกจากหน้า Apps Script เพื่ออนุญาตสิทธิ์และสร้างชีต

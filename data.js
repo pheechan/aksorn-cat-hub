@@ -369,5 +369,5 @@ window.CatData = (function () {
     return d;
   }
 
-  return { STATUS, CATEGORIES, HISTORY_TYPES, HISTORY_EN, COATS, AREAS, norm, lower, esc, load };
+  return { STATUS, CATEGORIES, HISTORY_TYPES, HISTORY_EN, COATS, AREAS, norm, lower, esc, fold, load };
 })();

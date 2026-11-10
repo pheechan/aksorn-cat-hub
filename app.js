@@ -3,7 +3,7 @@
    start caring step by step (SECI internalization/socialization), and share what you know with review (2.4.1).
    Thai and English: every UI string goes through L("ไทย", "English"); sheet text goes through T() (see i18n.js).
    Routes: #/  #/cats?coat=&area=&status=&touch=  #/find?coat=&area=  #/start  #/cat/:id  #/family[/:id]
-           #/knowledge[/:category]  #/article/:id  #/search/:q  #/share?type=&cat=&ctx=  #/help  #/about  #/qr */
+           #/knowledge[/:category]  #/article/:id  #/search/:q  #/share?type=&cat=&ctx=  #/help  #/ask  #/quiz  #/handover  #/about  #/qr */
 (function () {
   "use strict";
 
@@ -80,6 +80,29 @@
   const looksLikeDate = (v) => /^\d{4}-\d{2}-\d{2}/.test(v) || /^\d{1,2}\s*[/.-]\s*\d{1,2}([/.-]\d{2,4})?$/.test(v);
   const daysAgo = (iso) => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 864e5));
   const lastSighting = (c) => { const h = D.history.find((x) => x.cat === c.id && x.type === "sighting"); return h ? h.date : ""; };
+
+  // freshness: when the data was last checked, and whether that was too long ago (REVIEW_EVERY_DAYS in config.js).
+  // A site nobody looks after should say so, not quietly show old facts as current.
+  const REVIEW_DAYS = +CFG.REVIEW_EVERY_DAYS || 120, UNSEEN_DAYS = +CFG.NOT_SEEN_DAYS || 60;
+  const isoDate = (v) => { const m = norm(v).match(/^\d{4}-\d{2}-\d{2}/); return m ? m[0] : ""; };
+  const checkedOn = (c) => isoDate(c && c.checked) || isoDate(CFG.DATA_CHECKED);
+  const stale = (iso) => !!iso && daysAgo(iso) > REVIEW_DAYS;
+  const reviewState = (a) => (!a.reviewedBy ? "pending" : stale(isoDate(a.reviewedOn)) ? "due" : "ok");
+
+  // keepers: until they agree to be named, a role and where to find them stand in for the name (KEEPER_ROLES in config.js)
+  const oneSpace = (v) => norm(v).replace(/\s+/g, " ");
+  function keeperRole(text) {
+    const m = CFG.KEEPER_ROLES || {};
+    const k = Object.keys(m).find((x) => oneSpace(x) === oneSpace(text));
+    return k ? m[k] : null;
+  }
+  function keeperHtml(text) {
+    if (!text) return "";
+    const r = keeperRole(text);
+    const where = r && r.where ? `<small class="where">${L("หาได้ที่", "Find them at")} ${esc(en(r, "where"))}</small>` : "";
+    if (CFG.SHOW_KEEPER_NAMES) return T(text) + (r ? ` · ${esc(en(r, "role"))}` : "") + where;
+    return r ? esc(en(r, "role")) + where : L("มีผู้ดูแลหลัก ติดต่อผ่านทีม", "Has a main keeper; ask through the team");
+  }
 
   /* toast + quick posts (one-tap "seen today", article feedback) */
   function toast(html) {
@@ -240,7 +263,7 @@
     return `<li><a class="article-row" href="#/article/${enc(a.id)}">
       <span class="a-cat">${lbl(CATEGORIES[a.category])}</span>
       <div${langAttr(a)}><h3>${highlight(a.title, terms)}</h3>${a.summary ? `<p>${highlight(a.summary, terms)}</p>` : ""}
-      <span class="a-meta">${[esc(a.source || a.author), a.date ? fmtDate(a.date) : "", a.reviewedBy ? L("ตรวจทานโดย ", "Reviewed by ") + esc(a.reviewedBy) : ""].filter(Boolean).join(" · ")}</span></div>
+      <span class="a-meta">${[esc(a.source || a.author), a.date ? fmtDate(a.date) : "", a.reviewedBy ? L("ตรวจทานโดย ", "Reviewed by ") + esc(a.reviewedBy) + (isoDate(a.reviewedOn) ? L(" เมื่อ ", " on ") + fmtDate(a.reviewedOn) : "") : ""].filter(Boolean).join(" · ")}</span></div>
     </a></li>`;
   }
 
@@ -296,7 +319,7 @@
       <span class="a-top"><span class="a-ico">${ICON[a.category] || ICON.book}</span>${lbl(CATEGORIES[a.category])}</span>
       <h3${langAttr(a)}>${highlight(a.title, terms)}</h3>
       ${a.summary ? `<p${langAttr(a)}>${highlight(a.summary, terms)}</p>` : ""}
-      <span class="a-meta">${meta}${a.reviewedBy ? `<span class="a-ok">${CHECK}${L("ตรวจทานแล้ว", "Reviewed")}</span>` : `<span class="a-pending">${L("รอผู้ดูแลตรวจทาน", "Awaiting a keeper's review")}</span>`}</span>
+      <span class="a-meta">${meta}${{ ok: `<span class="a-ok">${CHECK}${L("ตรวจทานแล้ว", "Reviewed")}</span>`, due: `<span class="a-pending">${L("ถึงเวลาตรวจทานอีกรอบ", "Due for a re-check")}</span>`, pending: `<span class="a-pending">${L("รอผู้ดูแลตรวจทาน", "Awaiting a keeper's review")}</span>` }[reviewState(a)]}</span>
     </a></li>`;
   }
   function topicCards() {
@@ -321,7 +344,7 @@
             `The faculty has ${nHome} cats of its own, and ${nOther} more turn up now and then. Start with the faculty cats in the building where you study and try to learn three. Tap “I know … now” on a cat's page to keep count.`)
           : L(`ตอนนี้เจอแมวในคณะ ${nOther} ตัว เริ่มจากตัวที่อยู่ตึกที่คุณเรียน ลองจำให้ได้สัก 3 ตัว แล้วกด “จำได้แล้ว” ในหน้าแมวแต่ละตัว`,
             `${nOther} cats are around the faculty now. Start with the ones in the building where you study and try to learn three. Tap “I know … now” on a cat's page to keep count.`),
-        links: [nHome ? [L("ดูแมวประจำคณะ", "See the faculty cats"), "#/cats?status=resident"] : [L("ดูแมวที่อยู่ในคณะ", "See the cats at the faculty"), "#/cats?status=active"], [L("ผู้ดูแลจำแมวได้ยังไง", "How keepers tell cats apart"), "#/article/a09"]] },
+        links: [nHome ? [L("ดูแมวประจำคณะ", "See the faculty cats"), "#/cats?status=resident"] : [L("ดูแมวที่อยู่ในคณะ", "See the cats at the faculty"), "#/cats?status=active"], [L("ลองทายแมวจากรูป", "Try the cat quiz"), "#/quiz"], [L("ผู้ดูแลจำแมวได้ยังไง", "How keepers tell cats apart"), "#/article/a09"]] },
       { id: "touch", seci: "Internalization", title: L("รู้ว่าตัวไหนจับได้ ตัวไหนไม่ควรจับ", "Know which cats you can approach, and which not to touch"),
         text: [
           noTouch.length ? L(`${noTouch.join(", ")}ไม่ชอบให้จับ`, `${noTouch.join(", ")} ${noTouch.length > 1 ? "don't" : "doesn't"} like being touched.`) : "",
@@ -369,6 +392,7 @@
         ["#/help", L("แมวดูไม่สบาย ทำยังไงดี", "It looks unwell: what now?")]] },
       { ico: ICON.start, t: L("อยากช่วยดูแลแมว", "I want to help look after them"), d: L("ผู้ดูแลมือใหม่ และนิสิตที่จะมาช่วยรุ่นต่อไป", "New keepers and next year's student helpers"), links: [
         ["#/start", nDone ? L(`5 เรื่องก่อนไปดูแลแมว (ทำไปแล้ว ${nDone}/5)`, `Five things before you start (${nDone}/5 done)`) : L("5 เรื่องก่อนไปดูแลแมว", "Five things before you start")],
+        ["#/quiz", L("ทายแมวจากรูป จำได้กี่ตัวแล้ว", "Cat quiz: how many do you know?")],
         hasA("a01") && ["#/article/a01", L("ให้อาหารยังไงให้พอดี", "Feeding without overfeeding")],
         hasA("a09") && ["#/article/a09", L("ผู้ดูแลจำแมวแต่ละตัวยังไง", "How keepers tell them apart")]] },
       { ico: ICON.cats, t: L("อยากรู้จักแมวในคณะ", "I'm curious about the cats"), d: L("ใครก็ได้ที่อยากรู้ว่ามีแมวตัวไหนบ้าง", "For anyone who wants to meet them"), links: [
@@ -602,6 +626,11 @@
     const lastSeen = seenISO ? L(`มีคนเห็นล่าสุด ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " วันก่อน" : "วันนี้"})`, `Last seen ${fmtDate(seenISO)} (${daysAgo(seenISO) ? daysAgo(seenISO) + " days ago" : "today"})`)
       : sheetDate ? L("เห็นล่าสุด ", "Last seen ") + (/^\d{4}-/.test(sheetDate) ? fmtDate(sheetDate) : esc(sheetDate)) : "";
     if (c.lastSeen && !sheetDate) notes.unshift(c.lastSeen);
+    const chk = checkedOn(c), seenAny = seenISO || isoDate(sheetDate);
+    const fresh = [
+      stale(chk) ? `${L(`ข้อมูลของ${esc(c.name)}ไม่ได้ตรวจมา ${daysAgo(chk)} วันแล้ว บางอย่างอาจเปลี่ยนไป ถ้าเห็นอะไรไม่ตรง`, `${name}'s details haven't been checked for ${daysAgo(chk)} days, so some may be out of date. If something's wrong,`)} <a href="${shareHref("fix", c)}">${L("แจ้งแก้ได้เลย", "report a fix")}</a>` : "",
+      c.status === "active" && seenAny && daysAgo(seenAny) > UNSEEN_DAYS ? L(`ในเว็บยังไม่มีใครบันทึกว่าเห็น${esc(c.name)}มา ${daysAgo(seenAny)} วันแล้ว ถ้าเห็น กดปุ่ม “เห็น${esc(c.name)}วันนี้” ให้หน่อย`, `Nobody has recorded seeing ${name} here for ${daysAgo(seenAny)} days. If you see ${name}, tap “Saw ${name} today”.`) : ""
+    ].filter(Boolean);
     app.innerHTML = `
       <nav class="crumbs" aria-label="${L("ตำแหน่ง", "Breadcrumb")}"><a href="${esc(backHref)}">← ${esc(backLabel)}</a>${inList && ids.length > 1 ? `<span class="crumb-pos">${pos + 1} / ${ids.length}</span>` : ""}</nav>
       <article class="profile">
@@ -620,6 +649,7 @@
             ${shareBtn()}
           </div>
 
+          ${fresh.map((t) => `<p class="fresh-note">${t}</p>`).join("")}
           <section class="normal-card" aria-labelledby="normalH">
             <h2 id="normalH">${L(`ปกติ${c.name}เป็นยังไง`, `What's normal for ${nm(c)}`)}</h2>
             <p class="muted">${L("รู้ว่าปกติเป็นแบบไหน จะได้สังเกตออกเวลามีอะไรผิดไป", "Knowing what's normal is how you notice when something changes.")}</p>
@@ -627,6 +657,7 @@
               ${c.about ? `<div><dt>${L("ควรรู้ไว้", "Good to know")}</dt><dd>${T(c.about)}</dd></div>` : ""}
               <div><dt>${L("อยู่แถวไหน", "Usually at")}</dt><dd>${c.locations.length ? expandBuildings(c.locations.map(T).join(", ")) : c.areas.length ? esc(c.areas.map((a) => lbl(AREAS[a])).join(", ")) : `<span class="muted">${L("ยังไม่มีข้อมูล", "Not recorded yet")}</span>`}${c.areas.filter((a) => AREAS[a] && AREAS[a].where).map((a) => `<small class="where">${esc(L(AREAS[a].where, AREAS[a].whereEn))}</small>`).join("")}${mapSpot(c) ? ` <a class="map-link" href="index.html#map-${mapSpot(c)}">${L("ดูบนแผนที่", "See on the map")}</a>` : ""}</dd></div>
               <div><dt>${L("เข้าหายังไง", "How to approach")}</dt><dd>${approachFor(c)}</dd></div>
+              ${c.caretakers ? `<div><dt>${L("ใครดูแล", "Looked after by")}</dt><dd>${keeperHtml(c.caretakers)}</dd></div>` : ""}
               ${c.health ? `<div><dt>${L("เรื่องสุขภาพ", "Health to watch")}</dt><dd>${healthText(c.health)}</dd></div>` : ""}
               ${c.marks ? `<div><dt>${L("จุดสังเกต", "How to spot")}</dt><dd>${T(c.marks)}</dd></div>` : ""}
               ${c.normal ? `<div><dt>${L("กิจวัตร", "Daily routine")}</dt><dd class="hand">${T(c.normal)}</dd></div>` : ""}
@@ -645,7 +676,7 @@
 
           ${rel.length ? `<section class="sec"><h2 class="label">${L(`อ่านเพิ่มเกี่ยวกับ${esc(c.name)}`, `Reading about ${name}`)}</h2><ul class="articles">${rel.map((a) => articleRow(a)).join("")}</ul></section>` : ""}
 
-          <p class="meta-line">${L("ข้อมูลจากชีตของทีม", "From the team's sheet")}${D.loadedAt ? L(" อัปเดต ", ", updated ") + fmtTime(D.loadedAt) : ""}${c.coatSource === "photo" ? L(" · สีขนดูจากรูปถ่าย", " · coat identified from photos") : ""}${c.source ? L(" · ที่มา: ", " · source: ") + esc(c.source) : ""} · ${L("ข้อมูลผิด?", "Something wrong?")} <a href="${shareHref("fix", c)}">${L("แจ้งแก้", "Report a fix")}</a></p>
+          <p class="meta-line">${L("ข้อมูลจากชีตของทีม", "From the team's sheet")}${D.loadedAt ? L(" อัปเดต ", ", updated ") + fmtTime(D.loadedAt) : ""}${chk ? L(" · ตรวจข้อมูลล่าสุด ", " · last checked ") + fmtDate(chk) : ""}${c.coatSource === "photo" ? L(" · สีขนดูจากรูปถ่าย", " · coat identified from photos") : ""}${c.source ? L(" · ที่มา: ", " · source: ") + esc(c.source) : ""} · ${L("ข้อมูลผิด?", "Something wrong?")} <a href="${shareHref("fix", c)}">${L("แจ้งแก้", "Report a fix")}</a></p>
         </div>
       </article>
       ${prev || next ? `<nav class="pager" aria-label="${L("แมวตัวอื่นในรายการ", "Other cats in this list")}">
@@ -803,7 +834,7 @@
           ${a.author ? `<span>${L("เรียบเรียงโดย", "Written up by")} <b>${esc(a.author)}</b></span>` : ""}
           ${a.source ? `<span>${L("ที่มา", "Source")} <b>${esc(a.source)}</b></span>` : ""}
           ${a.date ? `<span>${fmtDate(a.date)}</span>` : ""}
-          <span>${a.reviewedBy ? `${L("ตรวจทานโดย", "Reviewed by")} <b>${esc(a.reviewedBy)}</b>` : `<span class="a-pending">${L("รอผู้ดูแลตรวจทาน", "Awaiting a keeper's review")}</span>`}</span>
+          <span>${a.reviewedBy ? `${L("ตรวจทานโดย", "Reviewed by")} <b>${esc(a.reviewedBy)}</b>${isoDate(a.reviewedOn) ? L(" เมื่อ ", " on ") + fmtDate(a.reviewedOn) : ""}${reviewState(a) === "due" ? ` <span class="a-pending">${L("ตรวจครั้งล่าสุดนานแล้ว อาจต้องทบทวน", "Last checked a while ago")}</span>` : ""}` : `<span class="a-pending">${L("รอผู้ดูแลตรวจทาน", "Awaiting a keeper's review")}</span>`}</span>
         </div>
         <div class="prose"${langAttr(a)}>${renderBody(a.body)}</div>
         ${a.tags.length ? `<div class="tags">${a.tags.map((t) => `<a class="chip" href="#/search/${enc(t)}">${esc(t)}</a>`).join("")}</div>` : ""}
@@ -969,6 +1000,7 @@
   function renderHelp() {
     const tok = renderToken;
     const contacts = (CFG.EMERGENCY_CONTACTS || []).filter((c) => norm(c.value));
+    const kr = Object.values(CFG.KEEPER_ROLES || {}).find((r) => r && r.where);
     const step = (t, d) => `<li><div><b>${t}</b><span>${d}</span></div></li>`;
     app.innerHTML = `
       ${pageHead(L("เจอแมวป่วยหรือบาดเจ็บ", "You've found a sick or injured cat"), L("ทำตามนี้ก่อน แล้วค่อยติดต่อผู้ดูแลหรือสัตวแพทย์", "Do this first, then contact a keeper or a vet."))}
@@ -983,7 +1015,7 @@
         <aside class="help-side">
           <h2 class="label">${L("ติดต่อ", "Contacts")}</h2>
           ${contacts.map((c) => `<div class="contact-card"><b>${esc(en(c, "label"))}</b><p>${esc(en(c, "value"))}</p><p class="contact-links">${c.map ? `<a class="btn small" href="${esc(c.map)}" target="_blank" rel="noopener">${L("เปิดแผนที่", "Open map")}</a>` : ""}${c.href ? `<a href="${esc(c.href)}" target="_blank" rel="noopener">${L("ข้อมูลจากจุฬาฯ", "Chula's page")}</a>` : ""}</p></div>`).join("")}
-          <div class="contact-card muted-card"><b>${L("ผู้ดูแลแมวในคณะ", "The faculty's cat keepers")}</b><p>${L("ยังไม่มีเบอร์ที่ยืนยันแล้ว ระหว่างนี้แจ้งทีมผ่าน", "No confirmed number yet. For now, use the")} <a href="${shareHref("sick")}">${L("ฟอร์มแมวป่วย", "sick-cat form")}</a></p></div>
+          <div class="contact-card muted-card"><b>${L("ผู้ดูแลแมวในคณะ", "The faculty's cat keepers")}</b><p>${kr ? L(`ยังไม่มีเบอร์ที่ยืนยันแล้ว ระหว่างนี้ไปหาผู้ดูแลได้ที่${esc(kr.where)} (${esc(kr.role)}) หรือแจ้งทีมผ่าน`, `No confirmed number yet. For now, find a keeper at ${esc(en(kr, "where"))} (${esc(en(kr, "role")).replace(/^The /, "the ")}), or use the`) : L("ยังไม่มีเบอร์ที่ยืนยันแล้ว ระหว่างนี้แจ้งทีมผ่าน", "No confirmed number yet. For now, use the")} <a href="${shareHref("sick")}">${L("ฟอร์มแมวป่วย", "sick-cat form")}</a></p></div>
           <p class="muted small">${L("หน้านี้เป็นแนวทางเบื้องต้น ไม่ใช่การวินิจฉัยหรือรักษา ถ้าไม่แน่ใจ ปรึกษาสัตวแพทย์", "This page is basic guidance, not a diagnosis or treatment. If you're unsure, ask a vet.")}</p>
           <p><button type="button" class="btn ghost" id="posterBtn">${L("พิมพ์เป็นโปสเตอร์", "Print as a poster")}</button></p>
           <p class="more"><a href="#/article/a02">${L("สัญญาณว่าแมวอาจไม่สบาย", "Signs that a cat may be unwell")} →</a></p>
@@ -1010,13 +1042,13 @@
       [L("เรื่องเฉพาะของแมวแต่ละตัว", "Anything about one particular cat"), L("ผู้ดูแลหลักของตัวนั้น (ดูตารางด้านล่าง)", "That cat's main keeper (see below)"), "", ""]
     ];
     const here = D.cats.filter(SEEN_NOW).sort(byStatusThenName);
-    const who = (c) => (c.caretakers ? (names ? T(c.caretakers) : L("มีผู้ดูแลหลัก ติดต่อผ่านทีม", "Has a main keeper; ask through the team")) : `<span class="muted">${L("ยังไม่รู้ว่าใครดูแลประจำ", "Not known yet")}</span>`);
+    const who = (c) => (c.caretakers ? keeperHtml(c.caretakers) : `<span class="muted">${L("ยังไม่รู้ว่าใครดูแลประจำ", "Not known yet")}</span>`);
     app.innerHTML = `
       ${pageHead(L("ถามใครดี", "Who to ask"), L("ความรู้บางอย่างยังอยู่ในหัวคน ไม่ได้อยู่ในเว็บ หน้านี้บอกว่าเรื่องไหนควรถามใคร ส่งคำถามผ่านทีมได้ ทีมจะไปถามให้แล้วเติมคำตอบไว้ในเว็บ", "Some knowledge still lives in people's heads, not on this site. This page shows who to ask about what. Send your question through the team; they'll ask and add the answer here."))}
       <section class="sec"><h2 class="label">${L("ตามเรื่อง", "By topic")}</h2>
         <dl class="ask-list">${topics.map(([t, w, h, cta]) => `<div><dt>${t}</dt><dd>${w}${h ? ` <a href="${h}">${cta} →</a>` : ""}</dd></div>`).join("")}</dl></section>
       <section class="sec"><h2 class="label">${L("ตามแมว", "By cat")}</h2>
-        <p class="muted small">${names ? "" : L("ชื่อผู้ดูแลอยู่ในชีตของทีม จะแสดงบนเว็บเมื่อเจ้าของชื่ออนุญาตแล้ว", "Keepers' names are in the team's sheet and will appear here once they agree.")}</p>
+        <p class="muted small">${names ? "" : L("ตอนนี้บอกเป็นตำแหน่งกับที่ที่หาตัวได้ ชื่อจริงจะแสดงเมื่อเจ้าของชื่ออนุญาตแล้ว", "For now this shows each keeper's role and where to find them. Names will appear once the keepers agree.")}</p>
         <ul class="ask-cats">${here.map((c) => `<li><a class="mini" href="${catHref(c)}">${portrait(c)}<span>${nmHtml(c)}</span></a><span class="ask-who">${who(c)}</span><a class="ask-q" href="${shareHref("question", c)}">${L("ถามเรื่องตัวนี้", "Ask about this cat")} →</a></li>`).join("")}</ul>
         <p class="more"><a href="${shareHref("story")}">${L("รู้ว่าใครดูแลตัวไหน? บอกทีมได้", "Know who looks after a cat? Tell the team")} →</a></p></section>`;
   }
@@ -1059,18 +1091,212 @@
         <section>
           <h2 class="label">${L("ใครดูแลเรื่องอะไร", "Who looks after what")}</h2>
           <ul class="roles">${(CFG.ROLES || []).map((r) => `<li><b>${esc(en(r, "role"))}</b><span>${esc(en(r, "who"))}</span><span>${esc(en(r, "duty"))}</span></li>`).join("")}
-            ${keepers.length ? `<li><b>${L("ผู้ดูแลหลัก", "Main keepers")}</b><span>${CFG.SHOW_KEEPER_NAMES ? keepers.map(T).join(", ") : L("ชื่ออยู่ในชีตของทีม จะแสดงเมื่อเจ้าของชื่ออนุญาตแล้ว", "Named in the team's sheet; shown here once they agree")}</span><span><a href="#/ask">${L("ถามใครดี", "Who to ask")} →</a></span></li>` : ""}</ul>
+            ${keepers.length ? `<li><b>${L("ผู้ดูแลหลัก", "Main keepers")}</b><span>${keepers.map(keeperHtml).join("; ")}</span><span><a href="#/ask">${L("ถามใครดี", "Who to ask")} →</a></span></li>` : ""}</ul>
+          <p class="more"><a href="#/handover">${L("คู่มือส่งต่องานให้รุ่นถัดไป", "Handover guide for the next team")} →</a></p>
           <h2 class="label">${L("ขอบคุณ", "With thanks to")}</h2>
           <p>${list("CREDITS_KNOWLEDGE_HOLDERS", "CREDITS_KNOWLEDGE_HOLDERS_EN")}</p>
           <h2 class="label">${L("ทีมผู้จัดทำ", "Made by")}</h2>
           <p>${team ? team + "<br>" : ""}<span class="muted">${esc(L(CFG.COURSE || "", CFG.COURSE_EN))}</span></p>
           <h2 class="label">${L("สถานะข้อมูล", "Data status")}</h2>
           <ul class="data-status">${st(L("ข้อมูลแมว", "Cats"), D.samples.cats, CFG.SHEET_CSV_URL)}${st(L("ความรู้", "Know-how"), D.samples.articles, CFG.ARTICLES_CSV_URL)}${st(L("ประวัติการดูแล", "Care history"), D.samples.history, CFG.HISTORY_CSV_URL)}
+            <li><span>${L("ตรวจข้อมูลแมวล่าสุด", "Cats last checked")}</span><span class="${stale(isoDate(CFG.DATA_CHECKED)) ? "flag-warn" : ""}">${isoDate(CFG.DATA_CHECKED) ? fmtDate(CFG.DATA_CHECKED) : L("ยังไม่ระบุ", "Not set")}</span></li>
             <li><span>${L("รูปแมว", "Photos")}</span><span>${window.CAT_PHOTO_SYNCED ? L("อัปเดต ", "Updated ") + fmtDate(window.CAT_PHOTO_SYNCED) : L("ยังไม่ได้อัปเดต", "Not synced yet")}</span></li>
             <li><span>${L("ฟอร์มรับเรื่อง", "Submissions")}</span><span class="${norm(CFG.SUBMIT_URL) ? "" : "flag-warn"}">${norm(CFG.SUBMIT_URL) ? L("เปิดอยู่", "On") : L("ยังไม่เปิด", "Not on yet")}</span></li>
             <li><span>${L("ภาษา", "Languages")}</span><span>${L("ไทย · อังกฤษ (ทีมแปลเอง)", "Thai · English (translated by the team)")}</span></li></ul>
         </section>
       </div>`;
+  }
+
+  /* ---------------- cat quiz: practise telling the cats apart (internalization) ----------------
+     Each round sends an anonymous score to the team's submissions sheet, so the team can see whether
+     people who use the site really learn the cats (first try vs later tries on the same device). */
+  const QUIZ_KEY = "akc-quiz-v1";
+  const shuffle = (list) => { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const quizPool = () => D.cats.filter((c) => SEEN_NOW(c) && c.photo);
+  // a random photo of the cat, so the quiz is about the cat and not one picture
+  const quizPic = (c) => { const g = c.gallery.length ? c.gallery[Math.floor(Math.random() * c.gallery.length)] : null; return g ? g.s : c.photo; };
+  function quizQuestions() {
+    const pool = quizPool(), qs = [];
+    for (const c of shuffle(pool).slice(0, 5)) {
+      // one look-alike (same coat) among the wrong answers, so it takes more than the colour to get it right
+      const same = shuffle(pool.filter((o) => o !== c && o.coat === c.coat)).slice(0, 1);
+      const rest = shuffle(pool.filter((o) => o !== c && !same.includes(o)));
+      const opts = shuffle([c].concat(same, rest).slice(0, 4));
+      qs.push({ kind: "name", cat: c, img: quizPic(c), opts: opts.map((o) => ({ label: nmHtml(o), ok: o === c })) });
+    }
+    // how to approach: prefer a cat that needs care, since that's the answer that matters
+    const known = shuffle(D.cats.filter((c) => SEEN_NOW(c) && c.touch !== "unknown"));
+    const t = known.find((c) => c.touch !== "yes") || known[0];
+    if (t) qs.push({ kind: "touch", cat: t, img: t.photo ? quizPic(t) : "", opts: [
+      ["yes", L("เป็นมิตร ยื่นมือให้ดมก่อน แล้วค่อยลูบ", "Friendly: offer a hand to sniff, then stroke")],
+      ["careful", L("นั่งห่าง ๆ ให้น้องเข้ามาหาเองก่อน", "Sit a little way off and let it come to you")],
+      ["no", L("ดูอยู่ห่าง ๆ ไม่จับเลย", "Watch from a distance; don't touch")]
+    ].map(([k, label]) => ({ label: esc(label), ok: k === t.touch })) });
+    const st = shuffle(D.cats.filter((c) => SEEN_NOW(c) && c !== t && (c.sterilised === "yes" || c.sterilised === "no")))[0];
+    if (st) qs.push({ kind: "steril", cat: st, img: st.photo ? quizPic(st) : "", opts: [
+      ["yes", L("ทำหมันแล้ว", "Yes, already")], ["no", L("ยังไม่ทำหมัน", "Not yet")]
+    ].map(([k, label]) => ({ label: esc(label), ok: k === st.sterilised })) });
+    return qs;
+  }
+  const quizAsk = (q) => ({
+    name: L("แมวตัวนี้ชื่ออะไร", "What's this cat's name?"),
+    touch: L(`เจอ${esc(q.cat.name)} ควรเข้าหายังไง`, `You meet ${esc(nm(q.cat))}. How should you approach?`),
+    steril: L(`${esc(q.cat.name)}ทำหมันแล้วหรือยัง`, `Is ${esc(nm(q.cat))} spayed or neutered?`)
+  }[q.kind]);
+  const quizWhy = (q) => ({
+    name: L(`ตัวนี้คือ${esc(q.cat.name)}`, `This is ${esc(nm(q.cat))}.`) + (q.cat.marks ? ` ${L("จุดสังเกต:", "How to spot:")} ${T(q.cat.marks)}` : ""),
+    touch: approachFor(q.cat),
+    steril: esc(STERIL()[q.cat.sterilised])
+  }[q.kind]);
+
+  function renderQuiz() {
+    const tok = renderToken;
+    const sends = !!norm(CFG.SUBMIT_URL);
+    app.innerHTML = `
+      ${pageHead(L("ทายแมว", "Cat quiz"),
+        L(`ดูรูปแล้วทายว่าเป็นแมวตัวไหน ตามด้วยเรื่องที่ต้องรู้ก่อนเข้าหา${sends ? " ทำเสร็จแล้วเว็บจะส่งคะแนนให้ทีมแบบไม่มีชื่อ เพื่อดูว่าเว็บช่วยให้จำแมวได้จริงไหม" : ""}`,
+          `Name the cat from its photo, then answer what you need to know before going near.${sends ? " When you finish, your score goes to the team without your name, so they can see whether the site really helps people learn the cats." : ""}`))}
+      <div class="quiz" id="quiz"></div>`;
+    const box = document.getElementById("quiz");
+    if (quizPool().length < 2) { box.innerHTML = `<p class="empty">${L("ยังมีรูปแมวไม่พอให้ทาย", "Not enough cat photos for a quiz yet.")} <a href="#/cats">${L("ดูแมวทั้งหมด", "See all the cats")}</a></p>`; return; }
+    let qs, i, right, missed, named;
+    const begin = () => { qs = quizQuestions(); i = 0; right = 0; missed = []; named = []; show(); };
+    function show() {
+      const q = qs[i];
+      box.innerHTML = `
+        <p class="quiz-pos">${L(`ข้อ ${i + 1} จาก ${qs.length}`, `Question ${i + 1} of ${qs.length}`)}</p>
+        <div class="quiz-q">
+          ${q.img ? `<div class="portrait quiz-photo"><img src="${esc(q.img)}" alt="${q.kind === "name" ? L("แมวที่ต้องทายชื่อ", "The cat to name") : photoAlt(q.cat)}" width="400" height="500" decoding="async"></div>` : ""}
+          <div>
+            <h2 id="qH" tabindex="-1">${quizAsk(q)}</h2>
+            <div class="quiz-opts" role="group" aria-labelledby="qH">${q.opts.map((o, k) => `<button type="button" class="quiz-opt" data-k="${k}">${o.label}</button>`).join("")}</div>
+            <div class="quiz-fb" id="qFb" aria-live="polite"></div>
+          </div>
+        </div>`;
+      if (i > 0) document.getElementById("qH").focus({ preventScroll: true });
+      box.querySelector(".quiz-opts").addEventListener("click", (e) => {
+        const b = e.target.closest(".quiz-opt");
+        if (!b || b.disabled) return;
+        const o = q.opts[+b.dataset.k];
+        box.querySelectorAll(".quiz-opt").forEach((x, k) => { x.disabled = true; if (q.opts[k].ok) x.classList.add("right"); });
+        if (o.ok) { right++; if (q.kind === "name") named.push(q.cat); } else { b.classList.add("wrong"); if (!missed.includes(q.cat)) missed.push(q.cat); }
+        document.getElementById("qFb").innerHTML = `
+          <p class="${o.ok ? "ok" : "bad"}"><b>${o.ok ? L("ถูก", "Right.") : L("ยังไม่ใช่", "Not quite.")}</b> ${quizWhy(q)}</p>
+          <p class="quiz-next"><button type="button" class="btn" id="qNext">${i < qs.length - 1 ? L("ข้อต่อไป", "Next") : L("ดูคะแนน", "See your score")}</button>
+            <a href="${catHref(q.cat)}">${L(`ดูหน้าของ${esc(q.cat.name)}`, `${esc(nm(q.cat))}'s page`)} →</a></p>`;
+        const nx = document.getElementById("qNext");
+        nx.focus({ preventScroll: true });
+        nx.addEventListener("click", () => { i++; if (i < qs.length) show(); else finish(); });
+      });
+    }
+    function finish() {
+      const prev = store.get(QUIZ_KEY, { tries: 0, best: 0 });
+      const tries = (prev.tries || 0) + 1;
+      store.set(QUIZ_KEY, { tries, best: Math.max(prev.best || 0, right), last: right, of: qs.length });
+      const met = metMap(), toMark = named.filter((c) => !met[c.id]);
+      const all = right === qs.length;
+      box.innerHTML = `
+        <div class="quiz-done">
+          <p class="quiz-score"><b>${right}</b> / ${qs.length}</p>
+          <h2 tabindex="-1" id="qDone">${all ? L("ถูกหมดเลย", "All correct") : right * 2 >= qs.length ? L("เกือบแล้ว", "Nearly there") : L("ค่อย ๆ จำไป", "Keep at it")}</h2>
+          <p>${all ? L("พร้อมไปเจอแมวตัวจริงแล้ว ลองขอไปให้อาหารกับผู้ดูแลสักรอบ", "You're ready to meet them for real. Ask to join a keeper on a feeding round.")
+            : L("ตัวที่ยังพลาดอยู่ข้างล่าง เปิดดูหน้าของแต่ละตัว แล้วกลับมาทายใหม่", "The ones you missed are below. Look at their pages, then try again.")}</p>
+          ${missed.length ? `<div class="mini-cats">${missed.map(miniCat).join("")}</div>` : ""}
+          ${toMark.length ? `<p><button type="button" class="btn ghost" id="qMark">${L(`นับ ${toMark.map((c) => esc(c.name)).join(", ")} เป็นตัวที่จำได้แล้ว`, `Mark ${toMark.map((c) => esc(nm(c))).join(", ")} as known`)}</button></p>` : ""}
+          <p class="actions"><button type="button" class="btn" id="qAgain">${L("ทายอีกรอบ", "Play again")}</button><a class="btn ghost" href="${all ? shareHref("join") : "#/start"}">${all ? L("ขอไปให้อาหารด้วยกัน", "Ask to join a round") : L("กลับไป 5 เรื่องก่อนไปดูแลแมว", "Back to the five things")}</a></p>
+          <p class="muted small" id="qSent" aria-live="polite"></p>
+        </div>`;
+      document.getElementById("qDone").focus({ preventScroll: true });
+      document.getElementById("qAgain").addEventListener("click", begin);
+      const mk = document.getElementById("qMark");
+      if (mk) mk.addEventListener("click", () => {
+        const m = metMap(); toMark.forEach((c) => { m[c.id] = true; }); store.set(MET_KEY, m);
+        mk.outerHTML = `<span class="met-count">${CHECK} ${L(`จำได้แล้ว ${Object.keys(m).length} ตัว`, `You know ${Object.keys(m).length} cats`)}</span>`;
+      });
+      // anonymous: the score, which try this is on this device, and which cats were missed
+      if (sends) postQuick({ type: "ผลทายแมว", message: `ทายแมวได้ ${right}/${qs.length} · ครั้งที่ ${tries} บนเครื่องนี้ · กดจำได้แล้ว ${Object.keys(met).length} ตัว · พลาด: ${missed.map((c) => c.name).join(", ") || "-"}` })
+        .then((ok) => { const el = document.getElementById("qSent"); if (ok && el && tok === renderToken) el.textContent = L("ส่งคะแนนให้ทีมแล้ว แบบไม่มีชื่อ", "Your score was sent to the team, without your name."); });
+    }
+    begin();
+  }
+
+  /* ---------------- handover: so the site outlives the team that built it ---------------- */
+  function renderHandover() {
+    const chk = isoDate(CFG.DATA_CHECKED);
+    const names = (list) => list.map((c) => esc(nm(c))).join(", ");
+    // work waiting for the content steward, worked out from the data itself
+    const unreviewed = D.articles.filter((a) => reviewState(a) === "pending"), due = D.articles.filter((a) => reviewState(a) === "due");
+    const noStatus = D.cats.filter((c) => c.status === "unknown");
+    const noPhoto = D.cats.filter((c) => SEEN_NOW(c) && !c.photo);
+    const noKeeper = D.cats.filter((c) => SEEN_NOW(c) && !c.caretakers);
+    const emptyContacts = (CFG.EMERGENCY_CONTACTS || []).filter((c) => !norm(c.value));
+    const todo = [
+      !chk || stale(chk) ? [L(`ไล่ตรวจข้อมูลแมวทั้งชีตกับผู้ดูแล (ตรวจล่าสุด ${chk ? fmtDate(chk) : "ยังไม่ระบุ"})`, `Check every cat's details with the keepers (last checked ${chk ? fmtDate(chk) : "never"})`), "#/cats"] : null,
+      unreviewed.length ? [L(`บทความที่ยังไม่มีผู้ดูแลตรวจทาน ${unreviewed.length} เรื่อง`, `${unreviewed.length} article${unreviewed.length > 1 ? "s" : ""} not yet reviewed by a keeper`), "#/knowledge"] : null,
+      due.length ? [L(`บทความที่ตรวจไว้นานแล้ว ควรทบทวน ${due.length} เรื่อง`, `${due.length} article${due.length > 1 ? "s" : ""} due for a re-check`), "#/knowledge"] : null,
+      noStatus.length ? [L(`แมวที่ยังไม่ระบุสถานะ: ${names(noStatus)}`, `Cats with no status: ${names(noStatus)}`), "#/cats?status=unknown"] : null,
+      noPhoto.length ? [L(`แมวในคณะที่ยังไม่มีรูป: ${names(noPhoto)}`, `Cats at the faculty with no photo: ${names(noPhoto)}`), catHref(noPhoto[0])] : null,
+      noKeeper.length ? [L(`แมวในคณะที่ยังไม่รู้ว่าใครดูแลประจำ ${noKeeper.length} ตัว`, `${noKeeper.length} cats at the faculty with no known main keeper`), "#/ask"] : null,
+      !CFG.SHOW_KEEPER_NAMES ? [L("ขออนุญาตผู้ดูแลก่อนแสดงชื่อ (ตอนนี้เว็บบอกเป็นตำแหน่งแทน)", "Ask the keepers whether their names can be shown (the site shows roles for now)"), "#/ask"] : null,
+      emptyContacts.length ? [L(`ช่องทางติดต่อที่ยังว่างใน config.js: ${emptyContacts.map((c) => esc(c.label)).join(", ")}`, `Contacts still empty in config.js: ${emptyContacts.map((c) => esc(en(c, "label"))).join(", ")}`), "#/help"] : null
+    ].filter(Boolean);
+    const col = (title, items) => `<div class="hand-col"><h3>${title}</h3><ul>${items.map((t) => `<li>${t}</li>`).join("")}</ul></div>`;
+    const COLS = [
+      ["ชื่อแมว", "Name", "ถ้าเปลี่ยนการสะกด เว็บยังจับคู่รูปกับประวัติเดิมได้", "If the spelling changes, the site still matches the old photos and history"],
+      ["Status", "Status", "active (อยู่ในคณะ) · back home (ไปกลับ) · missing (หาย) · adopted (มีบ้าน) · passed away (จากไป)", "active · back home · missing · adopted · passed away"],
+      ["แมวประจำคณะ (เพิ่มคอลัมน์เองได้)", "แมวประจำคณะ (add this column)", "ใช่ / ไม่ใช่ ใช้แทนการไฮไลต์สีเหลือง เว็บอ่านคอลัมน์นี้เองโดยไม่ต้องรันอะไร", "ใช่ (yes) / ไม่ใช่ (no). Use this instead of the yellow highlight: the site reads it directly, no script needed"],
+      ["ทำหมัน · Vaccination Status", "ทำหมัน · Vaccination Status", "แล้ว / ยังไม่", "แล้ว (done) / ยังไม่ (not yet)"],
+      ["Personality", "Personality", "Friendly · Approach with caution · Don't touch", "Friendly · Approach with caution · Don't touch"],
+      ["Personal Information", "Personal Information", "ประวัติ และตัวที่ไม่ถูกกัน ขึ้นเป็นช่อง “ควรรู้ไว้”", "Background and which cats it doesn't get on with; shown as “Good to know”"],
+      ["Usual locations", "Usual locations", "ใส่ชื่อตึก เช่น BRK, MCS, เทวาลัย แมวจะขึ้นบนแผนที่ 3D", "Name the building (BRK, MCS, Thewalai) and the cat appears on the 3D map"],
+      ["Relationship", "Relationship", "“ลูกกะตั้ว” = แม่คือกะตั้ว · “พี่น้องกับตาต้า” = พี่น้อง", "“ลูกกะตั้ว” = Katua is the mother · “พี่น้องกับตาต้า” = sibling"],
+      ["Primary caretaker(s)", "Primary caretaker(s)", "ชื่อหรือตำแหน่ง ชื่อจะขึ้นเว็บเมื่อเจ้าของชื่ออนุญาต (SHOW_KEEPER_NAMES)", "A name or role. Names appear only once the keeper agrees (SHOW_KEEPER_NAMES)"],
+      ["Last seen date", "Last seen date", "วันที่แบบ 2026-11-12 (ค.ศ.-เดือน-วัน)", "A date like 2026-11-12"],
+      ["Photo", "Photo", "ลิงก์โฟลเดอร์ Drive ของแมวตัวนั้น", "A link to that cat's Drive folder"],
+      ["ตรวจล่าสุด (เพิ่มคอลัมน์เองได้)", "ตรวจล่าสุด (add this column)", "วันที่ตรวจแถวนั้นกับผู้ดูแล ถ้าไม่มี เว็บใช้ DATA_CHECKED ใน config.js", "When that row was checked with a keeper; without it the site uses DATA_CHECKED in config.js"]
+    ];
+    const repo = norm(CFG.REPO_URL);
+    app.innerHTML = `
+      ${pageHead(L("ส่งต่องานให้รุ่นถัดไป", "Handing over to the next team"),
+        L("นิสิตที่ดูแลเว็บนี้ก็เปลี่ยนรุ่นเหมือนกัน หน้านี้สำหรับคนที่รับช่วงต่อ งานส่วนใหญ่ทำในชีตของทีม ไม่ต้องเขียนโค้ด",
+          "The students who run this site move on too. This page is for whoever takes over. Most of the work happens in the team's sheet, with no code."))}
+      <section class="sec"><h2 class="label">${L("ตอนนี้ใครดูแล", "Who looks after it now")}</h2>
+        <ul class="roles">${(CFG.ROLES || []).map((r) => `<li><b>${esc(en(r, "role"))}</b><span>${esc(en(r, "who"))}</span><span>${esc(en(r, "duty"))}</span></li>`).join("")}</ul>
+        <p class="muted small">${L("รายชื่อนี้แก้ได้ที่ช่อง ROLES ใน config.js", "Edit these names in ROLES in config.js.")}</p></section>
+      ${todo.length ? `<section class="sec"><h2 class="label">${L(`งานที่ค้างอยู่ตอนนี้ (${todo.length})`, `Waiting to be done (${todo.length})`)}</h2>
+        <p class="muted small">${L("เว็บนับจากข้อมูลเอง ทำเสร็จแล้วรายการจะหายไปเอง", "Worked out from the data; each item disappears once it's done.")}</p>
+        <ul class="todo-list">${todo.map(([t, h]) => `<li><a href="${h}">${t}</a></li>`).join("")}</ul></section>` : ""}
+      <section class="sec"><h2 class="label">${L("งานประจำ", "Routine")}</h2>
+        <div class="hand-cols">
+          ${col(L("ทุกสัปดาห์", "Every week"), [
+            L("เปิดชีตรับเรื่อง ดูแถวที่สถานะ “รอตรวจ”", "Open the submissions sheet and look at rows marked “รอตรวจ” (waiting)."),
+            L("เรื่องที่ถูกต้องและไม่มีข้อมูลส่วนตัว คัดลงชีตของทีมหรือเขียนเป็นบทความ แล้วเปลี่ยนสถานะเป็น “ลงแล้ว”", "Copy anything accurate and free of personal details into the team's sheet or an article, then mark it “ลงแล้ว” (done)."),
+            L("คำถามที่ส่งมาจากหน้า “ถามใครดี” เอาไปถามผู้ดูแล แล้วเติมคำตอบไว้ในเว็บ", "Take questions sent from “Who to ask” to the keepers, and add the answers to the site."),
+            L("แมวที่ไม่มีใครกด “เห็นวันนี้” นานเกินสัปดาห์ ถามผู้ดูแล และแก้สถานะในชีตถ้าหายไปจริง", "If nobody has tapped “Saw … today” for a cat in over a week, ask the keepers and update its status if it's really gone.")
+          ])}
+          ${col(L("ทุกภาคเรียน", "Every semester"), [
+            L("นั่งไล่ชีตกับผู้ดูแลทีละตัว: สถานะ ทำหมัน วัคซีน สุขภาพ ที่อยู่", "Go through the sheet with a keeper, cat by cat: status, spaying, vaccines, health, where it lives."),
+            L(`ตรวจเสร็จแล้วแก้ DATA_CHECKED ใน config.js เป็นวันที่ตรวจ ถ้าเกิน ${REVIEW_DAYS} วัน เว็บจะขึ้นป้ายเตือนเอง`, `Then set DATA_CHECKED in config.js to that date. After ${REVIEW_DAYS} days the site warns visitors by itself.`),
+            L("ให้ผู้ดูแลอ่านทวนบทความ ใส่ชื่อในช่อง reviewed_by และวันที่ในช่อง reviewed_on", "Ask a keeper to read the articles; put their name in reviewed_by and the date in reviewed_on."),
+            L("ดูผล “ทายแมว” กับ “เรื่องนี้ช่วยได้ไหม” ในชีตรับเรื่อง เรื่องที่คนบอกว่ายังไม่ช่วย เอามาเติม", "Look at the quiz scores and “Did this help?” votes in the submissions sheet, and improve what people say didn't help.")
+          ])}
+          ${col(L("ก่อนรุ่นเดิมจบ", "Before you graduate"), [
+            L("หาผู้รับช่วงอย่างน้อย 2 คน ถ้ามีคนเดียวแล้วเขาไม่ว่าง ทุกอย่างก็หยุด", "Find at least two people to take over. With only one, everything stops when they're busy."),
+            L("โอนความเป็นเจ้าของชีตของทีม ชีตรับเรื่อง และสคริปต์ ไปที่บัญชีกลางของคณะหรือชมรม ไม่ใช่บัญชีส่วนตัวของใคร", "Move ownership of the team's sheet, the submissions sheet and the script to a shared faculty or club account, not anyone's personal one."),
+            L("เพิ่มผู้รับช่วงเป็นผู้ดูแล repo บน GitHub แล้วแก้ชื่อในช่อง ROLES", "Add them as maintainers of the GitHub repo, and update ROLES."),
+            L("พาผู้รับช่วงไปให้อาหารกับผู้ดูแลอย่างน้อยหนึ่งรอบ แล้วทำงานประจำสัปดาห์ด้วยกันสักครั้ง", "Take them on a feeding round with a keeper, and do one week's routine together.")
+          ])}
+        </div></section>
+      <section class="sec"><h2 class="label">${L("กรอกชีตยังไง", "Filling in the sheet")}</h2>
+        <p class="muted small">${L("แก้ชีตแล้วเว็บอัปเดตเองภายในไม่กี่นาที ลิงก์ชีตขอได้จากผู้ดูแลเนื้อหาคนปัจจุบัน (ไม่ได้ใส่ไว้ในเว็บ เพราะใครมีลิงก์ก็แก้ได้)", "Edits show up on the site within minutes. Ask the current content steward for the sheet link (it isn't on the site, because anyone with the link can edit).")}</p>
+        <table class="km-table hand-table"><thead><tr><th scope="col">${L("คอลัมน์", "Column")}</th><th scope="col">${L("ใส่อะไร", "What to put")}</th></tr></thead>
+          <tbody>${COLS.map(([th, enC, d, dEn]) => `<tr><td>${esc(L(th, enC))}</td><td>${esc(L(d, dEn))}</td></tr>`).join("")}</tbody></table></section>
+      <section class="sec"><h2 class="label">${L("เรื่องที่ยังต้องแตะโค้ด (นาน ๆ ครั้ง)", "What still needs code (rarely)")}</h2>
+        <ul class="hand-list">
+          <li>${L("ชื่อผู้ดูแล ช่องทางติดต่อ วันที่ตรวจ: แก้ config.js บนหน้าเว็บ GitHub ได้เลย กดรูปดินสอ แก้ แล้วกด Commit", "Keeper names, contacts, the checked date: edit config.js on the GitHub website. Press the pencil, edit, then Commit.")}</li>
+          <li>${L("รูปใหม่ในโฟลเดอร์ Drive: รัน python -I tools/sync_photos.py แล้ว push (ถ้าไม่รัน รูปเดิมก็ยังอยู่)", "New photos in a Drive folder: run python -I tools/sync_photos.py, then push. (If nobody does, the existing photos stay.)")}</li>
+          ${repo ? `<li><a href="${esc(repo)}#readme" target="_blank" rel="noopener">${L("คู่มือฉบับเต็ม (README บน GitHub)", "The full guide (README on GitHub)")}</a></li>` : ""}
+        </ul></section>`;
   }
 
   /* ---------------- family graph ---------------- */
@@ -1143,7 +1369,7 @@
   }
 
   /* ---------------- router ---------------- */
-  const NAV_OF = { "": "home", cats: "cats", cat: "cats", family: "cats", find: "find", start: "start", knowledge: "knowledge", article: "knowledge", ask: "knowledge", share: "share", report: "share", help: "help", about: "about", qr: "about" };
+  const NAV_OF = { "": "home", cats: "cats", cat: "cats", family: "cats", find: "find", start: "start", knowledge: "knowledge", article: "knowledge", ask: "knowledge", quiz: "start", handover: "about", share: "share", report: "share", help: "help", about: "about", qr: "about" };
   function route(evt) {
     const keep = evt && evt.keepScroll;
     renderToken++;
@@ -1178,6 +1404,8 @@
       case "report": renderShare(new URLSearchParams("type=sighting")); break;
       case "help": renderHelp(); break;
       case "ask": renderAsk(); break;
+      case "quiz": renderQuiz(); break;
+      case "handover": renderHandover(); break;
       case "about": renderAbout(); break;
       case "qr": renderQR(); break;
       default: app.innerHTML = `<div class="empty">${cat("peek")}<h1>${L("ไม่เจอหน้านี้", "Page not found")}</h1><p><a href="#/">${L("กลับหน้าแรก", "Back to home")}</a></p></div>`;
@@ -1209,11 +1437,14 @@
     const msgs = [];
     if (D.samples.cats) msgs.push(L("โหลดชีตล่าสุดไม่ได้ เลยแสดงข้อมูลสำรองที่เก็บไว้ในเว็บ", "Couldn't load the latest sheet, so this is the saved copy of the data."));
     else if (D.error) msgs.push(D.error);
+    const chk = isoDate(CFG.DATA_CHECKED);
+    if (stale(chk)) msgs.push(L(`ทีมไม่ได้ตรวจข้อมูลแมวมา ${daysAgo(chk)} วันแล้ว บางอย่างอาจไม่ตรงกับตอนนี้`, `Nobody has checked the cat details for ${daysAgo(chk)} days, so some may be out of date.`));
     banner.textContent = msgs.join(" · ");
     banner.hidden = !msgs.length;
     const meta = document.getElementById("footMeta");
     if (meta) meta.textContent = [
       L(`ข้อมูลแมว ${D.cats.length} ตัวจากชีตของทีม${D.samples.cats ? " (สำเนา)" : ""} · อัปเดต ${fmtTime(D.loadedAt)}`, `${D.cats.length} cats from the team's sheet${D.samples.cats ? " (saved copy)" : ""} · read at ${fmtTime(D.loadedAt)}`),
+      isoDate(CFG.DATA_CHECKED) ? L("ตรวจข้อมูลล่าสุด ", "last checked ") + fmtDate(CFG.DATA_CHECKED) : "",
             L(CFG.COURSE || "", CFG.COURSE_EN)
     ].filter(Boolean).join(" · ");
   }

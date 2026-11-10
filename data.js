@@ -93,7 +93,7 @@ window.CatData = (function () {
     if (/ยังไม่|ไม่ได้/.test(v)) return "no";
     if (/แล้ว/.test(v)) return "yes";
     if (["yes", "y", "true", "1", "ใช่", "แล้ว", "ทำแล้ว", "ฉีดแล้ว"].includes(v)) return "yes";
-    if (["no", "n", "false", "0", "ไม่", "ยัง", "ยังไม่"].includes(v)) return "no";
+    if (["no", "n", "false", "0", "ไม่", "ไม่ใช่", "ยัง", "ยังไม่"].includes(v)) return "no";
     return "unknown";
   }
   function sexOf(v) {
@@ -182,6 +182,8 @@ window.CatData = (function () {
       mother: lower(r.mother_id),
       status: statusOf(r.status),
       caretakers: clean(r.caretakers),
+      // when the team last checked this cat's row (optional column); else the site uses DATA_CHECKED in config.js
+      checked: clean(r.checked),
       lastSeen: clean(r.last_seen),
       source: clean(r.source),
       notes: clean(r.notes),
@@ -219,6 +221,7 @@ window.CatData = (function () {
       tags: splitList(r.tags),
       relatedCats: splitList(r.related_cats).map(lower),
       reviewedBy: norm(r.reviewed_by),
+      reviewedOn: norm(r.reviewed_on),
       published: isPublished(r.status)
     };
   }
@@ -243,7 +246,8 @@ window.CatData = (function () {
     about: ["personal information", "personal info", "ข้อมูลส่วนตัว", "ประวัติ", "background"],
     resident: ["resident", "แมวประจำคณะ", "แมวประจำ", "ประจำคณะ"],
     locations: ["usual locations", "locations", "location", "ที่อยู่", "จุดที่พบ"], relationship: ["relationship", "ความสัมพันธ์", "ครอบครัว"],
-    caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"], notes: ["note", "notes", "หมายเหตุ"],
+    caretakers: ["primary caretaker", "caretakers", "caretaker", "ผู้ดูแล"], last_seen: ["last seen", "พบล่าสุด"],
+    checked: ["last checked", "checked", "ตรวจล่าสุด", "ตรวจข้อมูลล่าสุด"], reviewed_on: ["reviewed on", "ตรวจทานเมื่อ"], notes: ["note", "notes", "หมายเหตุ"],
     coat: ["coat", "coat colour", "coat color", "colour", "color", "สีขน", "ลายขน"],
     normal: ["normal", "what's normal", "habits", "routine", "ปกติ", "กิจวัตร", "ข้อควรรู้"],
     approach: ["approach", "how to approach", "วิธีเข้าหา"]
@@ -334,6 +338,10 @@ window.CatData = (function () {
     linkSiblings(cats.rows);
     const byId = {};
     cats.rows.forEach((c) => { byId[c.id] = c; });
+    // history rows and articles name cats by id; a renamed cat (มีตัง → มีตังค์) still matches by folded spelling
+    const idOf = (k) => (byId[k] ? k : (cats.rows.find((c) => fold(c.id) === fold(k)) || { id: k }).id);
+    history.rows.forEach((h) => { h.cat = idOf(h.cat); });
+    articles.rows.forEach((a) => { a.relatedCats = a.relatedCats.map(idOf); });
     const articleById = {};
     articles.rows.forEach((a) => { articleById[a.id] = a; });
     history.rows.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));

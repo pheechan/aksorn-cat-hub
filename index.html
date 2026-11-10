@@ -16,8 +16,9 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap"></noscript>
-  <link rel="stylesheet" href="tokens.css?v=20261110b">
-  <link rel="stylesheet" href="landing.css?v=20261110b">
+  <link rel="stylesheet" href="tokens.css?v=20261111">
+  <link rel="stylesheet" href="landing.css?v=20261111">
+  <link rel="stylesheet" href="menu.css?v=20261111">
 </head>
 <body class="is-loading">
   <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -57,6 +58,28 @@
     <circle cx="57.0" cy="58.0" r="8" style="fill:var(--cat-eye,#fff)"/><circle cx="83.0" cy="58.0" r="8" style="fill:var(--cat-eye,#fff)"/><circle cx="57.0" cy="60.2" r="4.2" style="fill:var(--cat-pupil,#16181d)"/><circle cx="83.0" cy="60.2" r="4.2" style="fill:var(--cat-pupil,#16181d)"/><path d="M40.0 64.8L46.4 63.4M40.0 69.2L46.5 69.3M100.0 64.8L93.6 66.1M100.0 69.2L93.5 69.2" style="fill:none;stroke:var(--cat-eye,#fff);stroke-width:1.9;stroke-linecap:round"/><path d="M66.2 68.0q1.9 3.0 3.8 0q1.9 3.0 3.8 0" style="fill:none;stroke:var(--cat-eye,#fff);stroke-width:2;stroke-linecap:round;stroke-linejoin:round"/><path d="M10 100H130" style="fill:none;stroke:var(--cat,#16181d);stroke-width:3.4;stroke-linecap:round"/>
   </symbol>
 </svg>
+  <!-- full-screen menu for tablets and phones (menu.css + menu.js), the same on every page -->
+  <div class="site-menu" id="siteMenu" aria-hidden="true">
+    <nav class="m-list" aria-label="ทุกหน้า" data-en-aria-label="All pages">
+      <div class="m-group" data-key="home" style="--i:0"><a class="m-parent" href="index.html" data-en="Home">หน้าแรก</a>
+        <div class="m-subs"><a href="index.html#map" data-en="Cat map (3D)">แผนที่แมว</a><a href="index.html#process" data-en="How we built it">5 ขั้นของโครงการ</a></div></div>
+      <div class="m-group" data-key="hub" style="--i:1"><a class="m-parent" href="cats.html#/" data-en="Knowledge hub">คลังความรู้</a>
+        <div class="m-subs"><a href="cats.html#/start" data-en="New here? Start here">มือใหม่เริ่มที่นี่</a><a href="cats.html#/knowledge" data-en="Know-how">ความรู้ทั้งหมด</a></div></div>
+      <div class="m-group" data-key="cats" style="--i:2"><a class="m-parent" href="cats.html#/cats" data-en="All cats">แมวทั้งหมด</a>
+        <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a><a href="cats.html#/family" data-en="Family tree">ผังครอบครัวแมว</a></div></div>
+      <div class="m-group" data-key="share" style="--i:3"><a class="m-parent" href="cats.html#/share" data-en="Tell the team">เล่าให้ทีมฟัง</a></div>
+      <div class="m-group" data-key="help" style="--i:4"><a class="m-parent urgent" href="cats.html#/help" data-en="Sick cat?">แมวป่วย?</a></div>
+      <div class="m-group" data-key="about" style="--i:5"><a class="m-parent" href="cats.html#/about" data-en="About">เกี่ยวกับเว็บนี้</a>
+        <div class="m-subs"><a href="cats.html#/qr" data-en="Print cat QR codes">พิมพ์ QR ประจำตัวแมว</a></div></div>
+    </nav>
+    <div class="m-group m-prefs" style="--i:6">
+      <div class="lang" role="group" aria-label="ภาษา / Language">
+        <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ไทย</button>
+        <button type="button" data-set-lang="en" lang="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="m-theme" data-toggle-theme aria-pressed="false"><span class="to-night"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span><span class="to-night" data-en="Night mode">โหมดกลางคืน</span><span class="to-day"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg></span><span class="to-day" data-en="Day mode">โหมดกลางวัน</span></button>
+    </div>
+  </div>
   <canvas id="gl" aria-hidden="true"></canvas>
   <div class="pins" id="pins" aria-hidden="true"></div>
   <div id="grain" aria-hidden="true"></div>
@@ -87,6 +110,7 @@
       </div>
       <button type="button" class="icon-btn" data-toggle-theme aria-pressed="false" aria-label="เปลี่ยนเป็นโหมดกลางคืน"><svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg><svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
       <a class="btn small nav-cta" href="cats.html" data-en="Open the hub">เข้าสู่คลังความรู้</a>
+      <button type="button" class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="siteMenu" aria-label="เปิดเมนู"><i></i><i></i><i></i></button>
     </div>
   </header>
 
@@ -207,14 +231,16 @@
     </footer>
   </main>
 
-  <script src="content-en.js?v=20261110b"></script>
-  <script src="i18n.js?v=20261110b"></script>
+  <script src="content-en.js?v=20261111"></script>
+  <script src="i18n.js?v=20261111"></script>
+  <script defer src="menu.js?v=20261111"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script defer src="config.js?v=20261110b"></script>
-  <script defer src="data-sample.js?v=20261110b"></script>
-  <script defer src="photos/manifest.js?v=20261110b"></script>
-  <script defer src="data.js?v=20261110b"></script>
-  <script defer src="landing.js?v=20261110b"></script>
+  <script defer src="config.js?v=20261111"></script>
+  <script defer src="data-sample.js?v=20261111"></script>
+  <script defer src="photos/manifest.js?v=20261111"></script>
+  <script defer src="data.js?v=20261111"></script>
+  <script defer src="landing.js?v=20261111"></script>
+  <script defer src="glass.js?v=20261111"></script>
 </body>
 </html>

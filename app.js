@@ -214,6 +214,11 @@
   }
 
   const ICON = {
+    cats: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20c0-4 2.5-7 7-7s7 3 7 7"/><path d="M7.5 9.5 8 4l3 3h2l3-3 .5 5.5"/><circle cx="12" cy="10" r="4.2"/></svg>',
+    book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>',
+    family: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><circle cx="5.5" cy="18" r="2.5"/><circle cx="18.5" cy="18" r="2.5"/><path d="M12 7.5v4M5.5 15.5v-4h13v4"/></svg>',
+    share: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/></svg>',
+    map: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.3"/></svg>',
     find: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/><path d="M8 9.5l1-2 1.2 1.6 1.3-1.6 1 2"/></svg>',
     start: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
     help: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M12 9v5M9.5 11.5h5"/></svg>'
@@ -270,9 +275,9 @@
     app.innerHTML = `
       <section class="hello">
         ${cat("sit", "hello-cat")}
-        <h1>${L("รู้จักแมวอักษร<br>ให้ครบทุกตัว", "Get to know every cat<br>at the Faculty of Arts")}</h1>
-        <p class="lede">${L("ชื่อ นิสัย ที่ประจำ และเรื่องสุขภาพ รวมไว้จากพี่ ๆ ผู้ดูแลที่อยู่กับแมวมาหลายปี ใครเพิ่งมาช่วยดูแลก็เริ่มได้เลย ไม่ต้องเริ่มจากศูนย์",
-          "Names, habits, favourite spots and health notes, gathered from the keepers who have looked after these cats for years. New to helping out? Start here, not from zero.")}</p>
+        <h1>${L("คลังความรู้<br>แมวอักษร", "A knowledge hub<br>for every cat at Arts")}</h1>
+        <p class="lede">${L("ที่รวมทุกอย่างที่ผู้ดูแลแมวในคณะรู้ ทั้งชื่อ นิสัย ที่ประจำ เรื่องสุขภาพ และวิธีดูแล เราฟังมาจากพี่ ๆ ที่อยู่กับแมวมาหลายปี แล้วจดไว้ให้ทุกคนเปิดดูได้ คนที่มาช่วยดูแลรุ่นต่อไปจะได้ไม่ต้องเริ่มจากศูนย์",
+          "Everything the faculty's cat keepers know: names, habits, favourite spots, health and how to care for them. We listened to the people who have looked after these cats for years and wrote it down for anyone to open, so whoever helps next doesn't start from zero.")}</p>
         <div class="hello-actions"><a class="btn" href="#/find">${L("หาแมวที่เพิ่งเจอ", "Find a cat you just met")}</a><a class="btn ghost" href="#/start">${L("มือใหม่เริ่มที่นี่", "New here? Start here")}</a></div>
         <p class="hello-3d"><a href="index.html#map">${L("ดูว่าแมวอยู่ตรงไหนบนแผนที่ 3D ของคณะ →", "See where the cats live on the 3D campus map →")}</a></p>
         <dl class="stats" aria-label="${L("ตอนนี้", "Right now")}">
@@ -282,11 +287,32 @@
         </dl>
       </section>
       ${resume}
-      <div class="tasks">
-        <a class="task" href="#/find"><span class="task-ico">${ICON.find}</span><h2>${L("เจอแมว แต่ไม่รู้ว่าตัวไหน", "Met a cat but don't know who?")}</h2><p>${L("เลือกสีขนกับจุดที่เจอ แล้วดูว่าน่าจะเป็นใคร", "Pick its coat and where you saw it, and see who it probably is.")}</p><span class="go">${L("หาแมว", "Find this cat")} →</span></a>
-        <a class="task" href="#/start"><span class="task-ico">${ICON.start}</span><h2>${L("อยากช่วยดูแลแมว", "Want to help with the cats?")}</h2><p>${L("เริ่มจาก 5 เรื่องที่ผู้ดูแลอยากให้รู้ก่อน", "Start with the five things the keepers want you to know.")}</p><span class="go">${nDone ? L(`ทำไปแล้ว ${nDone}/5 · ทำต่อ`, `${nDone}/5 done · continue`) : L("เริ่มเลย", "Start")} →</span></a>
-        <a class="task urgent" href="#/help"><span class="task-ico">${ICON.help}</span><h2>${L("แมวป่วยหรือบาดเจ็บ", "A cat looks sick or hurt")}</h2><p>${L("ทำอะไรก่อน อะไรห้ามทำ และต้องติดต่อใคร", "What to do first, what not to do, and who to call.")}</p><span class="go">${L("ดูวิธีรับมือ", "See the steps")} →</span></a>
-      </div>
+
+      <section class="sec">
+        <div class="sec-head"><h2>${L("ในคลังนี้มีอะไรบ้าง", "What's in here")}</h2><p>${L("เลือกตามสิ่งที่อยากรู้ได้เลย", "Go straight to what you need")}</p></div>
+        <div class="dir">
+          ${[
+            ["#/cats", ICON.cats, L("แมวทั้งหมด", "All cats"), L(`${D.cats.length} ตัว พร้อมรูป และว่าปกติแต่ละตัวเป็นยังไง`, `${D.cats.length} cats, with photos and what's normal for each`)],
+            ["#/find", ICON.find, L("หาแมวที่เพิ่งเจอ", "Find a cat you just met"), L("ไม่รู้ชื่อก็หาได้ เลือกสีขนกับจุดที่เจอ", "No name needed: pick the coat and the place")],
+            ["#/start", ICON.start, L("มือใหม่เริ่มที่นี่", "New here? Start here"), nDone ? L(`ทำไปแล้ว ${nDone}/5 ขั้น ทำต่อได้เลย`, `${nDone}/5 done, carry on`) : L("5 เรื่องที่ผู้ดูแลอยากให้รู้ก่อนไปดูแลแมว", "The five things the keepers want you to know first")],
+            ["#/knowledge", ICON.book, L("ความรู้", "Know-how"), L(`${D.articles.length} เรื่อง ทั้งอาหาร สุขภาพ นิสัยแมว และเรื่องเล่าผู้ดูแล`, `${D.articles.length} pieces on food, health, behaviour and keepers' stories`)],
+            ["#/family", ICON.family, L("ผังครอบครัวแมว", "Family tree"), L("ใครเป็นแม่ ลูก หรือพี่น้องกับใคร", "Who is whose mother, kitten or sibling")],
+            ["index.html#map", ICON.map, L("แผนที่แมว 3D", "3D cat map"), L("ดูว่าแมวแต่ละตัวอยู่ตึกไหนในคณะ", "See which building each cat calls home")],
+            ["#/share", ICON.share, L("เล่าให้ทีมฟัง", "Tell the team"), L("เห็นแมว เจอตัวใหม่ หรือข้อมูลผิด บอกได้ ทีมตรวจก่อนขึ้นเว็บ", "Saw a cat, met a new one, or spotted a mistake? The team checks it first")],
+            ["#/help", ICON.help, L("แมวป่วย?", "Sick cat?"), L("ทำอะไรก่อน อะไรห้ามทำ และต้องติดต่อใคร", "What to do first, what not to do, who to call"), "urgent"]
+          ].map(([href, ico, t, d, cls]) => `<a class="dir-card ${cls || ""}" href="${href}"><span class="task-ico">${ico}</span><span><b>${t}</b><span>${d}</span></span></a>`).join("")}
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-head"><h2>${L("ความรู้ในนี้มาจากไหน", "Where this knowledge comes from")}</h2><p>${L("ความรู้เรื่องแมวส่วนใหญ่อยู่ในหัวคนไม่กี่คน เราเลยทำให้มันส่งต่อกันได้", "Most of what's known about the cats lived in a few people's heads. This hub makes it something that can be passed on.")}</p></div>
+        <ol class="kflow">
+          <li><b>1</b><div><h3>${L("ฟังจากผู้ดูแล", "Listen to the keepers")}</h3><p>${L("สัมภาษณ์พี่ ๆ ที่ดูแลแมวมานาน ว่าแต่ละตัวเป็นยังไง ต้องระวังอะไร", "We interviewed long-time keepers about each cat and what to watch out for.")}</p></div></li>
+          <li><b>2</b><div><h3>${L("จดให้เป็นระบบ", "Write it down properly")}</h3><p>${L("เก็บไว้ในชีตของทีมกับบทความ ค้นได้จากชื่อ สีขน และจุดที่เจอ", "It lives in the team's sheet and articles, searchable by name, coat and place.")}</p></div></li>
+          <li><b>3</b><div><h3>${L("ทุกคนช่วยเติม", "Everyone adds to it")}</h3><p>${L("ใครเห็นอะไรใหม่ เล่าให้ทีมฟังได้ ทีมตรวจแล้วค่อยขึ้นเว็บพร้อมเครดิต", "Anyone can tell the team what they've seen; it goes up after review, with credit.")}</p></div></li>
+        </ol>
+        <p class="more"><a href="#/about">${L("อ่านเรื่องโครงการนี้", "About this project")} →</a></p>
+      </section>
 
       <section class="sec">
         <div class="toolbar"><h2>${L("ตอนนี้อยู่ในคณะ", "At the faculty now")}</h2><a href="#/cats">${L(`ดูทั้งหมด ${D.cats.length} ตัว`, `All ${D.cats.length} cats`)} →</a></div>
@@ -878,15 +904,6 @@
     });
   }
 
-  // phone menu: a native <dialog> (focus is trapped and Esc closes it)
-  function wireMenu() {
-    const dlg = document.getElementById("menu"), open = document.getElementById("menuOpen");
-    if (!dlg || !open || typeof dlg.showModal !== "function") return;
-    open.addEventListener("click", () => { dlg.showModal(); open.setAttribute("aria-expanded", "true"); });
-    dlg.addEventListener("close", () => open.setAttribute("aria-expanded", "false"));
-    dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.closest("a") || e.target.closest("[data-close]")) dlg.close(); });
-  }
-
   // texts outside #app that depend on the data and the language
   function chrome() {
     const msgs = [];
@@ -903,7 +920,6 @@
 
   async function init() {
     wireSearch();
-    wireMenu();
     D = await window.CatData.load(CFG);
     chrome();
     window.addEventListener("hashchange", route);

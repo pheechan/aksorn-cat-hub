@@ -1,0 +1,60 @@
+/* Full-screen menu for tablets and phones, shared by the landing page and the hub.
+   Style after iol2027.web.app: the page colour fills the screen, the header stays on top and its
+   burger turns into a cross, big tight headings for the main pages with small links under them,
+   and every group fades up one after another. */
+
+.menu-btn {
+  display: none; position: relative; flex: none; width: 42px; height: 42px; padding: 0;
+  border: 0; border-radius: 50%; cursor: pointer; color: var(--ink);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+.menu-btn i { position: absolute; left: 12px; right: 12px; height: 2px; border-radius: 2px; background: currentColor; transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .2s; }
+.menu-btn i:nth-child(1) { top: 14px; }
+.menu-btn i:nth-child(2) { top: 20px; }
+.menu-btn i:nth-child(3) { top: 26px; }
+body.menu-open .menu-btn i:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+body.menu-open .menu-btn i:nth-child(2) { opacity: 0; transform: scaleX(.3); }
+body.menu-open .menu-btn i:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+.site-menu {
+  position: fixed; inset: 0; z-index: var(--menu-z, 29);
+  display: flex; flex-direction: column; gap: 14px;
+  padding: calc(var(--menu-top, 72px) + 28px) 7vw calc(40px + env(safe-area-inset-bottom));
+  background: var(--bg); color: var(--ink);
+  overflow-y: auto; overscroll-behavior: contain;
+  opacity: 0; visibility: hidden; transition: opacity .3s ease, visibility 0s linear .3s;
+}
+.site-menu.open { opacity: 1; visibility: visible; transition: opacity .3s ease; }
+
+.m-group { display: flex; flex-direction: column; gap: 4px; opacity: 0; transform: translateY(15px); transition: opacity .35s ease, transform .35s ease; transition-delay: calc(var(--i, 0) * 35ms); }
+.site-menu.open .m-group { opacity: 1; transform: none; }
+
+.m-parent {
+  width: fit-content; font-family: var(--sans); font-size: clamp(32px, 7vw, 54px); font-weight: 600;
+  line-height: 1.12; letter-spacing: -.035em; color: var(--ink); text-decoration: none; transition: color .2s;
+}
+html[lang="th"] .m-parent { letter-spacing: -.01em; line-height: 1.3; }
+.m-parent:hover { color: var(--pink-ink); }
+.m-group.active .m-parent { color: var(--pink); }
+.m-parent.urgent, .m-group.active .m-parent.urgent { color: var(--bad); }
+
+.m-subs { display: grid; grid-template-columns: 1fr; gap: 2px 24px; padding: 0 0 12px 4px; max-width: 640px; }
+@media (min-width: 560px) { .m-subs { grid-template-columns: 1fr 1fr; } }
+.m-subs a { width: fit-content; padding: 5px 0; font-size: 15px; color: var(--muted); text-decoration: none; transition: color .2s; }
+.m-subs a:hover { color: var(--ink); }
+.site-menu [aria-current="page"] { color: var(--ink); font-weight: 500; }
+.m-group.active .m-parent[aria-current="page"] { color: var(--pink); font-weight: 600; }
+
+.m-prefs { margin-top: auto; padding-top: 22px; border-top: 1px solid var(--line); flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+.m-theme { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 999px; font: inherit; font-size: 14.5px; font-weight: 500; color: var(--ink); background: var(--surface); cursor: pointer; }
+.m-theme svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+[data-theme="dark"] .m-theme .to-night, [data-theme="light"] .m-theme .to-day, :root:not([data-theme]) .m-theme .to-day { display: none; }
+
+body.menu-open { overflow: hidden; }
+body.menu-open .tabbar, body.menu-open .rail, body.menu-open #pins { visibility: hidden; }
+
+@media (max-width: 1180px) { .menu-btn { display: block; } }
+@media (prefers-reduced-motion: reduce) {
+  .site-menu, .m-group, .menu-btn i { transition: none; }
+  .m-group { transform: none; }
+}

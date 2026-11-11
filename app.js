@@ -233,7 +233,7 @@
   function portrait(c, note, large) {
     if (c.photo) {
       return large
-        ? `<div class="portrait"><img id="profilePhoto" src="${esc(c.photoLarge || c.photo)}" alt="${photoAlt(c)}" width="900" height="1125" fetchpriority="high" decoding="async"></div>`
+        ? `<div class="portrait${c.gallery.length ? " can-open" : ""}"><img id="profilePhoto" src="${esc(c.photoLarge || c.photo)}" alt="${photoAlt(c)}" width="900" height="1125" fetchpriority="high" decoding="async" data-i="0"${c.gallery.length ? ` tabindex="0" role="button" title="${L("กดเพื่อดูรูปเต็มจอ", "Open full screen")}"` : ""}></div>`
         : `<div class="portrait"><img src="${esc(c.photo)}"${c.photoThumb ? ` srcset="${esc(c.photoThumb)} 240w, ${esc(c.photo)} 480w" sizes="(max-width: 640px) 45vw, 230px"` : ""} alt="${photoAlt(c)}" width="400" height="500" loading="lazy" decoding="async"></div>`;
     }
     return `<div class="portrait">${silhouette(c)}${note ? `<span class="ph-note">${L("ยังไม่มีรูป", "No photo yet")}</span>` : ""}</div>`;
@@ -324,7 +324,7 @@
     return `<li><a class="article-row" href="#/article/${enc(a.id)}">
       <span class="a-cat">${lbl(CATEGORIES[a.category])}</span>
       <div${langAttr(a)}><h3>${highlight(a.title, terms)}</h3>${a.summary ? `<p>${highlight(a.summary, terms)}</p>` : ""}
-      <span class="a-meta">${[esc(a.source || a.author), a.date ? fmtDate(a.date) : "", a.reviewedBy ? L("ตรวจทานโดย ", "Reviewed by ") + esc(a.reviewedBy) + (isoDate(a.reviewedOn) ? L(" เมื่อ ", " on ") + fmtDate(a.reviewedOn) : "") : ""].filter(Boolean).join(" · ")}</span></div>
+      <span class="a-meta">${[L(`อ่าน ${readMin(a)} นาที`, `${readMin(a)} min read`), esc(a.source || a.author), a.date ? fmtDate(a.date) : "", a.reviewedBy ? L("ตรวจทานโดย ", "Reviewed by ") + esc(a.reviewedBy) + (isoDate(a.reviewedOn) ? L(" เมื่อ ", " on ") + fmtDate(a.reviewedOn) : "") : ""].filter(Boolean).join(" · ")}</span></div>
     </a></li>`;
   }
 
@@ -372,7 +372,9 @@
   ];
   const glossary = () => GLOSSARY.filter((g) => !/^#\/article\//.test(g.href) || D.articleById[g.href.split("/").pop()]);
   const glossHtml = (list) => `<dl class="gloss">${list.map((g) => `<div><dt>${L(g.t, g.en)}${isEN() ? ` <span lang="th">${g.t}</span>` : ""}</dt><dd>${L(g.d, g.dEn)} <a href="${g.href}">${L("อ่านต่อ", "More")}<span class="sr"> ${L(g.t, g.en)}</span> →</a></dd></div>`).join("")}</dl>`;
-  const readMin = (a) => Math.max(1, Math.round(norm(a.body || "").length / 450));
+  const mediaCap = (m) => L(m.caption || "", m.caption_en || m.caption || "");
+  // about 1,000 Thai characters or 220 English words a minute
+  const readMin = (a) => { const t = norm(a.body || ""); return Math.max(1, Math.round(isEN() && !a.th ? t.split(/\s+/).length / 220 : t.replace(/\s+/g, "").length / 1000)); };
   function articleCard(raw, terms) {
     const a = art(raw);
     const meta = [L(`อ่าน ${readMin(a)} นาที`, `${readMin(a)} min read`), a.source ? esc(a.source) : ""].filter(Boolean).join(" · ");
@@ -583,8 +585,10 @@
     return esc(L("ยังไม่มีข้อมูล เข้าหาช้า ๆ แล้วดูท่าทีก่อน", "No notes yet. Approach slowly and read its body language first."));
   }
   const metLabel = (c, on) => (on ? L("จำได้แล้ว", "You know " + nm(c)) : L(`จำ${c.name}ได้แล้ว`, `I know ${nm(c)} now`));
+  let curCat = null;  // the cat whose page is open (for the photo slideshow)
   function renderCat(id) {
     const c = D.byId[lower(id)];
+    curCat = c || null;
     if (!c) { app.innerHTML = `<div class="empty">${cat("peek")}<h1>${L(`ไม่เจอแมวชื่อ “${esc(id)}”`, `No cat called “${esc(id)}”`)}</h1><p><a href="#/find">${L("ลองหาจากสีขนกับจุดที่เจอ", "Try finding it by coat and place")}</a></p></div>`; return; }
     document.title = `${nm(c)} · ${TITLE()}`;
     const met = metMap();
@@ -617,8 +621,7 @@
     app.innerHTML = `
       <nav class="crumbs" aria-label="${L("ตำแหน่ง", "Breadcrumb")}"><a href="${esc(backHref)}">← ${esc(backLabel)}</a>${inList && ids.length > 1 ? `<span class="crumb-pos">${pos + 1} / ${ids.length}</span>` : ""}</nav>
       <article class="profile">
-        <div class="profile-side">${portrait(c, true, true)}${c.gallery.length > 1 ? `
-          <div class="gallery" role="group" aria-label="${esc(L(`รูปของ${c.name} ${c.gallery.length} รูป`, `${c.gallery.length} photos of ${nm(c)}`))}">${c.gallery.map((p, i) => `<button type="button" class="thumb" aria-pressed="${i === 0}" aria-label="${L("ดูรูปที่ ", "Show photo ")}${i + 1}" data-l="${esc(p.l)}"><img src="${esc(p.t || p.s)}" alt="" width="96" height="120" loading="lazy" decoding="async"></button>`).join("")}</div>` : ""}
+        <div class="profile-side">${portrait(c, true, true)}${c.gallery.length > 1 ? galleryHtml(c) : ""}
           ${c.gallery.length ? "" : `<p class="photo-credit">${L("ยังไม่มีรูป", "No photo yet")} · <a href="${shareHref("photo", c)}">${L("มีรูปน้องไหม? ส่งมาได้เลย", "Have a photo? Send it in")}</a></p>`}
         </div>
         <div class="profile-main">
@@ -690,14 +693,82 @@
     });
   }
 
-  // profile gallery: thumbnails swap the main photo (event delegation survives re-renders)
+  /* ---------------- photo and clip viewer: a full-screen slideshow over the page ----------------
+     items: [{ l: large image, v: video (optional), alt, caption }]. Arrows, swipe, Esc; focus returns where it was. */
+  let viewer = null;
+  function openViewer(items, start, label) {
+    if (!items.length) return;
+    const back = document.activeElement;
+    let i = Math.max(0, Math.min(items.length - 1, start || 0));
+    const el = document.createElement("div");
+    el.className = "viewer";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.setAttribute("aria-label", label || L("รูปและคลิป", "Photos and clips"));
+    el.innerHTML = `<div class="v-top"><span class="v-count" aria-live="polite"></span><button type="button" class="v-close" aria-label="${L("ปิด", "Close")}">✕</button></div>
+      <figure class="v-stage"></figure>
+      ${items.length > 1 ? `<button type="button" class="v-nav v-prev" aria-label="${L("ก่อนหน้า", "Previous")}">‹</button><button type="button" class="v-nav v-next" aria-label="${L("ถัดไป", "Next")}">›</button>` : ""}`;
+    const stage = el.querySelector(".v-stage"), count = el.querySelector(".v-count");
+    const show = (n) => {
+      i = (n + items.length) % items.length;
+      const it = items[i];
+      stage.innerHTML = (it.v
+        ? `<video src="${esc(it.v)}" poster="${esc(it.l)}" controls playsinline preload="metadata"></video>`
+        : `<img src="${esc(it.l)}" alt="${esc(it.alt || "")}" decoding="async">`) + (it.caption ? `<figcaption>${esc(it.caption)}</figcaption>` : "");
+      count.textContent = items.length > 1 ? `${i + 1} / ${items.length}` : "";
+      [items[i + 1], items[i - 1]].forEach((x) => { if (x && !x.v) { const im = new Image(); im.src = x.l; } });  // next ones load early
+    };
+    const close = () => { document.removeEventListener("keydown", key); el.remove(); document.body.classList.remove("viewer-open"); viewer = null; if (back && back.focus) back.focus(); };
+    const key = (e) => {
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowRight") show(i + 1);
+      else if (e.key === "ArrowLeft") show(i - 1);
+      else if (e.key === "Tab") { const f = [...el.querySelectorAll("button, video")]; const k = f.indexOf(document.activeElement); if (e.shiftKey ? k <= 0 : k === f.length - 1) { e.preventDefault(); f[e.shiftKey ? f.length - 1 : 0].focus(); } }
+    };
+    el.addEventListener("click", (e) => {
+      if (e.target.closest(".v-close") || e.target === el || e.target === stage) close();
+      else if (e.target.closest(".v-prev")) show(i - 1);
+      else if (e.target.closest(".v-next")) show(i + 1);
+    });
+    // swipe left or right on a phone
+    let x0 = null;
+    stage.addEventListener("pointerdown", (e) => { x0 = e.clientX; });
+    stage.addEventListener("pointerup", (e) => { if (x0 != null && Math.abs(e.clientX - x0) > 50 && items.length > 1) show(e.clientX < x0 ? i + 1 : i - 1); x0 = null; });
+    document.addEventListener("keydown", key);
+    document.body.appendChild(el);
+    document.body.classList.add("viewer-open");
+    viewer = el;
+    show(i);
+    el.querySelector(".v-close").focus();
+  }
+  window.addEventListener("hashchange", () => { if (viewer) viewer.querySelector(".v-close").click(); });
+
+  // profile gallery: 8 thumbnails; past that the 8th says "+N" and opens the slideshow. Clips show a play mark.
+  const GALLERY_SHOWN = 8;
+  function galleryHtml(c) {
+    const g = c.gallery, more = g.length > GALLERY_SHOWN ? g.length - GALLERY_SHOWN + 1 : 0;
+    const nPhoto = g.filter((p) => !p.v).length, nClip = g.length - nPhoto;
+    const what = L([`รูป ${nPhoto} รูป`, nClip ? `คลิป ${nClip} คลิป` : ""].filter(Boolean).join(" "), [`${nPhoto} photo${nPhoto === 1 ? "" : "s"}`, nClip ? `${nClip} clip${nClip === 1 ? "" : "s"}` : ""].filter(Boolean).join(", "));
+    return `<div class="gallery" role="group" aria-label="${esc(L(`${c.name}: `, `${nm(c)}: `) + what)}">${g.slice(0, GALLERY_SHOWN).map((p, i) => {
+      const last = more && i === GALLERY_SHOWN - 1;
+      const lab = last ? L(`ดูทั้งหมด ${g.length} รายการ`, `See all ${g.length}`) : p.v ? L(`เปิดคลิปที่ ${i + 1}`, `Play clip ${i + 1}`) : L(`ดูรูปที่ ${i + 1}`, `Show photo ${i + 1}`);
+      return `<button type="button" class="thumb${p.v ? " is-clip" : ""}${last ? " is-more" : ""}" data-i="${i}" ${last || p.v ? "" : `aria-pressed="${i === 0}" `}aria-label="${esc(lab)}"><img src="${esc(p.t || p.s)}" alt="" width="96" height="120" loading="lazy" decoding="async">${p.v && !last ? '<span class="play" aria-hidden="true"></span>' : ""}${last ? `<span class="more-n" aria-hidden="true">+${more}</span>` : ""}</button>`;
+    }).join("")}</div>`;
+  }
+  const galleryItems = (c) => c.gallery.map((p, i) => ({ l: p.l, v: p.v, alt: L(`${c.name} รูปที่ ${i + 1}`, `${nm(c)}, photo ${i + 1}`) }));
   app.addEventListener("click", (e) => {
+    const main = document.getElementById("profilePhoto"), c = main && curCat;
+    if (e.target === main && c && c.gallery.length) { openViewer(galleryItems(c), Number(main.dataset.i || 0), L(`รูปของ${c.name}`, `Photos of ${nm(c)}`)); return; }
     const t = e.target.closest(".gallery .thumb");
-    if (!t) return;
-    const main = document.getElementById("profilePhoto");
-    if (main) main.src = t.dataset.l;
-    t.parentNode.querySelectorAll(".thumb").forEach((b) => b.setAttribute("aria-pressed", b === t));
+    if (!t || !c) return;
+    const n = Number(t.dataset.i);
+    // a clip, or the "+N" tile: open the slideshow. A photo: show it as the big picture.
+    if (t.classList.contains("is-more") || t.classList.contains("is-clip")) { openViewer(galleryItems(c), n, L(`รูปของ${c.name}`, `Photos of ${nm(c)}`)); return; }
+    if (main) { main.src = c.gallery[n].l; main.dataset.i = n; }
+    t.parentNode.querySelectorAll(".thumb[aria-pressed]").forEach((b) => b.setAttribute("aria-pressed", b === t));
   });
+  // the big photo opens the slideshow from the keyboard too
+  app.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.id === "profilePhoto") { e.preventDefault(); e.target.click(); } });
 
   /* ---------------- knowledge ---------------- */
   function renderKnowledge(catKey) {
@@ -824,8 +895,10 @@
           ${a.author ? `<span>${L("เรียบเรียงโดย", "Written up by")} <b>${esc(a.author)}</b></span>` : ""}
           ${a.source ? `<span>${L("ที่มา", "Source")} <b>${esc(a.source)}</b></span>` : ""}
           ${a.date ? `<span>${fmtDate(a.date)}</span>` : ""}
+          <span>${L(`อ่านราว ${readMin(a)} นาที`, `About ${readMin(a)} min read`)}</span>
           <span>${a.reviewedBy ? `${L("ตรวจทานโดย", "Reviewed by")} <b>${esc(a.reviewedBy)}</b>${isoDate(a.reviewedOn) ? L(" เมื่อ ", " on ") + fmtDate(a.reviewedOn) : ""}${reviewState(a) === "due" ? ` <span class="a-pending">${L("ตรวจครั้งล่าสุดนานแล้ว อาจต้องทบทวน", "Last checked a while ago")}</span>` : ""}` : `<span class="a-pending">${L("รอผู้ดูแลตรวจทาน", "Awaiting a keeper's review")}</span>`}</span>
         </div>
+        ${a.media.length ? `<div class="a-media${a.media.length > 1 ? " is-many" : ""}">${a.media.map((m, i) => `<figure><button type="button" class="a-shot${m.video ? " is-clip" : ""}" data-m="${i}" aria-label="${esc(mediaCap(m) || L("เปิดเต็มจอ", "Open full screen"))}"><img src="${esc(m.src || m.poster)}" alt="" loading="lazy" decoding="async">${m.video ? '<span class="play" aria-hidden="true"></span>' : ""}</button>${mediaCap(m) ? `<figcaption>${esc(mediaCap(m))}</figcaption>` : ""}</figure>`).join("")}</div>` : ""}
         <div class="prose"${langAttr(a)}>${renderBody(a.body)}</div>
         ${a.tags.length ? `<div class="tags">${a.tags.map((t) => `<a class="chip" href="#/search/${enc(t)}">${esc(t)}</a>`).join("")}</div>` : ""}
         ${cats.length ? `<section class="sec"><h2 class="label">${L("แมวในเรื่องนี้", "Cats in this story")}</h2><div class="mini-cats">${cats.map(miniCat).join("")}</div></section>` : ""}
@@ -834,6 +907,9 @@
         <div class="feedback"><span>${L("เรื่องนี้ขาดอะไรไหม หรือมีตรงไหนผิด?", "Something missing or wrong?")}</span><a class="btn ghost" href="${shareHref("story", null, "&ctx=" + enc(a.id))}">${L("เล่าเพิ่ม", "Add from experience")}</a><a class="btn ghost" href="${shareHref("fix", null, "&ctx=" + enc(a.id))}">${L("แจ้งแก้", "Report a fix")}</a></div>
       </article>
       ${more.length ? `<section class="sec article-more"><h2 class="label">${L(`อ่านต่อในหมวด${catLbl}`, `More in ${catLbl}`)}</h2><ul class="articles">${more.map((x) => articleRow(x)).join("")}</ul></section>` : ""}`;
+    // photos and clips in the article open in the slideshow
+    app.querySelectorAll(".a-shot").forEach((b) => b.addEventListener("click", () =>
+      openViewer(a.media.map((m) => ({ l: m.src || m.poster, v: m.video, caption: mediaCap(m) })), Number(b.dataset.m), a.title)));
     // "did this help?": a quiet signal of whether the knowledge is used, sent to the team's review sheet
     const hp = document.getElementById("helpful");
     hp.addEventListener("click", async (e) => {
@@ -1117,7 +1193,7 @@
   const shuffle = (list) => { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
   const quizPool = () => D.cats.filter((c) => SEEN_NOW(c) && c.photo);
   // a random photo of the cat, so the quiz is about the cat and not one picture
-  const quizPic = (c) => { const g = c.gallery.length ? c.gallery[Math.floor(Math.random() * c.gallery.length)] : null; return g ? g.s : c.photo; };
+  const quizPic = (c) => { const ph = c.gallery.filter((p) => !p.v); const g = ph.length ? ph[Math.floor(Math.random() * ph.length)] : null; return g ? g.s : c.photo; };  // photos only, not clip frames
   function quizQuestions() {
     const pool = quizPool(), qs = [];
     for (const c of shuffle(pool).slice(0, 5)) {

@@ -222,6 +222,9 @@ window.CatData = (function () {
       date: norm(r.date),
       tags: splitList(r.tags),
       relatedCats: splitList(r.related_cats).map(lower),
+      // photos and clips shown with the article: [{ src, video, caption, caption_en }] in data-sample.js,
+      // or image paths/links separated by commas in a sheet column "media"
+      media: Array.isArray(r.media) ? r.media.filter((m) => m && (m.src || m.video)) : splitList(r.media).map((src) => ({ src })),
       reviewedBy: norm(r.reviewed_by),
       reviewedOn: norm(r.reviewed_on),
       published: isPublished(r.status)

@@ -28,6 +28,8 @@ from PIL import Image, ImageOps
 
 SHEET_ID = "1LFBVHk6D9GHRL2BPJldPS-qql6UkGWmlpr8B-0B1J70"
 TAB = "Cat_profile"
+# the team's shared "รูปแมวอักษร" folder: one subfolder per cat. Used when a cat's Photo cell has no link.
+PARENT_FOLDER = "1GbIIACrwa_pIDQeCM0DFZAJMFLOamww-"
 MAX_PHOTOS = 8          # per cat
 THUMB, SMALL, LARGE = 240, 480, 1200  # longest side in px (t: list cards, s: cards on big screens, l: profile)
 OUT_DIR = os.path.join("photos", "cats")
@@ -74,8 +76,14 @@ def sheet_rows(rows, cols):
         name = str(r[name_i].value or "").strip()
         cell = r[photo_i]
         link = cell.hyperlink.target if cell.hyperlink else str(cell.value or "")
-        if name and link.startswith("http"):
-            yield name, link
+        if name:
+            yield name, link if link.startswith("http") else ""
+
+
+def subfolders(folder_id):
+    """{folder name: id} for the folders inside a shared Drive folder."""
+    html = fetch(f"https://drive.google.com/embeddedfolderview?id={folder_id}").decode("utf-8", "replace")
+    return {t.strip(): fid for fid, t in re.findall(r'folders/([A-Za-z0-9_-]+)[^>]*>.*?flip-entry-title">([^<]*)<', html, re.S)}
 
 
 def folder_images(folder_id):
@@ -84,8 +92,9 @@ def folder_images(folder_id):
     entries = re.findall(r'file/d/([A-Za-z0-9_-]+)/view.*?flip-entry-title">([^<]*)<', html, re.S)
     seen, out = set(), []
     for fid, title in entries:
-        if fid not in seen and title.lower().endswith(IMAGE_EXT):
-            seen.add(fid)
+        base = re.sub(r"\s*\(\d+\)(?=\.[^.]+$)", "", title)  # "IMG_7984(1).JPG" is a second copy of IMG_7984.JPG
+        if fid not in seen and base not in seen and title.lower().endswith(IMAGE_EXT):
+            seen.update((fid, base))
             out.append((fid, title))
     # a file whose name starts with "cover" (e.g. cover.jpg, cover_IMG_1140.HEIC) becomes the cat's cover photo
     return sorted(out, key=lambda e: (not e[1].lower().startswith("cover"), e[1]))
@@ -120,7 +129,16 @@ def main():
         print(f"updated the yellow list in {MANIFEST}")
         return
     manifest, used = {}, set()
+    try:
+        shared = subfolders(PARENT_FOLDER)
+    except Exception as e:
+        shared = {}
+        print(f"  ! could not list the shared photo folder: {e}", file=sys.stderr)
     for name, link in sheet_rows(rows, cols):
+        if not link and name in shared:  # no link in the sheet: use the cat's folder in the shared photo folder
+            link = f"https://drive.google.com/drive/folders/{shared[name]}"
+        if not link:
+            continue
         key = hashlib.sha1(name.encode("utf-8")).hexdigest()[:8]  # ASCII file names for any Thai cat name
         m_folder = re.search(r"/folders/([A-Za-z0-9_-]+)", link)
         m_file = re.search(r"/file/d/([A-Za-z0-9_-]+)", link)

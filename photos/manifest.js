@@ -101,6 +101,23 @@ window.CAT_PHOTO_SETS = {
    "l": "photos/cats/184462b8-4-l.jpg"
   }
  ],
+ "ชาด้า": [
+  {
+   "t": "photos/cats/e0e299b7-1-t.jpg",
+   "s": "photos/cats/e0e299b7-1-s.jpg",
+   "l": "photos/cats/e0e299b7-1-l.jpg"
+  },
+  {
+   "t": "photos/cats/e0e299b7-2-t.jpg",
+   "s": "photos/cats/e0e299b7-2-s.jpg",
+   "l": "photos/cats/e0e299b7-2-l.jpg"
+  },
+  {
+   "t": "photos/cats/e0e299b7-3-t.jpg",
+   "s": "photos/cats/e0e299b7-3-s.jpg",
+   "l": "photos/cats/e0e299b7-3-l.jpg"
+  }
+ ],
  "ชาบู": [
   {
    "t": "photos/cats/2ca0de44-1-t.jpg",
@@ -380,6 +397,38 @@ window.CAT_PHOTO_SETS = {
    "t": "photos/cats/6cfca070-8-t.jpg",
    "s": "photos/cats/6cfca070-8-s.jpg",
    "l": "photos/cats/6cfca070-8-l.jpg"
+  }
+ ],
+ "ทาโร่": [
+  {
+   "t": "photos/cats/74987967-1-t.jpg",
+   "s": "photos/cats/74987967-1-s.jpg",
+   "l": "photos/cats/74987967-1-l.jpg"
+  },
+  {
+   "t": "photos/cats/74987967-2-t.jpg",
+   "s": "photos/cats/74987967-2-s.jpg",
+   "l": "photos/cats/74987967-2-l.jpg"
+  },
+  {
+   "t": "photos/cats/74987967-3-t.jpg",
+   "s": "photos/cats/74987967-3-s.jpg",
+   "l": "photos/cats/74987967-3-l.jpg"
+  },
+  {
+   "t": "photos/cats/74987967-4-t.jpg",
+   "s": "photos/cats/74987967-4-s.jpg",
+   "l": "photos/cats/74987967-4-l.jpg"
+  },
+  {
+   "t": "photos/cats/74987967-5-t.jpg",
+   "s": "photos/cats/74987967-5-s.jpg",
+   "l": "photos/cats/74987967-5-l.jpg"
+  },
+  {
+   "t": "photos/cats/74987967-6-t.jpg",
+   "s": "photos/cats/74987967-6-s.jpg",
+   "l": "photos/cats/74987967-6-l.jpg"
   }
  ]
 };

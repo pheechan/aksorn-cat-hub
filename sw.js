@@ -5,9 +5,9 @@
    - The team's sheet and the submission script are never cached here: data.js keeps its own copy of the sheet,
      and a submission must reach the script or fail loudly. */
 const CACHE = "akc-v1";
-const SHELL = ["./", "index.html", "cats.html"];
+const SHELL = ["./", "index.html", "m.html", "cats.html"];
 const SKIP = /(^|\.)(docs|script|sheets)\.google(usercontent)?\.com$/;
-const CDN = /^(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
+const CDN = /^(cdnjs\.cloudflare\.com|cdn\.jsdelivr\.net|unpkg\.com|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}).then(() => self.skipWaiting()));

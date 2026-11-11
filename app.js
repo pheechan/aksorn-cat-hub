@@ -144,7 +144,6 @@
     });
     return libs[src];
   }
-  const VIS_JS = "https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js";
   const QR_JS = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
   let renderToken = 0;
 
@@ -1447,7 +1446,11 @@
   }
 
   /* ---------------- knowledge map: cats, places, keepers and know-how, and how they connect ----------------
-     Built from the sheet (family, Personal Information, locations, keepers) and the library (articles, topics). */
+     Stated links come from the sheet (family, Personal Information, places, keepers) and the library (articles, topics).
+     "Similar" links are computed in the browser: every cat profile and article becomes a TF-IDF vector of its words
+     (Thai split by the browser's ICU word breaker, Intl.Segmenter), and pairs with a high cosine similarity are linked.
+     They are suggestions for the team to confirm, not facts.
+     Drawn with force-graph: d3-force physics on a canvas, the same approach as Obsidian's graph view. */
   const EDGE_KINDS = () => ({
     mother: { t: L("แม่ลูก", "Mother and kitten"), g: "family" },
     sibling: { t: L("พี่น้อง", "Siblings"), g: "family" },
@@ -1456,18 +1459,75 @@
     place: { t: L("อยู่ที่", "Lives at"), g: "place" },
     keeper: { t: L("ผู้ดูแลหลัก", "Main keeper"), g: "keeper" },
     about: { t: L("บทความที่พูดถึง", "Written about in"), g: "know" },
-    topic: { t: L("หมวดของบทความ", "Article topic"), g: "know" }
+    topic: { t: L("หมวดของบทความ", "Article topic"), g: "know" },
+    near: { t: L("เนื้อหาคล้ายกัน (คำนวณ)", "Similar content (computed)"), g: "near" }
   });
-  const KG_GROUPS = () => [["family", L("ครอบครัว", "Family")], ["social", L("เพื่อน / ไม่ถูกกัน", "Friends and rivals")], ["place", L("ที่อยู่", "Places")], ["keeper", L("ผู้ดูแล", "Keepers")], ["know", L("ความรู้", "Know-how")]];
+  const KG_GROUPS = () => [["family", L("ครอบครัว", "Family")], ["social", L("เพื่อน / ไม่ถูกกัน", "Friends and rivals")], ["place", L("ที่อยู่", "Places")], ["keeper", L("ผู้ดูแล", "Keepers")], ["know", L("ความรู้", "Know-how")], ["near", L("คล้ายกัน", "Similar")]];
   const NODE_GROUP = { place: "place", keeper: "keeper", article: "know", topic: "know" };
-  let network = null;
+  const TOPIC_HUE = { experience: "#3b82c4", feeding: "#d9822b", health: "#e0565b", behavior: "#8b6fd6", hygiene: "#2a9d8f" };
   const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  // --- the computed part: word vectors and cosine similarity ---
+  const KG_STOP = new Set(("และ ที่ ก็ ได้ ไม่ มี เป็น ใน กับ ของ จะ ให้ แต่ ไป มา อยู่ แล้ว นี้ นั้น ว่า คน ตัว แมว คือ หรือ จาก ถ้า เลย ค่อย การ ความ เขา เรา เค้า มัน "
+    + "อักษร คณะ จุฬา ช่วง สี ถูก ปี หา เข้า ขึ้น ลง ตรง แถว ก่อน หลัง ด้วย ยัง อีก เพราะ เมื่อ ตอน เวลา ทุก บาง ซึ่ง โดย จึง กัน นะ ครับ ค่ะ คะ จ้ะ ๆ ไหน อะไร ยังไง แบบ เคย ต้อง ควร อาจ ช่วย ทำ เห็น รู้ "
+    + "the a an and of to in is it with for on at be this that are was").split(" "));
+  let thSeg = null;
+  try { thSeg = new Intl.Segmenter("th", { granularity: "word" }); } catch (e) { thSeg = null; }
+  function kgWords(text, show) {
+    const out = [], push = (w) => {
+      w = w.trim().toLowerCase();
+      if (w.length < 2 || (/^[\d.,:/-]+$/.test(w) && !/^(19|20)\d\d$/.test(w)) || KG_STOP.has(w)) return; // keep years: "arrived in 2024" is real signal
+      const k = fold(w) || w;
+      if (KG_STOP.has(k)) return;
+      if (!show[k]) show[k] = w;
+      out.push(k);
+    };
+    const t = String(text || "");
+    if (thSeg) { for (const s of thSeg.segment(t)) if (s.isWordLike) push(s.segment); }
+    else t.split(/[^\p{L}\p{M}\p{N}]+/u).forEach((run) => {
+      if (!/[ก-๙]/.test(run)) return push(run);
+      for (let i = 0; i < run.length - 2; i++) push(run.slice(i, i + 3)); // no word breaker: Thai character trigrams
+    });
+    return out;
+  }
+  // locations and names are left out on purpose: places are already their own links, so similarity has to come from what was written
+  const catText = (c) => [c.about, c.personality, c.notes, c.health, c.normal, c.approach, c.relationship, c.marks].concat(c.interview || []).join(" ");
+  const artText = (a) => [a.title, a.title, a.summary, (a.tags || []).join(" "), a.body].join(" ");
+  function kgSimilar(nodes) {
+    const docs = nodes.filter((n) => n.kind === "cat" || n.kind === "article"), show = {};
+    // cat names are taken out first: sharing a name is not sharing content (and Thai word breaking splits them, มีตังค์ → มี + ตังค์)
+    const names = D.cats.flatMap((c) => [c.name].concat(c.nicknames || [])).filter((x) => x && x.length > 1).sort((a, b) => b.length - a.length);
+    const strip = (t) => names.reduce((acc, x) => acc.split(x).join(" "), String(t || ""));
+    const tfs = docs.map((n) => { const m = new Map(); kgWords(strip(n.kind === "cat" ? catText(n.cat) : artText(n.raw)), show).forEach((w) => m.set(w, (m.get(w) || 0) + 1)); return m; });
+    const df = new Map();
+    tfs.forEach((m) => m.forEach((_, w) => df.set(w, (df.get(w) || 0) + 1)));
+    const N = docs.length;
+    // tf-idf with log tf; words in more than half the documents carry no signal
+    const vecs = tfs.map((m) => {
+      const v = new Map(); let ss = 0;
+      m.forEach((tf, w) => { const d = df.get(w); if (d > N / 2) return; const x = (1 + Math.log(tf)) * Math.log(N / d); v.set(w, x); ss += x * x; });
+      const k = Math.sqrt(ss) || 1; v.forEach((x, w) => v.set(w, x / k)); return v;
+    });
+    const sims = new Map(); docs.forEach((n) => sims.set(n.id, []));
+    for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
+      let [a, b] = [vecs[i], vecs[j]]; if (a.size > b.size) [a, b] = [b, a];
+      let s = 0; const parts = [];
+      a.forEach((x, w) => { const y = b.get(w); if (y) { s += x * y; parts.push([w, x * y]); } });
+      if (s <= 0.02) continue;
+      const words = parts.sort((p, q) => q[1] - p[1]).slice(0, 4).map((p) => show[p[0]]);
+      sims.get(docs[i].id).push({ id: docs[j].id, s, words });
+      sims.get(docs[j].id).push({ id: docs[i].id, s, words });
+    }
+    sims.forEach((l) => l.sort((p, q) => q.s - p.s));
+    return { sims, docs: N, words: df.size };
+  }
+
   function buildGraph() {
     const nodes = [], edges = [], ids = new Set(), keys = new Set();
     const add = (n) => { if (!ids.has(n.id)) { ids.add(n.id); nodes.push(n); } };
-    const link = (from, to, kind, both) => {
+    const link = (from, to, kind, both, extra) => {
       const k = (both ? [from, to].sort().join("|") : from + ">" + to) + kind;
-      if (!keys.has(k)) { keys.add(k); edges.push({ id: "e" + edges.length, from, to, kind }); }
+      if (!keys.has(k)) { keys.add(k); edges.push(Object.assign({ id: "e" + edges.length, from, to, kind }, extra)); }
     };
     D.cats.forEach((c) => add({ id: "c:" + c.id, kind: "cat", cat: c, label: nm(c) }));
     D.cats.forEach((c) => {
@@ -1489,12 +1549,18 @@
     });
     D.articles.forEach((raw) => {
       const a = art(raw);
-      add({ id: "a:" + a.id, kind: "article", article: a, label: a.title });
+      add({ id: "a:" + a.id, kind: "article", article: a, raw, topic: a.category, label: a.title });
       add({ id: "t:" + a.category, kind: "topic", topic: a.category, label: lbl(CATEGORIES[a.category]) });
       link("a:" + a.id, "t:" + a.category, "topic");
       a.relatedCats.forEach((k) => { if (D.byId[k]) link("a:" + a.id, "c:" + k, "about"); });
     });
-    return { nodes, edges };
+    // computed links: each cat or article keeps its two closest matches, if they are close enough and not already linked
+    const sim = kgSimilar(nodes), linked = new Set(edges.map((e) => [e.from, e.to].sort().join("|")));
+    sim.sims.forEach((list, id) => list.slice(0, 2).forEach((m) => {
+      if (m.s < 0.12 || linked.has([id, m.id].sort().join("|"))) return;
+      link(id, m.id, "near", true, { w: m.s, words: m.words });
+    }));
+    return { nodes, edges, sim };
   }
   const nodeHref = (n) => ({ cat: () => catHref(n.cat), place: () => `#/cats?area=${n.area}`, keeper: () => "#/ask", article: () => `#/article/${enc(n.article.id)}`, topic: () => `#/knowledge/${n.topic}` }[n.kind]());
   const nodeKind = (n) => ({ cat: L("แมว", "Cat"), place: L("ที่อยู่", "Place"), keeper: L("ผู้ดูแล", "Keeper"), article: L("บทความ", "Article"), topic: L("หมวดความรู้", "Topic") }[n.kind]);
@@ -1510,95 +1576,315 @@
     return K[e.kind].t;
   }
 
+  // colours come from the theme tokens, read again when the theme changes
+  function kgPalette() {
+    const v = (n, d) => cssVar(n) || d;
+    return { ink: v("--ink", "#16181d"), ink2: v("--ink-2", "#3d4048"), muted: v("--muted", "#6a6e76"), line: v("--line", "#e6e3dd"), strong: v("--line-strong", "#d4d1ca"),
+      bg: v("--bg", "#fff"), surface: v("--surface", "#f5f5f3"), pink: v("--pink", "#e2447a"), ok: v("--ok", "#1f7a4d"), bad: v("--bad", "#c0352b"), violet: v("--violet", "#5b4ab3"),
+      near: document.documentElement.getAttribute("data-theme") === "dark" ? "#6fb3ff" : "#2f74c0", font: getComputedStyle(document.body).fontFamily };
+  }
+  function rgba(c, a) {
+    const m = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(c);
+    if (m) return `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})`;
+    const r = /rgba?\(([^)]+)\)/.exec(c);
+    return r ? `rgba(${r[1].split(",").slice(0, 3).join(",")},${a})` : c;
+  }
+  const FG_JS = "https://unpkg.com/force-graph@1.52.0/dist/force-graph.min.js";
+  let kg = null;
+  function stopGraph() {
+    if (!kg) return;
+    try { kg.g.pauseAnimation(); if (kg.g._destructor) kg.g._destructor(); } catch (e) { /* already gone */ }
+    kg.off(); kg = null;
+  }
+  if (window.I18N && I18N.onTheme) I18N.onTheme(() => { if (kg) setTimeout(() => { if (kg) kg.pal = kgPalette(); }, 30); });
+
   function renderGraph(focusId) {
     const tok = renderToken;
     const G = buildGraph(), K = EDGE_KINDS(), byId = {};
-    G.nodes.forEach((n) => { byId[n.id] = n; });
+    G.nodes.forEach((n) => { byId[n.id] = n; n.deg = 0; n.links = []; });
+    G.edges.forEach((e) => { [byId[e.from], byId[e.to]].forEach((n) => { n.links.push(e); if (e.kind !== "near") n.deg++; }); });
     const on = new Set(store.get("akc-kg-groups", KG_GROUPS().map(([g]) => g)));
     const count = (k) => G.nodes.filter((n) => n.kind === k).length;
-    const neighbours = (id) => G.edges.filter((e) => e.from === id || e.to === id).map((e) => ({ e, other: byId[e.from === id ? e.to : e.from], self: e.from === id }));
-    const hint = `<p class="muted">${L("แตะแมว ที่อยู่ ผู้ดูแล หรือบทความในผัง เพื่อดูว่าเชื่อมกับอะไรบ้าง", "Tap a cat, place, keeper or article in the map to see what it connects to.")}</p>
-      <ul class="kg-legend">${Object.keys(K).map((k) => `<li><i class="kg-line kg-${k}"></i>${K[k].t}</li>`).join("")}</ul>
-      <p class="muted small">${L("วงชมพูหนา = แมวประจำคณะ · สีจาง = จากไปแล้ว", "Thick pink ring = faculty cat · faded = passed away")}</p>`;
+    const stated = G.edges.filter((e) => e.kind !== "near").length, computed = G.edges.length - stated;
+    // knowledge gaps: cats nobody has written an article about yet
+    const gaps = G.nodes.filter((n) => n.kind === "cat" && n.cat.status === "active" && !n.links.some((e) => e.kind === "about"));
+    const neighbours = (id) => byId[id].links.map((e) => ({ e, other: byId[e.from === id ? e.to : e.from], self: e.from === id }));
+    const line = (k) => `<svg class="kg-key" viewBox="0 0 28 8" aria-hidden="true"><path d="M1 4h26" class="kk-${k}"/></svg>`;
+    const dot = (cls) => `<i class="kg-dot ${cls}" aria-hidden="true"></i>`;
+    const hint = `<p class="kg-lead">${L("แตะอะไรก็ได้ในผัง เพื่อดูว่าเชื่อมกับอะไรบ้าง ลากเพื่อเลื่อน หมุนล้อหรือถ่างนิ้วเพื่อซูม", "Tap anything in the map to see what it connects to. Drag to move, scroll or pinch to zoom.")}</p>
+      <h2 class="kg-h">${L("จุด", "Dots")}</h2>
+      <ul class="kg-legend">
+        <li>${dot("is-cat")}${L("แมว (ขอบชมพู = แมวประจำคณะ)", "Cat (pink ring = faculty cat)")}</li>
+        <li>${dot("is-place")}${L("ที่อยู่", "Place")}</li><li>${dot("is-keeper")}${L("ผู้ดูแล", "Keeper")}</li>
+        <li>${dot("is-article")}${L("บทความ (สีตามหมวด)", "Article (coloured by topic)")}</li>
+      </ul>
+      <h2 class="kg-h">${L("เส้น", "Lines")}</h2>
+      <ul class="kg-legend">${Object.keys(K).map((k) => `<li>${line(k)}${K[k].t}</li>`).join("")}</ul>
+      <p class="muted small">${L("เส้นประสีฟ้าไม่ได้มาจากชีต คอมพิวเตอร์คำนวณจากคำที่ใช้บรรยายแมวหรือบทความ (TF-IDF กับ cosine similarity) จึงเป็นแค่ข้อเสนอให้ทีมตรวจ",
+        "The dotted blue lines are not from the sheet. They are computed from the words used to describe each cat or article (TF-IDF and cosine similarity), so treat them as suggestions for the team to check.")}</p>`;
     function panel(id) {
       const n = byId[id];
       if (!n) return hint;
       const rows = {};
-      neighbours(id).forEach(({ e, other, self }) => { const t = edgeText(e, self); (rows[t] = rows[t] || []).push(other); });
-      const c = n.cat;
-      return `<div class="kg-head">${c ? `<a class="kg-pic" href="${catHref(c)}">${portrait(c)}</a>` : ""}<div><small>${nodeKind(n)}</small><h2>${c ? nmHtml(c) : esc(n.label)}</h2>${c ? `<div class="cat-meta">${statusDot(c)}</div>` : ""}</div></div>
-        ${n.kind === "article" && n.article.summary ? `<p>${esc(n.article.summary)}</p>` : ""}
-        ${Object.keys(rows).length ? `<dl class="kg-rels">${Object.keys(rows).map((t) => `<div><dt>${t}</dt><dd>${rows[t].map((o) => `<button type="button" class="linkbtn" data-node="${esc(o.id)}">${esc(o.label)}</button>`).join(", ")}</dd></div>`).join("")}</dl>` : `<p class="muted">${L("ยังไม่มีความสัมพันธ์ที่บันทึกไว้", "No connections recorded yet")}</p>`}
-        <p><a class="btn small" href="${nodeHref(n)}">${nodeOpen(n)} →</a></p>
+      neighbours(id).filter(({ e }) => e.kind !== "near").forEach(({ e, other, self }) => { const t = edgeText(e, self); (rows[t] = rows[t] || []).push(other); });
+      const near = (G.sim.sims.get(id) || []).slice(0, 4).filter((m) => m.s >= 0.06);
+      const c = n.cat, a = n.article;
+      return `<div class="kg-head">${c ? `<a class="kg-pic" href="${catHref(c)}" tabindex="-1">${portrait(c)}</a>` : `<span class="kg-glyph kg-glyph-${n.kind}" aria-hidden="true"${n.topic ? ` style="--hue:${TOPIC_HUE[n.topic] || "#8a7fd0"}"` : ""}></span>`}
+          <div><small>${nodeKind(n)}${n.deg ? ` · ${L(n.deg + " ความสัมพันธ์", n.deg + (n.deg === 1 ? " link" : " links"))}` : ""}</small><h2>${c ? nmHtml(c) : esc(n.label)}</h2>${c ? `<div class="cat-meta">${statusDot(c)}</div>` : ""}</div></div>
+        ${a && a.summary ? `<p class="kg-sum">${esc(a.summary)}</p>` : ""}
+        ${Object.keys(rows).length ? `<dl class="kg-rels">${Object.keys(rows).map((t) => `<div><dt>${t}</dt><dd>${rows[t].map((o) => `<button type="button" class="kg-chip" data-node="${esc(o.id)}">${esc(o.label)}</button>`).join("")}</dd></div>`).join("")}</dl>` : `<p class="muted">${L("ยังไม่มีความสัมพันธ์ที่บันทึกไว้", "No connections recorded yet")}</p>`}
+        ${near.length ? `<h2 class="kg-h">${L("เนื้อหาคล้ายกัน", "Similar content")} <span class="muted">${L("คำนวณ", "computed")}</span></h2>
+          <ul class="kg-sim">${near.map((m) => `<li><button type="button" class="kg-chip" data-node="${esc(m.id)}">${esc(byId[m.id].label)}</button>
+            <span class="kg-bar" aria-hidden="true"><i style="width:${Math.min(100, Math.round(m.s * 160))}%"></i></span><span class="kg-pct">${Math.round(m.s * 100)}%</span>
+            <small>${L("คำที่ใช้ร่วมกัน: ", "Shared words: ")}${m.words.map(esc).join(", ")}</small></li>`).join("")}</ul>` : ""}
+        <p class="kg-actions"><a class="btn small" href="${nodeHref(n)}">${nodeOpen(n)} →</a></p>
         ${c ? `<p class="muted small">${L(`รู้ว่า${esc(c.name)}สนิทหรือไม่ถูกกับตัวไหน?`, `Know who ${esc(nm(c))} gets on with?`)} <a href="${shareHref("story", c)}">${L("บอกทีม", "Tell the team")}</a></p>` : ""}`;
     }
     const list = Object.keys(K).map((k) => {
       const es = G.edges.filter((e) => e.kind === k);
-      return es.length ? `<div><h3>${K[k].t} <span class="muted">(${es.length})</span></h3><ul>${es.map((e) => `<li><a href="${nodeHref(byId[e.from])}">${esc(byId[e.from].label)}</a> ${e.kind === "mother" || e.kind === "keeper" || e.kind === "place" || e.kind === "about" || e.kind === "topic" ? "→" : "↔"} <a href="${nodeHref(byId[e.to])}">${esc(byId[e.to].label)}</a></li>`).join("")}</ul></div>` : "";
+      const arrow = (e) => (["mother", "keeper", "place", "about", "topic"].includes(e.kind) ? "→" : "↔");
+      return es.length ? `<div><h3>${K[k].t} <span class="muted">(${es.length})</span></h3><ul>${es.map((e) => `<li><a href="${nodeHref(byId[e.from])}">${esc(byId[e.from].label)}</a> ${arrow(e)} <a href="${nodeHref(byId[e.to])}">${esc(byId[e.to].label)}</a>${e.w ? ` <span class="muted">${Math.round(e.w * 100)}%</span>` : ""}</li>`).join("")}</ul></div>` : "";
     }).join("");
+    const icon = (d) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
     app.innerHTML = `
-      ${pageHead(L("ผังความรู้", "Knowledge map"), L("แมวทุกตัวในคณะ เชื่อมกับครอบครัว เพื่อน ที่อยู่ ผู้ดูแล และบทความที่พูดถึง ทุกเส้นดึงมาจากชีตของทีมและคลังความรู้ แตะจุดไหนก็ได้เพื่อดูรายละเอียด",
-        "Every cat at the faculty, linked to family, friends, places, keepers and the articles about them. Every link comes from the team's sheet and the library. Tap anything to see more."))}
-      <p class="kg-stats">${[[count("cat"), L("แมว", "cats")], [count("place"), L("ที่อยู่", "places")], [count("keeper"), L("ผู้ดูแล", "keepers")], [count("article"), L("บทความ", "articles")], [G.edges.length, L("ความสัมพันธ์", "links")]].map(([v, t]) => `<span><b>${v}</b> ${t}</span>`).join("")}</p>
-      <div class="chips kg-filters" role="group" aria-label="${L("แสดงความสัมพันธ์", "Show links")}">${KG_GROUPS().map(([g, t]) => `<button type="button" data-g="${g}" aria-pressed="${on.has(g)}"><i class="kg-sw kg-g-${g}" aria-hidden="true"></i>${t}</button>`).join("")}</div>
-      <div class="kg-wrap">
-        <div id="kg" class="kg" role="img" aria-label="${L("ผังความรู้ รายการแบบข้อความอยู่ใต้ผัง", "Knowledge map; a text list is below it")}"><p class="empty">${L("กำลังวาดผัง…", "Drawing the map…")}</p></div>
-        <aside class="kg-panel" id="kgPanel" aria-live="polite">${hint}</aside>
+      ${pageHead(L("ผังความรู้", "Knowledge map"), L("แมวทุกตัวในคณะ เชื่อมกับครอบครัว เพื่อน ที่อยู่ ผู้ดูแล และบทความที่พูดถึง เส้นทึบมาจากชีตของทีม เส้นประคอมพิวเตอร์คำนวณจากเนื้อหา",
+        "Every cat at the faculty, linked to family, friends, places, keepers and the articles about them. Solid lines come from the team's sheet; dotted lines are computed from the writing."))}
+      <div class="kg-stats">
+        ${[[count("cat"), L("แมว", "cats")], [count("place"), L("ที่อยู่", "places")], [count("article"), L("บทความ", "articles")], [stated, L("ความสัมพันธ์จากชีต", "links from the sheet")], [computed, L("ความคล้ายที่คำนวณได้", "computed similarities")]].map(([v, t]) => `<span><b>${v}</b> ${t}</span>`).join("")}
+        ${gaps.length ? `<button type="button" class="kg-gap" id="kgGap" aria-pressed="false">${L(`${gaps.length} ตัวยังไม่มีใครเขียนถึง`, `${gaps.length} cats nobody has written about yet`)}</button>` : ""}
+      </div>
+      <div class="kg-shell">
+        <div class="kg-stage">
+          <div id="kg" class="kg" role="img" aria-label="${L("ผังความรู้ รายการแบบข้อความอยู่ใต้ผัง", "Knowledge map; a text list is below it")}"><p class="empty">${L("กำลังวาดผัง…", "Drawing the map…")}</p></div>
+          <div class="kg-top">
+            <label class="kg-search"><span class="sr">${L("หาในผัง", "Find in the map")}</span>${icon("M10.5 4a6.5 6.5 0 1 0 4.2 11.5l4.4 4.4M10.5 4a6.5 6.5 0 0 1 4.2 11.5")}<input id="kgQ" type="search" list="kgNames" placeholder="${L("หาแมวหรือบทความในผัง", "Find a cat or article")}" autocomplete="off" enterkeyhint="search"></label>
+            <datalist id="kgNames">${G.nodes.map((n) => `<option value="${esc(n.label)}"></option>`).join("")}</datalist>
+            <div class="chips kg-filters" role="group" aria-label="${L("แสดงความสัมพันธ์", "Show links")}">${KG_GROUPS().map(([g, t]) => `<button type="button" data-g="${g}" aria-pressed="${on.has(g)}"><i class="kg-sw kg-g-${g}" aria-hidden="true"></i>${t}</button>`).join("")}</div>
+          </div>
+          <div class="kg-zoom" role="group" aria-label="${L("ซูม", "Zoom")}">
+            <button type="button" data-z="in" aria-label="${L("ซูมเข้า", "Zoom in")}">${icon("M12 5v14M5 12h14")}</button>
+            <button type="button" data-z="out" aria-label="${L("ซูมออก", "Zoom out")}">${icon("M5 12h14")}</button>
+            <button type="button" data-z="fit" aria-label="${L("ดูทั้งผัง", "Fit the whole map")}">${icon("M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5")}</button>
+          </div>
+          <div class="kg-tip" id="kgTip" hidden></div>
+        </div>
+        <aside class="kg-panel" id="kgPanel" aria-live="polite" tabindex="0" aria-label="${L("รายละเอียด", "Details")}">${hint}</aside>
       </div>
       <details class="kg-list"><summary>${L("ดูทุกความสัมพันธ์เป็นรายการ", "See every link as a list")}</summary><div class="kg-cols">${list}</div></details>`;
-    const pnl = document.getElementById("kgPanel"), box = document.getElementById("kg");
-    let sel = focusId && byId["c:" + lower(focusId)] ? "c:" + lower(focusId) : "";
-    if (sel) pnl.innerHTML = panel(sel);
-    loadScript(VIS_JS).then(() => {
+    const pnl = document.getElementById("kgPanel"), box = document.getElementById("kg"), stage = box.parentElement, tip = document.getElementById("kgTip");
+    let pending = focusId && byId["c:" + lower(focusId)] ? "c:" + lower(focusId) : "";
+    if (pending) pnl.innerHTML = panel(pending);
+    stopGraph();
+    loadScript(FG_JS).then(() => {
       if (tok !== renderToken || !document.getElementById("kg")) return;
       box.innerHTML = "";
-      const v = (n, d) => cssVar(n) || d;
-      const ink = v("--ink", "#16181d"), ink2 = v("--ink-2", "#3d4048"), muted = v("--muted", "#6a6e76"), line = v("--line-strong", "#c9ccd2"), surf = v("--bg", "#fff"),
-        pink = v("--pink", "#e2447a"), ok = v("--ok", "#2f9e6a"), bad = v("--bad", "#d64545"), violet = v("--violet", "#7a6ae0"), soft = v("--pink-soft", "#fde8ef");
-      const font = (size, color) => ({ face: "Google Sans, Noto Sans Thai, sans-serif", size, color, strokeWidth: 3, strokeColor: surf });
-      const nodeStyle = (n) => {
-        if (n.kind === "cat") {
-          const c = n.cat, fill = (DRAW[c.coat] || DRAW.unknown)[0], img = c.photoThumb || c.photo;
-          return Object.assign({ size: c.resident ? 30 : 23, borderWidth: c.resident ? 5 : 2, opacity: c.status === "passed" ? 0.4 : 1, font: font(15, ink),
-            color: { border: c.resident ? pink : ink, background: fill, highlight: { border: pink, background: fill } } }, img ? { shape: "circularImage", image: img } : { shape: "dot" });
-        }
-        if (n.kind === "place") return { shape: "box", margin: 10, shapeProperties: { borderRadius: 10 }, color: { background: surf, border: line, highlight: { background: surf, border: pink } }, font: font(14, ink) };
-        if (n.kind === "keeper") return { shape: "diamond", size: 14, color: { background: violet, border: violet, highlight: { background: violet, border: pink } }, font: font(13, ink2) };
-        if (n.kind === "topic") return { shape: "ellipse", margin: 8, color: { background: soft, border: pink, highlight: { background: soft, border: ink } }, font: font(13, ink) };
-        return { shape: "box", margin: 7, widthConstraint: { maximum: 150 }, shapeProperties: { borderRadius: 6 }, color: { background: surf, border: line, highlight: { background: surf, border: pink } }, font: font(11.5, ink2) };
-      };
-      const edgeStyle = (k) => ({
-        mother: { arrows: { to: { enabled: true, scaleFactor: 0.6 } }, color: ink, width: 2.5 }, sibling: { dashes: [7, 5], color: pink, width: 2.5 },
-        friend: { color: ok, width: 3.5 }, rival: { dashes: [4, 5], color: bad, width: 2.5 }, place: { color: line, width: 1 },
-        keeper: { color: violet, width: 1.5 }, about: { color: muted, width: 1, dashes: [2, 4] }, topic: { color: line, width: 1 }
-      }[k]);
-      const hiddenNode = (n) => !!NODE_GROUP[n.kind] && !on.has(NODE_GROUP[n.kind]);
-      const nodes = new vis.DataSet(G.nodes.map((n) => Object.assign({ id: n.id, label: n.label, hidden: hiddenNode(n) }, nodeStyle(n))));
-      const edges = new vis.DataSet(G.edges.map((e) => Object.assign({ id: e.id, from: e.from, to: e.to, hidden: !on.has(K[e.kind].g), smooth: false }, edgeStyle(e.kind))));
-      if (network) { network.destroy(); network = null; }
-      network = new vis.Network(box, { nodes, edges }, {
-        layout: { randomSeed: 11, improvedLayout: true },
-        physics: { solver: "forceAtlas2Based", forceAtlas2Based: { gravitationalConstant: -70, centralGravity: 0.035, springLength: 95, springConstant: 0.08, avoidOverlap: 0.7 }, stabilization: { iterations: 600 } },
-        interaction: { hover: true, tooltipDelay: 200, navigationButtons: false, keyboard: false }
+      const S = { pal: kgPalette(), hover: null, sel: null, group: null, hl: null, dim: 0, fitted: false };
+      const fine = matchMedia("(hover: hover) and (pointer: fine)").matches, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // node sizes in graph units: cats grow with how much is known about them
+      G.nodes.forEach((n) => {
+        n.r = n.kind === "cat" ? 8 + Math.min(5, n.deg * 0.9) + (n.cat.resident ? 1.5 : 0) : n.kind === "topic" ? 7 : n.kind === "place" ? 5.5 : n.kind === "keeper" ? 5.5 : 3.6;
+        const src = n.cat && (n.cat.photoThumb || n.cat.photo);
+        if (src) { n.img = new Image(); n.img.decoding = "async"; n.img.src = src; }
       });
-      const pick = (id, zoom) => {
-        sel = id; pnl.innerHTML = panel(id);
-        if (!id) { network.unselectAll(); return; }
-        network.selectNodes([id]);
-        if (zoom) network.focus(id, { scale: 1.15, animation: { duration: 350 } });
+      const visNode = (n) => !NODE_GROUP[n.kind] || on.has(NODE_GROUP[n.kind]);
+      const data = () => {
+        const nodes = G.nodes.filter(visNode), ids = new Set(nodes.map((n) => n.id));
+        const id = (x) => (typeof x === "object" ? x.id : x);
+        return { nodes, links: links.filter((l) => on.has(K[l.kind].g) && ids.has(id(l.source)) && ids.has(id(l.target))) };
       };
-      // fit everything, but never so small that the names can't be read (the list under the map has every link)
-      network.once("stabilizationIterationsDone", () => { network.setOptions({ physics: false }); network.fit({ animation: false }); const min = innerWidth < 700 ? 0.6 : 0.72; if (network.getScale() < min) network.moveTo({ scale: min }); if (sel) pick(sel, true); });
-      network.on("click", (p) => pick(p.nodes && p.nodes[0] ? p.nodes[0] : "", false));
-      network.on("doubleClick", (p) => { if (p.nodes && p.nodes[0]) location.hash = nodeHref(byId[p.nodes[0]]); });
-      pnl.addEventListener("click", (e) => { const b = e.target.closest("[data-node]"); if (b) { const n = byId[b.dataset.node]; if (n && NODE_GROUP[n.kind] && !on.has(NODE_GROUP[n.kind])) return; pick(b.dataset.node, true); } });
-      app.querySelectorAll(".kg-filters button").forEach((b) => b.addEventListener("click", () => {
-        const g = b.dataset.g, show = !on.has(g);
-        if (show) on.add(g); else on.delete(g);
+      const links = G.edges.map((e) => ({ e, kind: e.kind, w: e.w || 0, source: e.from, target: e.to }));
+      const P = () => S.pal;
+      const hue = (n) => TOPIC_HUE[n.topic] || "#8a7fd0";
+      const linkColor = (k) => ({ mother: P().ink, sibling: P().pink, friend: P().ok, rival: P().bad, place: P().strong, keeper: P().violet, about: P().muted, topic: P().strong, near: P().near })[k];
+      const linkBase = { mother: [1.6, 0.85], sibling: [1.5, 0.8], friend: [2, 0.85], rival: [1.6, 0.85], place: [0.8, 0.45], keeper: [1.1, 0.7], about: [0.8, 0.5], topic: [0.8, 0.45], near: [1, 0.45] };
+      // what is lit: the hovered or picked node and its neighbours, or a group (knowledge gaps)
+      function lit() {
+        const base = S.hover || S.sel;
+        if (S.group && !base) return { nodes: S.group, links: new Set() };
+        if (!base) return null;
+        const nodes = new Set([base]), ls = new Set();
+        g.graphData().links.forEach((l) => { if (l.source === base || l.target === base) { ls.add(l); nodes.add(l.source); nodes.add(l.target); } });
+        return { nodes, links: ls };
+      }
+      const refresh = () => {
+        const h = lit(); if (h) S.hl = h;
+        g.linkDirectionalParticles(g.linkDirectionalParticles());
+      };
+      const nodeA = (n) => {
+        let a = n.cat && n.cat.status === "passed" ? 0.5 : 1;
+        if (S.hl && !S.hl.nodes.has(n)) a *= 1 - 0.86 * S.dim;
+        return a;
+      };
+      const linkLit = (l) => !!(S.hl && S.hl.links.has(l) && S.dim > 0.05);
+      const linkA = (l) => { const b = linkBase[l.kind][1]; return S.hl ? (S.hl.links.has(l) ? b + (1 - b) * S.dim : b * (1 - 0.9 * S.dim)) : b; };
+      function label(n, ctx, k, a) {
+        const big = n.kind === "cat" || n.kind === "topic", lighted = S.hl && S.hl.nodes.has(n) && S.dim > 0.3;
+        // labels fade in with zoom, like Obsidian; anything lit always shows its name
+        const need = n.kind === "article" ? 1.9 : n.kind === "cat" ? 0.75 : 1.05;
+        let la = lighted ? 1 : Math.max(0, Math.min(1, (k - need) / 0.35 + 1));
+        la *= a;
+        if (la < 0.03) return;
+        const px = big ? 12.5 : 11.5, fs = px / k;
+        ctx.font = `${n.kind === "cat" || (lighted && (n === S.hover || n === S.sel)) ? 600 : 500} ${fs}px ${P().font}`;
+        ctx.textAlign = "center"; ctx.textBaseline = "top";
+        let t = n.label; if (n.kind === "article" && t.length > 26 && !lighted) t = t.slice(0, 25) + "…";
+        const y = n.y + n.r + 3 / k;
+        ctx.globalAlpha = la;
+        ctx.lineJoin = "round"; ctx.lineWidth = 3.5 / k; ctx.strokeStyle = P().bg; ctx.strokeText(t, n.x, y);
+        ctx.fillStyle = n.kind === "article" ? P().ink2 : P().ink; ctx.fillText(t, n.x, y);
+      }
+      function drawNode(n, ctx, k) {
+        const a = nodeA(n), C = P(), r = n.r, now = performance.now();
+        ctx.save(); ctx.globalAlpha = a;
+        const focused = n === S.sel || n === S.hover;
+        if (focused) {
+          const pulse = reduce ? 0 : (Math.sin(now / 380) + 1) * 1.2;
+          ctx.beginPath(); ctx.arc(n.x, n.y, r + 3.5 + pulse, 0, 2 * Math.PI); ctx.fillStyle = rgba(n.kind === "article" || n.kind === "topic" ? hue(n) : C.pink, 0.16); ctx.fill();
+        }
+        if (n.kind === "cat") {
+          const coat = (DRAW[n.cat.coat] || DRAW.unknown)[0];
+          ctx.save(); ctx.shadowColor = "rgba(10,12,18,.28)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 1.5;
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = coat; ctx.fill(); ctx.restore();
+          if (n.img && n.img.complete && n.img.naturalWidth) {
+            const iw = n.img.naturalWidth, ih = n.img.naturalHeight, s = Math.min(iw, ih);
+            ctx.save(); ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.clip();
+            ctx.drawImage(n.img, (iw - s) / 2, (ih - s) * 0.3, s, s, n.x - r, n.y - r, r * 2, r * 2); ctx.restore();
+          }
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI);
+          ctx.lineWidth = n.cat.resident ? 1.8 : 1.2; ctx.strokeStyle = n.cat.resident ? C.pink : C.bg; ctx.stroke();
+        } else if (n.kind === "place") {
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = C.bg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = C.strong; ctx.stroke();
+          // a map pin
+          const s = r * 0.5; ctx.beginPath(); ctx.arc(n.x, n.y - s * 0.35, s * 0.62, Math.PI * 0.85, Math.PI * 2.15); ctx.lineTo(n.x, n.y + s * 0.95); ctx.closePath(); ctx.fillStyle = C.muted; ctx.fill();
+          ctx.beginPath(); ctx.arc(n.x, n.y - s * 0.35, s * 0.24, 0, 2 * Math.PI); ctx.fillStyle = C.bg; ctx.fill();
+        } else if (n.kind === "keeper") {
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = C.violet; ctx.fill();
+          ctx.fillStyle = C.bg; ctx.beginPath(); ctx.arc(n.x, n.y - r * 0.22, r * 0.26, 0, 2 * Math.PI); ctx.fill();
+          ctx.beginPath(); ctx.arc(n.x, n.y + r * 0.55, r * 0.45, Math.PI, 2 * Math.PI); ctx.fill();
+        } else if (n.kind === "topic") {
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = rgba(hue(n), 0.14); ctx.fill(); ctx.lineWidth = 1.6; ctx.strokeStyle = hue(n); ctx.stroke();
+          ctx.beginPath(); ctx.arc(n.x, n.y, r * 0.38, 0, 2 * Math.PI); ctx.fillStyle = hue(n); ctx.fill();
+        } else {
+          ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, 2 * Math.PI); ctx.fillStyle = hue(n); ctx.fill(); ctx.lineWidth = 0.8; ctx.strokeStyle = C.bg; ctx.stroke();
+        }
+        label(n, ctx, k, a);
+        ctx.restore();
+      }
+      // a dot grid that moves with the map
+      function grid(ctx, k) {
+        const w = box.clientWidth, h = box.clientHeight, a = g.screen2GraphCoords(0, 0), b = g.screen2GraphCoords(w, h);
+        let step = 26 / k; while (step * k < 18) step *= 2;
+        const s = 1.1 / k;
+        ctx.fillStyle = rgba(P().strong, 0.75);
+        for (let x = Math.floor(a.x / step) * step; x < b.x; x += step) for (let y = Math.floor(a.y / step) * step; y < b.y; y += step) ctx.fillRect(x - s / 2, y - s / 2, s, s);
+      }
+      const g = ForceGraph()(box)
+        .width(box.clientWidth).height(box.clientHeight)
+        .backgroundColor("rgba(0,0,0,0)")
+        .nodeId("id").nodeRelSize(1).nodeVal((n) => n.r * n.r).nodeLabel(() => "")
+        .nodeCanvasObject(drawNode)
+        .nodePointerAreaPaint((n, color, ctx) => { ctx.fillStyle = color; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 2.5, 0, 2 * Math.PI); ctx.fill(); })
+        .linkColor((l) => rgba(linkColor(l.kind), linkA(l)))
+        .linkWidth((l) => linkBase[l.kind][0] * (linkLit(l) ? 1.7 : 1))
+        .linkLineDash((l) => (l.kind === "near" ? [1.5, 2.5] : l.kind === "rival" ? [4, 3] : null))
+        .linkCurvature((l) => (l.kind === "friend" || l.kind === "rival" ? 0.22 : l.kind === "sibling" ? 0.16 : l.kind === "near" ? 0.12 : 0))
+        .linkDirectionalArrowLength((l) => (l.kind === "mother" ? 4 : 0)).linkDirectionalArrowRelPos(1).linkDirectionalArrowColor((l) => rgba(linkColor(l.kind), linkA(l)))
+        .linkDirectionalParticles((l) => (!reduce && S.hl && (S.hover || S.sel) && S.hl.links.has(l) ? 2 : 0)).linkDirectionalParticleWidth((l) => (l.kind === "near" ? 1.6 : 2.4))
+        .linkDirectionalParticleSpeed(0.007).linkDirectionalParticleColor((l) => linkColor(l.kind))
+        .autoPauseRedraw(false)
+        .d3AlphaDecay(0.028).d3VelocityDecay(0.34).warmupTicks(40).cooldownTicks(220)
+        .minZoom(0.35).maxZoom(6)
+        .onRenderFramePre((ctx, k) => {
+          grid(ctx, k);
+          const target = S.hover || S.sel || S.group ? 1 : 0;
+          S.dim += (target - S.dim) * (reduce ? 1 : 0.16);
+          if (!target && S.dim < 0.01) { S.dim = 0; S.hl = null; }
+        })
+        .onNodeHover((n) => {
+          if (!fine) return;
+          S.hover = n || null; box.style.cursor = n ? "pointer" : "grab"; refresh();
+          if (n) { tip.innerHTML = `<small>${nodeKind(n)}</small><b>${esc(n.label)}</b>${n.deg ? `<span>${L(n.deg + " ความสัมพันธ์", n.deg + " links")}</span>` : ""}`; tip.hidden = false; }
+          else tip.hidden = true;
+        })
+        .onNodeClick((n) => pick(n.id, true))
+        .onBackgroundClick(() => pick("", false))
+        .onEngineStop(() => { if (!S.fitted) { S.fitted = true; fit(700); if (pending) setTimeout(() => { pick(pending, true); pending = ""; }, 720); } });
+      // forces: cats push apart more than small nodes; each kind of link has its own length; nothing overlaps
+      g.d3Force("charge").strength((n) => (n.kind === "cat" ? -120 : n.kind === "article" ? -40 : -70)).distanceMax(240);
+      // a gentle pull to the middle keeps loose nodes (a topic with one article, a cat with no links) from drifting off
+      const gravity = (() => { let ns = []; const f = (alpha) => ns.forEach((n) => { n.vx -= n.x * 0.05 * alpha; n.vy -= n.y * 0.05 * alpha; }); f.initialize = (n) => { ns = n; }; return f; })();
+      g.d3Force("gravity", gravity);
+      g.d3Force("link").distance((l) => ({ mother: 34, sibling: 38, friend: 44, rival: 58, place: 52, keeper: 46, about: 56, topic: 30, near: 70 })[l.kind])
+        .strength((l) => (l.kind === "near" ? 0.08 + l.w * 0.4 : l.kind === "place" ? 0.35 : 0.6));
+      const collide = (() => {
+        let ns = [];
+        const f = () => { for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) {
+          const a = ns[i], b = ns[j], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 0.01, min = a.r + b.r + 9;
+          if (d < min) { const m = ((min - d) / d) * 0.5; a.x -= dx * m; a.y -= dy * m; b.x += dx * m; b.y += dy * m; }
+        } };
+        f.initialize = (n) => { ns = n; };
+        return f;
+      })();
+      g.d3Force("collide", collide);
+      g.graphData(data()).zoom(1.4);
+      // fit everything, but never so small that cat names can't be read (the list under the map has every link)
+      function fit(ms) {
+        g.zoomToFit(ms, 48);
+        // then leave room for the search and filters floating over the top of the map
+        setTimeout(() => {
+          const min = box.clientWidth < 600 ? 0.95 : 1.05; if (g.zoom() < min) g.zoom(min, 300);
+          const c = g.centerAt(), top = stage.querySelector(".kg-top").offsetHeight;
+          g.centerAt(c.x, c.y - top / 2 / g.zoom(), 300);
+        }, ms + 20);
+      }
+      function fly(n) { g.centerAt(n.x, n.y, reduce ? 0 : 800); g.zoom(Math.max(g.zoom(), 2.3), reduce ? 0 : 800); }
+      function pick(id, zoom) {
+        const n = id && byId[id];
+        if (n && !visNode(n)) return;
+        S.sel = n || null; S.group = null;
+        const gb = document.getElementById("kgGap"); if (gb) gb.setAttribute("aria-pressed", "false");
+        pnl.innerHTML = panel(n ? id : "");
+        refresh();
+        if (n && zoom && n.x != null) fly(n);
+        if (n && !fine && innerWidth < 900) pnl.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+      }
+      const onMove = (e) => { const r = stage.getBoundingClientRect(); tip.style.transform = `translate(${e.clientX - r.left + 14}px, ${e.clientY - r.top + 14}px)`; };
+      stage.addEventListener("pointermove", onMove);
+      box.addEventListener("pointerleave", () => { tip.hidden = true; });
+      const ro = new ResizeObserver(() => { g.width(box.clientWidth).height(box.clientHeight); });
+      ro.observe(box);
+      kg = { g, get pal() { return S.pal; }, set pal(p) { S.pal = p; }, off: () => ro.disconnect() };
+      pnl.addEventListener("click", (e) => { const b = e.target.closest("[data-node]"); if (b) pick(b.dataset.node, true); });
+      stage.querySelector(".kg-zoom").addEventListener("click", (e) => {
+        const b = e.target.closest("[data-z]"); if (!b) return;
+        if (b.dataset.z === "fit") fit(500); else g.zoom(g.zoom() * (b.dataset.z === "in" ? 1.5 : 1 / 1.5), 300);
+      });
+      const q = document.getElementById("kgQ");
+      const find = () => {
+        const t = fold(q.value.trim()); if (!t) return;
+        const n = G.nodes.find((x) => fold(x.label) === t) || G.nodes.find((x) => visNode(x) && fold(x.label).includes(t));
+        if (n) { if (!visNode(n)) { on.add(NODE_GROUP[n.kind]); syncFilters(); } pick(n.id, true); }
+      };
+      q.addEventListener("change", find);
+      q.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); find(); } });
+      const gapBtn = document.getElementById("kgGap");
+      if (gapBtn) gapBtn.addEventListener("click", () => {
+        const now = gapBtn.getAttribute("aria-pressed") !== "true";
+        S.sel = null; S.group = now ? new Set(gaps) : null; gapBtn.setAttribute("aria-pressed", String(now));
+        pnl.innerHTML = now ? `<h2 class="kg-h2">${L("ช่องว่างของความรู้", "Knowledge gaps")}</h2><p>${L("แมวที่ยังอยู่ในคณะแต่ยังไม่มีบทความไหนพูดถึง เรื่องของตัวเหล่านี้ยังอยู่ในหัวผู้ดูแลเท่านั้น", "Cats still at the faculty that no article mentions yet. What is known about them still lives only in the keepers' heads.")}</p>
+          <p class="kg-chips">${gaps.map((n) => `<button type="button" class="kg-chip" data-node="${esc(n.id)}">${esc(n.label)}</button>`).join("")}</p>
+          <p><a class="btn small" href="${shareHref("story")}">${L("เล่าเรื่องของแมวตัวนี้ให้ทีมฟัง", "Tell the team about one of them")} →</a></p>` : hint;
+        refresh();
+      });
+      function syncFilters() {
         store.set("akc-kg-groups", [...on]);
-        b.setAttribute("aria-pressed", String(show));
-        nodes.update(G.nodes.filter((n) => NODE_GROUP[n.kind] === g).map((n) => ({ id: n.id, hidden: !show })));
-        edges.update(G.edges.filter((e) => K[e.kind].g === g).map((e) => ({ id: e.id, hidden: !show })));
+        app.querySelectorAll(".kg-filters button").forEach((b) => b.setAttribute("aria-pressed", String(on.has(b.dataset.g))));
+        if (S.sel && !visNode(S.sel)) pick("", false);
+        g.graphData(data()); g.d3ReheatSimulation(); refresh();
+      }
+      app.querySelectorAll(".kg-filters button").forEach((b) => b.addEventListener("click", () => {
+        const k = b.dataset.g; if (on.has(k)) on.delete(k); else on.add(k);
+        syncFilters();
       }));
     }).catch(() => { if (tok === renderToken) box.innerHTML = `<p class="empty">${L("โหลดผังไม่ได้ (ต้องต่ออินเทอร์เน็ต) ดูรายการด้านล่างแทนได้", "Couldn't load the map (needs an internet connection). The list below has the same links.")}</p>`; });
   }
@@ -1643,7 +1929,7 @@
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
-    if (page !== "graph" && page !== "family" && network) { network.destroy(); network = null; }
+    stopGraph();
     if (page !== "search" && document.activeElement !== searchInput) searchInput.value = "";
     switch (page) {
       case "": renderHome(); break;

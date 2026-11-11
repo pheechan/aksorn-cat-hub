@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- phones get the lighter landing page (m.html) unless they asked for the 3D one; after the viewport tag so the width is the phone's -->
+  <script>try{var q=new URLSearchParams(location.search);if(q.has("full"))sessionStorage.setItem("akc-full","1");if(matchMedia("(max-width: 700px)").matches&&!q.has("full")&&sessionStorage.getItem("akc-full")!=="1")location.replace("m.html"+location.search+location.hash)}catch(e){}</script>
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <title data-en="Aksorn Cats">คลังความรู้แมวอักษร</title>
   <meta name="description" content="แมวทุกตัวในคณะอักษรศาสตร์ จุฬาฯ มีเรื่องเล่า เราไปฟังพี่ ๆ ผู้ดูแลมา แล้วจดไว้ให้ทุกคนค้นได้" data-en-content="Every cat at the Faculty of Arts, Chulalongkorn University has a story. We listened to the keepers and wrote it all down for anyone to look up.">
@@ -19,9 +21,9 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,opsz,wght@0,17..18,400..700&display=swap"></noscript>
-  <link rel="stylesheet" href="tokens.css?v=20261112f">
-  <link rel="stylesheet" href="landing.css?v=20261112f">
-  <link rel="stylesheet" href="menu.css?v=20261112f">
+  <link rel="stylesheet" href="tokens.css?v=20261112g">
+  <link rel="stylesheet" href="landing.css?v=20261112g">
+  <link rel="stylesheet" href="menu.css?v=20261112g">
 </head>
 <body class="is-loading">
   <svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -65,7 +67,7 @@
   <div class="site-menu" id="siteMenu" aria-hidden="true">
     <nav class="m-list" aria-label="ทุกหน้า" data-en-aria-label="All pages">
       <div class="m-group" data-key="hub" style="--i:0"><a class="m-parent" href="cats.html#/" data-en="Home: the four steps">หน้าแรก: 4 ขั้นของมือใหม่</a>
-        <div class="m-subs"><a href="index.html" data-en="The faculty in 3D">ดูคณะแบบ 3D</a><a href="index.html#map" data-en="Cat map">แผนที่แมว</a></div></div>
+        <div class="m-subs"><a href="index.html?full=1" data-en="The faculty in 3D">ดูคณะแบบ 3D</a><a href="index.html#map" data-en="Cat map">แผนที่แมว</a></div></div>
       <div class="m-group" data-key="know" style="--i:1"><a class="m-parent" href="cats.html#/cats" data-en="1 · Meet the cats">1 · รู้จักแมว</a>
         <div class="m-subs"><a href="cats.html#/find" data-en="Find a cat you just met">หาแมวที่เพิ่งเจอ</a><a href="cats.html#/quiz" data-en="Cat quiz">ทายแมว</a><a href="cats.html#/graph" data-en="Knowledge map">ผังความรู้</a></div></div>
       <div class="m-group" data-key="learn" style="--i:2"><a class="m-parent" href="cats.html#/knowledge" data-en="2 · Learn">2 · เรียนรู้</a>
@@ -78,7 +80,7 @@
       <div class="m-group" data-key="about" style="--i:6"><a class="m-parent" href="cats.html#/about" data-en="About">เกี่ยวกับเว็บนี้</a>
         <div class="m-subs"><a href="cats.html#/qr" data-en="Print cat QR codes">พิมพ์ QR ประจำตัวแมว</a></div></div>
     </nav>
-    <div class="m-group m-prefs" style="--i:7">
+    <div class="m-group m-prefs" style="--i:7" role="region" aria-label="ภาษาและโหมดสี" data-en-aria-label="Language and theme">
       <div class="lang" role="group" aria-label="ภาษา / Language">
         <button type="button" data-set-lang="th" lang="th" aria-pressed="true">ไทย</button>
         <button type="button" data-set-lang="en" lang="en" aria-pressed="false">EN</button>
@@ -237,16 +239,16 @@
     </footer>
   </main>
 
-  <script src="content-en.js?v=20261112f"></script>
-  <script src="i18n.js?v=20261112f"></script>
-  <script defer src="menu.js?v=20261112f"></script>
+  <script src="content-en.js?v=20261112g"></script>
+  <script src="i18n.js?v=20261112g"></script>
+  <script defer src="menu.js?v=20261112g"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-  <script defer src="config.js?v=20261112f"></script>
-  <script defer src="data-sample.js?v=20261112f"></script>
-  <script defer src="photos/manifest.js?v=20261112f"></script>
-  <script defer src="data.js?v=20261112f"></script>
-  <script defer src="landing.js?v=20261112f"></script>
-  <script defer src="glass.js?v=20261112f"></script>
+  <script defer src="config.js?v=20261112g"></script>
+  <script defer src="data-sample.js?v=20261112g"></script>
+  <script defer src="photos/manifest.js?v=20261112g"></script>
+  <script defer src="data.js?v=20261112g"></script>
+  <script defer src="landing.js?v=20261112g"></script>
+  <script defer src="glass.js?v=20261112g"></script>
 </body>
 </html>

@@ -195,6 +195,8 @@ window.CatData = (function () {
     const resCol = yesNo(r.resident);
     c.resident = c.status === "active" && (resCol !== "unknown" ? resCol === "yes" : inList(window.CAT_RESIDENTS, name) || inList(cfg && cfg.RESIDENT_CATS, name));
     if (!c.normal && extra.normal) c.normal = extra.normal;
+    // cats this one has bitten, as keepers reported (config.js); names, matched to cats in app.js
+    c.bit = Array.isArray(extra.bit) ? extra.bit.map(clean).filter(Boolean) : [];
     Object.assign(c, coatOf(r, c, extra));
     c.areas = areasOf(c.locations);
     // no = doesn't like being touched, careful = approach with caution (the sheet's dropdown), yes = friendly

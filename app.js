@@ -77,6 +77,66 @@
   const expandBuildings = (html) => { if (isEN()) return html; const seen = {}; return html.replace(/\b(BRK|MCS)\b(?!\s*\()/g, (m) => (seen[m] ? m : ((seen[m] = 1), `${m} (${BLD[m]})`))); };
   // a one-word health note ("ไต") reads as a fragment; say what it is and where it comes from
   const healthText = (h) => (!isEN() && h && h.length <= 8 && !/\s/.test(h) ? esc(`เรื่อง${h} (ตามข้อมูลในชีต)`) : T(h));
+
+  /* ---------------- special care: illness, food, and cats to keep apart ----------------
+     Read from the sheet (health notes; "ไม่ค่อยถูกกับ..." in Personal Information) and from bites keepers reported
+     (CAT_EXTRA bit in config.js), so housekeepers, guards and passers-by see it at the top of a cat's page. */
+  const AROUND = (c) => c.status === "active" || c.status === "commuter" || c.status === "missing";
+  const rivalWords = (x) => [x.about, x.relationship, x.personality, x.notes].concat(x.interview || []).join(" ").split(/\s+/).map(window.CatData.fold).filter((t) => /ไม่(ค่อย)?ถูกกับ/.test(t));
+  function rivalsOf(c) {
+    const fold = window.CatData.fold, out = new Map();
+    const put = (o, how) => { if (!o || o === c || !AROUND(o)) return; const r = out.get(o.id) || { cat: o, sheet: false, bit: false, bitBy: false }; r[how] = true; out.set(o.id, r); };
+    const named = (words, o) => o.name.length > 1 && words.some((t) => t.includes(fold(o.name)));
+    const mine = rivalWords(c);
+    D.cats.forEach((o) => { if (o !== c && (named(mine, o) || named(rivalWords(o), c))) put(o, "sheet"); });
+    (c.bit || []).forEach((n) => put(catNamed(n), "bit"));
+    D.cats.forEach((o) => { if ((o.bit || []).some((n) => catNamed(n) === c)) put(o, "bitBy"); });
+    return [...out.values()];
+  }
+  function careAlerts(c) {
+    if (!AROUND(c)) return [];
+    const h = [c.health, c.notes].join(" "), out = [];
+    const who = L(c.name, nm(c));
+    if (/ไต(?![่้๊๋ร])|kidney|renal|\bCKD\b/i.test(h)) out.push({ key: "kidney", href: "#/article/a11",
+      short: L("โรคไต ห้ามให้อาหารเค็ม", "Kidney disease: no salty food"),
+      title: L(`${who}เป็นโรคไต ระวังเรื่องอาหาร`, `${who} has kidney disease: watch what you feed`),
+      text: L("ห้ามให้ปลาทู ปลาเค็ม ปลากระป๋อง หรืออาหารคนรสเค็ม ให้เฉพาะอาหารที่ผู้ดูแลจัดไว้ และมีน้ำสะอาดให้ตลอด ถ้าเห็นซึม ไม่กิน หรือกินน้ำมากผิดปกติ แจ้งผู้ดูแลทันที",
+        "No mackerel, salted or tinned fish, or salty human food. Give only the food the keepers set out, and keep clean water out. If the cat seems dull, isn't eating, or drinks far more than usual, tell a keeper straight away."),
+      cta: L("แมวโรคไต ให้อะไรได้บ้าง", "What a cat with kidney disease can eat") });
+    if (/FeLV|ลิวคีเมีย|leuk/i.test(h)) out.push({ key: "felv", href: "#/article/a13",
+      short: L("ลิวคีเมีย (FeLV) แยกชามและที่นอน", "FeLV: separate bowls and bed"),
+      title: L(`${who}ติดลิวคีเมียแมว (FeLV) ต้องแยกเลี้ยง`, `${who} has FeLV: keep apart`),
+      text: L("ไม่ติดคน แต่ติดแมวตัวอื่นได้ง่าย แยกที่นอน ชามอาหาร ชามน้ำ และกระบะทรายจากตัวอื่น ล้างมือหลังจับ", "People can't catch it, but other cats can, easily. Separate bed, bowls and litter tray from the others; wash your hands after handling."),
+      cta: L("อ่านเรื่อง FeLV", "About FeLV") });
+    if (/FIV|เอดส์/i.test(h)) out.push({ key: "fiv", href: "#/article/a12",
+      short: L("เอดส์แมว (FIV) แยกจากตัวที่กัดกัน", "FIV: keep away from cats that bite"),
+      title: L(`${who}ติดเอดส์แมว (FIV)`, `${who} has FIV`),
+      text: L("ไม่ติดคน ติดแมวตัวอื่นผ่านแผลกัดลึกเป็นหลัก แยกจากตัวที่ชอบกัดกัน และแจ้งผู้ดูแลเร็วเมื่อเห็นอาการป่วย", "People can't catch it. It spreads to other cats mainly through deep bites, so keep it away from cats that fight, and report any illness early."),
+      cta: L("อ่านเรื่อง FIV", "About FIV") });
+    if (/หวัด|โรคติดต่อ|แยกเลี้ยง|แยกกรง|cat flu|contagious/i.test(h) && !out.some((a) => a.key === "felv")) out.push({ key: "apart", href: "#/article/a14",
+      short: L("ต้องแยกเลี้ยงไว้ก่อน", "Keep apart for now"),
+      title: L(`${who}ต้องแยกเลี้ยงไว้ก่อน`, `Keep ${who} apart for now`),
+      text: L("อาจติดแมวตัวอื่นได้ แยกที่นอนและชามไว้จนกว่าสัตวแพทย์จะดู", "It may pass something on to other cats. Keep its bed and bowls separate until a vet has seen it."),
+      cta: L("แมวตัวไหนต้องแยกเลี้ยง", "Which cats must be kept apart") });
+    if (/แผล|ฝี|wound|abscess/i.test(h)) out.push({ key: "wound", href: "#/article/a10",
+      short: L("มีแผล ดูทุกวัน", "Has a wound: check daily"),
+      title: L(`${who}มีแผล`, `${who} has a wound`),
+      text: L("ดูแผลทุกวัน ถ้าบวม มีหนอง มีกลิ่น หรือแมวซึม พาไปหาสัตวแพทย์", "Check it every day. If it's swollen, has pus, smells, or the cat is dull, it needs a vet."),
+      cta: L("ดูแลแผลแมวกัด", "Caring for a bite wound") });
+    const rv = rivalsOf(c);
+    if (rv.length) {
+      const how = (r) => (r.bit && r.bitBy ? L("เคยกัดกันจนเป็นแผล", "they've bitten each other") : r.bit ? L(`${c.name}เคยกัด`, `bitten by ${nm(c)}`) : r.bitBy ? L(`เคยกัด${c.name}`, `has bitten ${nm(c)}`) : L("ไม่ถูกกัน", "they don't get on"));
+      const names = rv.map((r) => L(r.cat.name, nm(r.cat))).join(", ");  // plain text; escaped where it's shown
+      out.push({ key: "rivals", href: "#/article/a16",
+        short: L(`แยกจาก${names}`, `Keep apart from ${names}`),
+        title: L(`ต้องแยกจาก${names}`, `Keep apart from ${names}`),
+        text: `<span class="care-pairs">${rv.map((r) => `<a href="${catHref(r.cat)}">${nmHtml(r.cat)}</a> <small>(${how(r)})</small>`).join(" · ")}</span>`
+          + L("ให้อาหารคนละจุดหรือคนละเวลา ไม่ขังรวมกัน ถ้าเห็นตีกัน อย่าใช้มือแยก ทำเสียงดังหรือหาของกั้น แล้วบอกผู้ดูแล", "Feed them at different spots or times, and never shut them in together. If they fight, don't use your hands: make a loud noise or put something between them, then tell a keeper."),
+        cta: L("เห็นแมวตีกัน ทำยังไง บอกใคร", "Cats fighting: what to do, who to tell") });
+    }
+    return out;
+  }
+  const careAlertHtml = (al) => (al.length ? `<section class="care-alert" aria-labelledby="careH"><h2 id="careH">${L("ต้องระวังเป็นพิเศษ", "Take extra care")}</h2><ul>${al.map((a) => `<li><b>${esc(a.title)}</b><p>${a.key === "rivals" ? a.text : esc(a.text)}</p><a href="${a.href}">${a.cta} →</a></li>`).join("")}</ul></section>` : "");
   const looksLikeDate = (v) => /^\d{4}-\d{2}-\d{2}/.test(v) || /^\d{1,2}\s*[/.-]\s*\d{1,2}([/.-]\d{2,4})?$/.test(v);
   const daysAgo = (iso) => Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 864e5));
   const lastSighting = (c) => { const h = D.history.find((x) => x.cat === c.id && x.type === "sighting"); const a = h ? h.date : "", b = feedSeen(c); return b > a ? b : a; };
@@ -572,6 +632,7 @@
             ${shareBtn()}
           </div>
 
+          ${careAlertHtml(careAlerts(c))}
           ${fresh.map((t) => `<p class="fresh-note">${t}</p>`).join("")}
           <section class="normal-card" aria-labelledby="normalH">
             <h2 id="normalH">${L(`ปกติ${c.name}เป็นยังไง`, `What's normal for ${nm(c)}`)}</h2>
@@ -666,8 +727,12 @@
     const keeper = sorted(D.articles.filter((a) => a.category === "experience"));
     const quotes = (CFG.KEEPER_QUOTES || []).slice(1, 3);
     // what is special about each cat: the knowledge that lives in the profiles
-    const watch = D.cats.filter((c) => SEEN_NOW(c) && (c.touch === "no" || c.touch === "careful" || c.health)).sort(byStatusThenName).slice(0, 6);
-    const watchNote = (c) => [c.touch === "no" ? L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ", "Doesn't like being touched") : c.touch === "careful" ? L("เข้าหาอย่างระวัง", "Approach with care") : "", c.health ? L("สุขภาพ: ", "Health: ") + T(c.health) : ""].filter(Boolean).join(" · ");
+    const watch = D.cats.filter((c) => SEEN_NOW(c) && (c.touch === "no" || c.touch === "careful" || c.health || careAlerts(c).length)).sort(byStatusThenName).slice(0, 6);
+    const watchNote = (c) => {
+      const al = careAlerts(c);
+      return [c.touch === "no" ? L("ไม่ชอบให้จับ ดูอยู่ห่าง ๆ", "Doesn't like being touched") : c.touch === "careful" ? L("เข้าหาอย่างระวัง", "Approach with care") : ""]
+        .concat(al.length ? al.map((a) => esc(a.short)) : [c.health ? L("สุขภาพ: ", "Health: ") + T(c.health) : ""]).filter(Boolean).join(" · ");
+    };
     document.title = `${L("คลังความรู้", "Knowledge library")} · ${TITLE()}`;
     app.innerHTML = `
       <header class="k-hero">
@@ -927,6 +992,7 @@
     const contacts = (CFG.EMERGENCY_CONTACTS || []).filter((c) => norm(c.value));
     const kr = Object.values(CFG.KEEPER_ROLES || {}).find((r) => r && r.where);
     const step = (t, d) => `<li><div><b>${t}</b><span>${d}</span></div></li>`;
+    const special = D.cats.filter(AROUND).sort(byStatusThenName).map((c) => [c, careAlerts(c)]).filter(([, al]) => al.length);
     app.innerHTML = `
       ${pageHead(L("เจอแมวป่วยหรือบาดเจ็บ", "You've found a sick or injured cat"), L("ทำตามนี้ก่อน แล้วค่อยติดต่อผู้ดูแลหรือสัตวแพทย์", "Do this first, then contact a keeper or a vet."))}
       <div class="help-grid">
@@ -944,8 +1010,13 @@
           <p class="muted small">${L("หน้านี้เป็นแนวทางเบื้องต้น ไม่ใช่การวินิจฉัยหรือรักษา ถ้าไม่แน่ใจ ปรึกษาสัตวแพทย์", "This page is basic guidance, not a diagnosis or treatment. If you're unsure, ask a vet.")}</p>
           <p><button type="button" class="btn ghost" id="posterBtn">${L("พิมพ์เป็นโปสเตอร์", "Print as a poster")}</button></p>
           <p class="more"><a href="#/article/a02">${L("สัญญาณว่าแมวอาจไม่สบาย", "Signs that a cat may be unwell")} →</a></p>
+          <p class="more"><a href="#/article/a10">${L("แมวโดนกัด ดูแลแผลยังไง", "A cat's been bitten: wound care")} →</a></p>
         </aside>
       </div>
+      ${special.length ? `<section class="sec care-list" aria-labelledby="careListH"><h2 class="label" id="careListH">${L("แมวที่ต้องระวังเป็นพิเศษ", "Cats that need extra care")}</h2>
+        <p class="muted small">${L("สำหรับแม่บ้าน รปภ. และผู้ดูแล จากชีตของทีมและที่ผู้ดูแลเล่า เห็นแมวตีกัน อย่าใช้มือแยก แล้วบอกผู้ดูแลหลักของตัวนั้น", "For housekeepers, security guards and keepers. From the team's sheet and what keepers told us. If cats fight, don't use your hands, and tell that cat's main keeper.")}</p>
+        <ul class="care-rows">${special.map(([c, al]) => `<li>${miniCat(c)}<span>${al.map((a) => esc(a.short)).join("<br>")}</span></li>`).join("")}</ul>
+        <p class="more"><a href="#/article/a14">${L("แมวตัวไหนต้องแยกเลี้ยง", "Which cats must be kept apart")} →</a> &nbsp; <a href="#/article/a16">${L("เห็นแมวตีกัน ทำยังไง บอกใคร", "Cats fighting: what to do, who to tell")} →</a></p></section>` : ""}
       <div class="poster-foot print-only"><div id="helpQR"></div><p>${L("สแกนเพื่อเปิดหน้านี้ในมือถือ", "Scan to open this page on your phone")}<br><b>${esc(publicUrl("#/help").replace(/^https?:\/\//, ""))}</b></p></div>`;
     document.getElementById("posterBtn").addEventListener("click", () => {
       const el = document.getElementById("helpQR");
@@ -962,6 +1033,7 @@
     const vet = (CFG.EMERGENCY_CONTACTS || []).find((c) => norm(c.value));
     const topics = [
       [L("แมวป่วยหรือบาดเจ็บ", "A sick or injured cat"), vet ? esc(en(vet, "label")) : L("สัตวแพทย์", "A vet"), "#/help", L("ทำอะไรก่อน", "What to do first")],
+      [L("เห็นแมวตีกัน หรือโดนกัด", "Cats fighting, or a bite wound"), L("ผู้ดูแลหลักของแมวตัวนั้น (ดูตารางด้านล่าง) แล้วบอกทีมด้วย จะได้บันทึกว่าคู่นี้ต้องแยกกัน", "That cat's main keeper (see below), and tell the team too so it's recorded that the pair must be kept apart"), "#/article/a16", L("ทำอะไรก่อน", "What to do first")],
       [L("อยากไปช่วยดูแล หรือไปให้อาหารด้วยกัน", "Joining a feeding round"), roles[0] ? esc(en(roles[0], "role")) + " · " + esc(en(roles[0], "who")) : "", shareHref("join"), L("ขอนัด", "Ask to join")],
       [L("ข้อมูลในเว็บผิด หรืออยากเพิ่มเรื่อง", "Something's wrong, or you'd like to add something"), roles[1] ? esc(en(roles[1], "role")) + " · " + esc(en(roles[1], "who")) : "", shareHref("fix"), L("แจ้งทีม", "Tell the team")],
       [L("เรื่องเฉพาะของแมวแต่ละตัว", "Anything about one particular cat"), L("ผู้ดูแลหลักของตัวนั้น (ดูตารางด้านล่าง)", "That cat's main keeper (see below)"), "", ""]
@@ -983,12 +1055,14 @@
     const keepers = [...new Set(D.cats.map((c) => c.caretakers).filter(Boolean))];
     // where each kind of data comes from; "kept in the site" is the normal case for tabs that have no sheet yet
     const st = (label, sample, url) => `<li><span>${label}</span><span class="${sample && norm(url) ? "flag-warn" : ""}">${!sample ? L("ชีตของทีม (ล่าสุด)", "Team sheet (live)") : norm(url) ? L("สำเนาสำรอง (โหลดชีตไม่ได้)", "Backup copy (sheet unreachable)") : L("เก็บไว้ในเว็บ", "Kept in the site")}</span></li>`;
+    // Probst, Raub & Romhardt (2000): six building blocks, as the project's report (ch. 2.1.3) maps them to the work
     const steps = [
-      [L("1. ระบุความรู้ที่สำคัญ", "1. Identify key knowledge"), L("มือใหม่ติดตรงไหน: ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องบอกใคร", "Where newcomers get stuck: not knowing the cats' names, which are spayed, or who to tell when one is sick."), [[L("หาแมว", "Find this cat"), "#/find"], [L("แมวป่วย", "Sick cat"), "#/help"]]],
-      [L("2. สร้างและแสวงหาความรู้", "2. Create and acquire"), L("สัมภาษณ์ผู้ดูแลรุ่นก่อน รวบรวมรูปกับข้อมูลในชีต แล้วเรียบเรียงเป็นบทความ", "Interview experienced keepers, gather photos and the team's sheet, and write it up as articles."), [[L("เรื่องเล่าจากผู้ดูแล", "Keepers' stories"), "#/knowledge/experience"]]],
-      [L("3. จัดเก็บ", "3. Store"), L("แมวแต่ละตัวมีหน้าของตัวเอง ความรู้แบ่งหมวดและติดแท็ก มีที่มา วันที่ และสถานะตรวจทาน ค้นได้จากสีขน จุดที่เจอ และนิสัย", "A page per cat; articles by category and tag, with source, date and review status; searchable by coat, place and personality."), [[L("แมวทั้งหมด", "All cats"), "#/cats"], [L("ความรู้", "Know-how"), "#/knowledge"]]],
-      [L("4. แบ่งปัน", "4. Share"), L("ฟอร์มสั้น ๆ บอกเท่าที่รู้ ทีมตรวจก่อน แล้วขึ้นเว็บพร้อมเครดิต", "A short form: say what you know, the team checks it, then it goes up with credit."), [[L("เล่าต่อ", "Pass it on"), "#/live"], [L("เล่าให้ทีมฟัง", "Tell the team"), "#/share"]]],
-      [L("5. นำไปใช้", "5. Use"), L("มือใหม่อ่าน 5 เรื่องก่อนไปดูแลแมว จนได้ไปดูแลจริงกับผู้ดูแลรุ่นก่อน แล้วเอาสิ่งที่ได้เรียนรู้กลับมาเติม", "Newcomers read the five things to know, go on a round with experienced keepers, then feed what they learn back in."), [[L("5 เรื่องก่อนไปดูแลแมว", "Five things before you start"), "#/start"], [L("ถามใครดี", "Who to ask"), "#/ask"]]]
+      [L("1. การระบุความรู้", "1. Identify"), L("ดูว่ามือใหม่ติดเรื่องไหนบ่อยที่สุด เช่น ไม่รู้ชื่อแมว ไม่รู้ว่าตัวไหนทำหมันแล้ว ไม่รู้ว่าแมวป่วยต้องบอกใคร", "Find what newcomers struggle with most: not knowing the cats' names, which are spayed, or who to tell when one is sick."), [[L("หาแมว", "Find this cat"), "#/find"], [L("แมวป่วย", "Sick cat"), "#/help"]]],
+      [L("2. การได้มาซึ่งความรู้", "2. Acquire"), L("รวบรวมจากผู้ดูแลเดิม เอกสารด้านสุขภาพ และสิ่งที่นิสิตสังเกตเห็น", "Gather it from experienced keepers, health records, and what students notice."), [[L("แมวทั้งหมด", "All cats"), "#/cats"], [L("เรื่องเล่าจากผู้ดูแล", "Keepers' stories"), "#/knowledge/experience"]]],
+      [L("3. การพัฒนาความรู้", "3. Develop"), L("ผู้ดูแลเรียบเรียงประสบการณ์เป็นบทความ ทีมจัดหมวด ติดแท็ก และเชื่อมเรื่องที่เกี่ยวกันเข้าหากัน", "Keepers write their experience up as articles; the team sorts them by category and tag and links related pieces together."), [[L("ความรู้", "Know-how"), "#/knowledge"], [L("ผังความรู้", "Knowledge map"), "#/graph"]]],
+      [L("4. การแบ่งปันความรู้", "4. Share"), L("เผยแพร่บนเว็บ และเปิดให้ทุกคนส่งข้อมูลหรือประสบการณ์เพิ่ม ทีมตรวจก่อนขึ้นเว็บ", "Publish it here, and let anyone send in more facts or experience; the team checks it before it goes up."), [[L("เล่าให้ทีมฟัง", "Tell the team"), "#/share"], [L("เล่าต่อ", "Pass it on"), "#/live"]]],
+      [L("5. การใช้ประโยชน์", "5. Use"), L("ผู้ดูแลและคนที่สนใจเอาไปใช้จริง แล้วสิ่งที่ได้จากการลงมือก็ย้อนกลับมาเป็นความรู้ใหม่", "Keepers and anyone interested put it to work, and what they learn by doing comes back as new knowledge."), [[L("5 เรื่องก่อนไปดูแลแมว", "Five things before you start"), "#/start"], [L("ถามใครดี", "Who to ask"), "#/ask"], [L("ทายชื่อแมว", "Cat quiz"), "#/quiz"]]],
+      [L("6. การรักษาความรู้ไว้", "6. Retain"), L("ตรวจทานและปรับข้อมูลให้ทันสมัยสม่ำเสมอ ทุกหน้าบอกวันที่ตรวจล่าสุด และมีคู่มือส่งต่องานให้รุ่นถัดไป เพราะผู้ดูแลหมุนเวียนทุกปี", "Review and update it regularly. Every page shows when it was last checked, and there's a handover guide for the next team, since keepers change every year."), [[L("ส่งต่องาน", "Handover"), "#/handover"]]]
     ];
     const list = (thKey, enKey) => esc(((isEN() && CFG[enKey]) || CFG[thKey] || []).join(", "));
     // placeholder names ("สมาชิกกลุ่ม 1") stay off the page until the real ones are filled in
@@ -998,9 +1072,13 @@
         "People already know a lot about the faculty's cats, but it's scattered across a few keepers and several group chats. The students who help change every year, and what they learned leaves when they graduate. This site gathers it in one place, and anyone can add to it."))}
       <div class="about-grid">
         <section>
-          <h2 class="label">${L("5 ขั้นของการจัดการความรู้ อยู่ตรงไหนในเว็บ", "The five knowledge management steps, and where they live on the site")}</h2>
-          <table class="km-table"><thead><tr><th scope="col">${L("ขั้น", "Step")}</th><th scope="col">${L("ทำอะไร", "What happens")}</th><th scope="col">${L("ดูได้ที่", "On the site")}</th></tr></thead>
+          <h2 class="label">${L("6 ส่วนของการจัดการความรู้ อยู่ตรงไหนในเว็บ", "The six building blocks of knowledge management, and where they live on the site")}</h2>
+          <p class="muted small">${L("ใช้กรอบของ Probst, Raub และ Romhardt (2000) เพราะมีส่วนระบุความรู้ ซึ่งจำเป็นกับงานที่ไม่เคยมีระบบมาก่อน และมีส่วนรักษาความรู้ไว้ ซึ่งตรงกับปัญหาผู้ดูแลที่เปลี่ยนทุกปีการศึกษา ทุกส่วนมีการตั้งเป้าหมายและวัดผลกำกับ",
+            "We follow Probst, Raub and Romhardt (2000): it has a block for identifying knowledge, which a task that never had a system needs, and one for retaining it, which fits keepers changing every academic year. Goals and evaluation run across every block.")}</p>
+          <table class="km-table"><thead><tr><th scope="col">${L("ส่วน", "Block")}</th><th scope="col">${L("ทำอะไร", "What happens")}</th><th scope="col">${L("ดูได้ที่", "On the site")}</th></tr></thead>
             <tbody>${steps.map(([s, d, links]) => `<tr><td>${s}</td><td>${d}</td><td>${links.map(([t, h]) => `<a href="${h}">${t}</a>`).join("<br>")}</td></tr>`).join("")}</tbody></table>
+          <p class="muted small">${L("ถ้าผลจากการใช้ไม่ย้อนกลับมาเป็นความรู้ใหม่ และไม่มีใครปรับข้อมูล เว็บก็จะเป็นแค่ที่เก็บข้อมูลเก่า เลยต้องมีทั้งส่วนเก็บและส่วนแลกเปลี่ยน",
+            "If what people learn by using it never comes back as new knowledge, and nobody updates it, the site becomes a store of stale facts. That's why it needs both a place to keep knowledge and a way to exchange it.")}</p>
           <p class="muted small">${L("ใช้ทั้งสองแบบ: เก็บความรู้ลงเว็บเป็นหลัก (codification) และพามือใหม่ไปเรียนกับผู้ดูแลตัวจริง (personalization) เพราะความรู้บางอย่างเขียนออกมาได้ไม่หมด",
             "Both approaches: mainly writing knowledge down here (codification), plus newcomers learning directly from experienced keepers (personalization), because some knowledge can't be fully written down.")}</p>
           <h2 class="label">${L("5 เรื่องก่อนไปดูแลแมว กับวงจร SECI", "The five things to know, and the SECI cycle")}</h2>
@@ -1539,6 +1617,8 @@
         if (!rival && !friend) return;
         D.cats.forEach((o) => { if (o !== c && o.name.length > 1 && f.includes(fold(o.name))) link("c:" + c.id, "c:" + o.id, rival ? "rival" : "friend", true); });
       });
+      // bites keepers reported (CAT_EXTRA bit in config.js) are rivals too
+      (c.bit || []).forEach((n) => { const o = catNamed(n); if (o && o !== c) link("c:" + c.id, "c:" + o.id, "rival", true); });
       c.areas.forEach((a) => { add({ id: "p:" + a, kind: "place", area: a, label: shortArea(a) }); link("c:" + c.id, "p:" + a, "place"); });
       if (c.caretakers) {
         const r = keeperRole(c.caretakers), id = "k:" + oneSpace(c.caretakers);
